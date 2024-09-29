@@ -1,0 +1,41 @@
+app_id,app_name,review_text,review_score,review_votes
+1001,Stellar Siege,Un shooter indie impresionante. Gráficos increíbles y jugabilidad fluida.,1,15
+1001,Stellar Siege,Buen concepto pero necesita más contenido.,0,7
+1001,Stellar Siege,Me encanta la atmósfera del juego. Muy inmersivo.,1,22
+1001,Stellar Siege,Demasiados bugs. Necesita más pulido.,0,10
+1002,Neon Nights,Una experiencia visual única. La historia es fascinante.,1,30
+1002,Neon Nights,Corto pero dulce. Valdría la pena a mitad de precio.,1,18
+1002,Neon Nights,No es mi tipo de juego. Demasiado abstracto.,0,5
+1002,Neon Nights,Una joya indie. Altamente recomendado para fans del género.,1,25
+1003,Galactic Empires,Estrategia profunda y rejugabilidad infinita.,1,50
+1003,Galactic Empires,Curva de aprendizaje empinada pero vale la pena.,1,35
+1003,Galactic Empires,Demasiado complejo para mi gusto.,0,8
+1003,Galactic Empires,Bugs frecuentes arruinan la experiencia.,0,20
+1004,Pixel Dungeon,Adictivo y desafiante. Perfecto para sesiones cortas.,1,40
+1004,Pixel Dungeon,Demasiado difícil. La RNG puede ser frustrante.,0,15
+1004,Pixel Dungeon,Un roguelike clásico con un toque moderno.,1,28
+1004,Pixel Dungeon,Necesita más variedad en los elementos y enemigos.,1,22
+1005,Cyber Infiltrator,Acción intensa y una historia cyberpunk cautivadora.,1,60
+1005,Cyber Infiltrator,Gráficos impresionantes pero la historia es predecible.,1,33
+1005,Cyber Infiltrator,El multijugador es divertido pero necesita más mapas.,1,45
+1005,Cyber Infiltrator,Problemas de equilibrio en las armas. Necesita parches.,0,25
+1006,Time Warp Puzzle,Rompecabezas ingenioso con mecánicas de viaje en el tiempo únicas.,1,38
+1006,Time Warp Puzzle,Corto pero dulce. Perfecto para los amantes de los puzzles.,1,29
+1006,Time Warp Puzzle,Demasiado fácil. Se queda corto en contenido.,0,12
+1006,Time Warp Puzzle,Un concepto interesante pero la ejecución podría mejorar.,1,20
+1007,Medieval Conquest,Una epopeya medieval con estrategia profunda y RPG.,1,70
+1007,Medieval Conquest,Bugs frecuentes y problemas de rendimiento.,0,40
+1007,Medieval Conquest,La mejor combinación de estrategia y RPG que he jugado.,1,55
+1007,Medieval Conquest,DLCs caros. El juego base se siente incompleto.,0,30
+1008,Retro Racer Deluxe,Diversión arcade pura. Trae recuerdos de la vieja escuela.,1,48
+1008,Retro Racer Deluxe,Buen juego pero necesita más pistas y modos.,1,35
+1008,Retro Racer Deluxe,El multijugador local es increíblemente divertido.,1,42
+1008,Retro Racer Deluxe,Los gráficos podrían ser mejores para un juego 'Deluxe'.,0,15
+1009,Zombie Survival,Intenso y aterrador. La cooperativa es fantástica.,1,80
+1009,Zombie Survival,Necesita más variedad de zombies y armas.,1,55
+1009,Zombie Survival,Problemas de conexión en el modo cooperativo.,0,30
+1009,Zombie Survival,Una experiencia de supervivencia zombie sólida.,1,65
+1010,Indie Art Studio,Una experiencia creativa única. Perfecto para relajarse.,1,25
+1010,Indie Art Studio,Faltan algunas herramientas básicas de edición.,0,10
+1010,Indie Art Studio,Una excelente manera de expresar la creatividad.,1,20
+1010,Indie Art Studio,Interfaz confusa. Necesita un mejor tutorial.,0,8

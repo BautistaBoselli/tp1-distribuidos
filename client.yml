@@ -4,4 +4,4 @@ server:
 log:
   level: "DEBUG"
 batch:
-  amount: 100
+  amount: 2

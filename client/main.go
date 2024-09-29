@@ -58,17 +58,17 @@ func main() {
 	// Print program config with debugging purposes
 	PrintConfig(config)
 
-	// gamesFile, err := openFile(config.Datasets.Games)
-	// if err != nil {
-	// 	log.Criticalf("Error reading agency file: %s", err)
-	// 	return
-	// }
+	gamesFile, err := openFile("./games.csv")
+	if err != nil {
+		log.Criticalf("Error reading agency file: %s", err)
+		return
+	}
 
-	// reviewsFile, err := openFile(config.Datasets.Reviews)
-	// if err != nil {
-	// 	log.Criticalf("Error reading agency file: %s", err)
-	// 	return
-	// }
+	reviewsFile, err := openFile("./reviews.csv")
+	if err != nil {
+		log.Criticalf("Error reading agency file: %s", err)
+		return
+	}
 
 	client := common.NewClient(*config)
 	defer client.Close()
@@ -81,12 +81,17 @@ func main() {
 		client.Cancel()
 	}()
 
-	// err = client.SendBets(betsFile)
-	// if err != nil {
-	// 	return
-	// }
+	err = client.SendGames(gamesFile)
+	if err != nil {
+		log.Criticalf("Error sending games: %s", err)
+		return
+	}
 
-	// client.GetWinners()
+	err = client.SendReviews(reviewsFile)
+	if err != nil {
+		log.Criticalf("Error sending reviews: %s", err)
+		return
+	}
 
 }
 

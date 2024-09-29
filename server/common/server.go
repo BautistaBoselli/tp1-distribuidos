@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"tp1-distribuidos/shared/protocol"
 
 	"github.com/op/go-logging"
 )
@@ -79,27 +80,35 @@ func (s *Server) acceptNewConnection() (*Client, error) {
 }
 
 func (s *Server) handleConnection(client *Client) {
-	// for {
-	// 	msg, err := protocol.Receive(client.conn)
-	// 	if err != nil {
-	// 		s.handleDisconnect(client, err)
-	// 		return
-	// 	}
+	for {
+		msg, err := protocol.Receive(client.conn)
+		if err != nil {
+			s.handleDisconnect(client, err)
+			return
+		}
 
-	// 	switch msg.MessageType {
+		switch msg.MessageType {
 
-	// 	case protocol.MessageTypeBetBatch:
-	// 		s.handleNewBets(client, msg)
+		case protocol.MessageTypeGame:
+			game := protocol.GameMessage{}
+			game.Decode(msg.Data)
+			log.Infof("action: receive_games | result: success | message: %s", game.Lines)
 
-	// 	case protocol.MessageTypeAllBetsSent:
-	// 		log.Info("action: total_apuestas_recibidas | result: success")
-	// 		return
+		case protocol.MessageTypeReview:
+			review := protocol.ReviewMessage{}
+			review.Decode(msg.Data)
+			log.Infof("action: receive_reviews | result: success | message: %s", review.Lines)
 
-	// 	default:
-	// 		log.Errorf("action: handle_message | result: fail | error: mensaje no soportado %s", msg.MessageType)
-	// 		return
-	// 	}
-	// }
+		default:
+			log.Errorf("action: handle_message | result: fail | error: mensaje no soportado %s", msg.MessageType)
+			return
+		}
+	}
+}
+
+func (s *Server) handleDisconnect(client *Client, err error) {
+	log.Errorf("action: handle_disconnect | result: fail | error: %s", err)
+	client.conn.Close()
 }
 
 type Client struct {
