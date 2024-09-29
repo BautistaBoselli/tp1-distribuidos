@@ -1,0 +1,7 @@
+id: 1
+server:
+  address: "server:12345"
+log:
+  level: "DEBUG"
+batch:
+  amount: 100

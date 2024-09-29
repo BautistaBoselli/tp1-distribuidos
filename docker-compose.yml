@@ -1,0 +1,35 @@
+
+name: tp0
+services:
+  server:
+    container_name: server
+    image: server:latest
+    entrypoint: /server
+    environment:
+      - CANT_AGENCIES=5
+    volumes:
+      - ./server.yml:/config.yml
+    networks:
+      - testing_net
+
+  client1:
+    container_name: client1
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=1
+    volumes:
+      - ./client.yml:/config.yml
+      - ./datasets/games.csv:/games.csv
+      - ./datasets/reviews.csv:/reviews.csv
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
+networks:
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24
