@@ -9,8 +9,9 @@ services:
       - CANT_AGENCIES=5
     volumes:
       - ./server.yml:/config.yml
-    networks:
-      - testing_net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   client1:
     container_name: client1
@@ -22,14 +23,25 @@ services:
       - ./client.yml:/config.yml
       - ./datasets/games.csv:/games.csv
       - ./datasets/reviews.csv:/reviews.csv
-    networks:
-      - testing_net
     depends_on:
-      - server
+      server:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
-networks:
-  testing_net:
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.25.125.0/24
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    # command: ["rabbitmq-server"]
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+      start_period: 5s
+    environment:
+      RABBITMQ_DEFAULT_LOG_LEVEL: error
+      RABBITMQ_LOG_LEVELS: "connection=error"

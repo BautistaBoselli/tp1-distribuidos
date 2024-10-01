@@ -1,12 +1,12 @@
-package common
+package main
 
 import (
 	"errors"
 	"net"
 	"strconv"
+	"time"
+	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared/protocol"
-
-	"github.com/op/go-logging"
 )
 
 type ServerConfig struct {
@@ -22,10 +22,9 @@ type Config struct {
 	Log    LogConfig    `mapstructure:"log"`
 }
 
-var log = logging.MustGetLogger("log")
-
 type Server struct {
 	serverSocket *net.TCPListener
+	middleware   *middleware.Middleware
 }
 
 func NewServer(address string) (*Server, error) {
@@ -39,7 +38,12 @@ func NewServer(address string) (*Server, error) {
 		return nil, err
 	}
 
-	return &Server{serverSocket: serverSocket}, nil
+	middleware, err := middleware.NewMiddleware("amqp://guest:guest@rabbitmq:5672/")
+	if err != nil {
+		return nil, err
+	}
+
+	return &Server{serverSocket: serverSocket, middleware: middleware}, nil
 }
 
 func (s *Server) Close() {
@@ -49,13 +53,18 @@ func (s *Server) Close() {
 func (s *Server) Run() {
 	defer s.Close()
 
+	s.consumeMessages()
+
 	client, err := s.acceptNewConnection()
 	if err != nil {
 		log.Errorf("action: accept_connections | result: fail | error: %s", err)
 		return
 	}
 
-	s.handleConnection(client)
+	go s.handleConnection(client)
+
+	select {}
+
 }
 
 func (s *Server) acceptNewConnection() (*Client, error) {
@@ -93,15 +102,68 @@ func (s *Server) handleConnection(client *Client) {
 			game := protocol.GameMessage{}
 			game.Decode(msg.Data)
 			log.Infof("action: receive_games | result: success | message: %s", game.Lines)
+			s.handleGames(client, game)
 
 		case protocol.MessageTypeReview:
 			review := protocol.ReviewMessage{}
 			review.Decode(msg.Data)
 			log.Infof("action: receive_reviews | result: success | message: %s", review.Lines)
+			s.handleReviews(client, review)
 
 		default:
 			log.Errorf("action: handle_message | result: fail | error: mensaje no soportado %s", msg.MessageType)
 			return
+		}
+	}
+}
+
+func (s *Server) consumeMessages() {
+	log.Info("Starting to consume messages")
+
+	go func() {
+		for {
+			err := s.middleware.Consume("reviews", "", func(body []byte) error {
+				log.Infof("Processed a message in reviews: %s", string(body))
+				return nil
+			})
+			if err != nil {
+				log.Errorf("Failed to consume from reviews exchange: %v", err)
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			err := s.middleware.Consume("games", "", func(body []byte) error {
+				log.Infof("Processed a message in games: %s", string(body))
+				return nil
+			})
+			if err != nil {
+				log.Errorf("Failed to consume from games exchange: %v", err)
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}()
+
+	log.Info("Set up consumers, waiting for messages...")
+
+}
+
+func (s *Server) handleGames(client *Client, game protocol.GameMessage) {
+	for _, line := range game.Lines {
+		err := s.middleware.Publish("games", "", []byte(line))
+		if err != nil {
+			log.Errorf("Failed to publish game message: %v", err)
+		}
+	}
+}
+
+func (s *Server) handleReviews(client *Client, review protocol.ReviewMessage) {
+	for _, line := range review.Lines {
+		err := s.middleware.Publish("reviews", "", []byte(line))
+		if err != nil {
+			log.Errorf("Failed to publish review message: %v", err)
 		}
 	}
 }

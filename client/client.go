@@ -1,4 +1,4 @@
-package common
+package main
 
 import (
 	"encoding/csv"
@@ -7,11 +7,7 @@ import (
 	"os"
 	"strings"
 	"tp1-distribuidos/shared/protocol"
-
-	"github.com/op/go-logging"
 )
-
-var log = logging.MustGetLogger("log")
 
 type ServerConfig struct {
 	Address string `mapstructure:"address"`
@@ -70,6 +66,7 @@ func (c *Client) SendGames(file *os.File) error {
 	log.Infof("action: enviar_juegos | result: in_progress | client: %v", c.config.ID)
 
 	reader := csv.NewReader(file)
+	_, _ = reader.Read()
 
 	for {
 		batch := protocol.GameMessage{
@@ -109,6 +106,7 @@ func (c *Client) SendReviews(file *os.File) error {
 	log.Infof("action: enviar_reviews | result: in_progress | client: %v", c.config.ID)
 
 	reader := csv.NewReader(file)
+	_, _ = reader.Read()
 
 	for {
 		batch := protocol.ReviewMessage{

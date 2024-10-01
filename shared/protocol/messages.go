@@ -39,7 +39,7 @@ type ReviewMessage struct {
 }
 
 func (m ReviewMessage) GetMessageType() MessageType {
-	return MessageTypeGame
+	return MessageTypeReview
 }
 
 func (m ReviewMessage) Encode() string {

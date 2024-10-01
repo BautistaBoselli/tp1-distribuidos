@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"tp1-distribuidos/client/common"
 	"tp1-distribuidos/shared"
 
 	"github.com/op/go-logging"
@@ -15,21 +14,21 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-func InitConfig() (*common.Config, error) {
+func InitConfig() (*Config, error) {
 	v := viper.New()
 
 	// Configure viper to read env variables with the CLI_ prefix
 	v.BindEnv("id", "CLI_ID")
 	v.BindEnv("server.address", "CLI_SERVER_ADDRESS")
 	v.BindEnv("log.level", "CLI_LOG_LEVEL")
-	v.BindEnv("batch.amount", "CLI_BATCH_MAX_AMOUNT")
+	v.BindEnv("batch.amount", "CLI_BATCH_AMOUNT")
 
 	v.SetConfigFile("./config.yml")
 	if err := v.ReadInConfig(); err != nil {
 		fmt.Printf("Configuration could not be read from config file. Using env variables instead")
 	}
 
-	config := common.Config{}
+	config := Config{}
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, err
 	}
@@ -37,7 +36,7 @@ func InitConfig() (*common.Config, error) {
 	return &config, nil
 }
 
-func PrintConfig(config *common.Config) {
+func PrintConfig(config *Config) {
 	log.Infof("action: config | result: success | client: %v | server: %s | log_level: %s",
 		config.ID,
 		config.Server.Address,
@@ -70,7 +69,7 @@ func main() {
 		return
 	}
 
-	client := common.NewClient(*config)
+	client := NewClient(*config)
 	defer client.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
@@ -92,7 +91,6 @@ func main() {
 		log.Criticalf("Error sending reviews: %s", err)
 		return
 	}
-
 }
 
 func openFile(path string) (*os.File, error) {

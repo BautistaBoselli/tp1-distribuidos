@@ -1,19 +1,24 @@
 FROM golang:alpine AS builder
-# Client uses docker multistage builds feature https://docs.docker.com/develop/develop-images/multistage-build/
-# First stage is used to compile golang binary and second stage is used to only copy the 
-# binary generated to the deploy image. 
-# Docker multi stage does not delete intermediate stages used to build our image, so we need 
-# to delete it by ourselves. Since docker does not give a good alternative to delete the intermediate images
-# we are adding a very specific label to the image to then find these kind of images and delete them
 LABEL intermediateStageToBeDeleted=true
 
-RUN mkdir -p /build
-WORKDIR /build/
+# Change the working directory to /app instead of /build
+WORKDIR /app
+
+# Copy go.mod and go.sum files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy the rest of the source code
 COPY . .
-# CGO_ENABLED must be disabled to run go binary in Alpine
-RUN CGO_ENABLED=0 go build -o bin/client ./client/main.go
 
+# Set GOCACHE
+ENV GOCACHE=/root/.cache/go-build
 
-FROM busybox:latest
-COPY --from=builder /build/bin/client /client
+# Build the application
+RUN --mount=type=cache,target="/root/.cache/go-build" go build -o bin/client ./client
+
+FROM alpine:latest
+COPY --from=builder /app/bin/client /client
 ENTRYPOINT ["/bin/sh"]

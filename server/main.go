@@ -6,25 +6,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"tp1-distribuidos/server/common"
 	"tp1-distribuidos/shared"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
 )
-
-type ServerConfig struct {
-	Address string `mapstructure:"address"`
-}
-
-type LogConfig struct {
-	Level string `mapstructure:"level"`
-}
-
-type Config struct {
-	Server ServerConfig `mapstructure:"server"`
-	Log    LogConfig    `mapstructure:"log"`
-}
 
 var log = logging.MustGetLogger("log")
 
@@ -68,7 +54,7 @@ func main() {
 
 	PrintConfig(env)
 
-	server, err := common.NewServer(env.Server.Address)
+	server, err := NewServer(env.Server.Address)
 
 	if err != nil {
 		log.Criticalf("Error creating server: %s", err)
