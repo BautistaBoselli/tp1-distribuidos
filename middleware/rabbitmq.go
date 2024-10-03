@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bytes"
+	"encoding/gob"
+
 	"github.com/op/go-logging"
 	"github.com/streadway/amqp"
 )
@@ -8,49 +11,58 @@ import (
 var log = logging.MustGetLogger("log")
 
 type Middleware struct {
-	conn *amqp.Connection
+	conn    *amqp.Connection
+	channel *amqp.Channel
 }
 
-func NewMiddleware(url string) (*Middleware, error) {
-	conn, err := amqp.Dial(url)
+func NewMiddleware() (*Middleware, error) {
+	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		return nil, err
 	}
-	return &Middleware{conn: conn}, nil
+
+	channel, err := conn.Channel()
+	if err != nil {
+		return nil, err
+	}
+
+	middleware := &Middleware{conn: conn, channel: channel}
+
+	err = middleware.Declare()
+	if err != nil {
+		return nil, err
+	}
+
+	return middleware, nil
 }
 
-func (m *Middleware) Publish(exchange string, key string, body []byte) error {
-	ch, err := m.conn.Channel()
-	if err != nil {
-		log.Errorf("Failed to open a channel: %v", err)
-		return err
-	}
-	defer ch.Close()
+func (m *Middleware) Close() error {
+	return m.conn.Close()
+}
 
-	err = ch.ExchangeDeclare(
-		exchange,
-		"fanout",
-		true,  // durable
-		false, // auto-deleted
-		false, // internal
-		false, // no-wait
-		nil,   // arguments
-	)
+func (m *Middleware) PublishExchange(exchange string, key string, body interface{}) error {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+
+	// msg := "HOLAAA"
+
+	err := encoder.Encode(body)
 	if err != nil {
-		log.Errorf("Failed to declare exchange: %v", err)
+		log.Errorf("Failed to encode message: %v", err)
 		return err
 	}
 
-	err = ch.Publish(
+	err = m.channel.Publish(
 		exchange,
-		"", // routing key is empty for fanout
+		key,
 		false,
 		false,
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        body,
+			Body:        buffer.Bytes(),
 		},
 	)
+
 	if err != nil {
 		log.Errorf("Failed to publish message: %v", err)
 		return err
@@ -59,49 +71,19 @@ func (m *Middleware) Publish(exchange string, key string, body []byte) error {
 	return nil
 }
 
-func (m *Middleware) Consume(exchange string, key string, callback func([]byte) error) error {
-	ch, err := m.conn.Channel()
-	if err != nil {
-		log.Errorf("Failed to open a channel: %v", err)
-		return err
-	}
-	defer ch.Close()
+func (m *Middleware) PublishQueue(queue *amqp.Queue, body interface{}) error {
 
-	err = ch.ExchangeDeclare(
-		exchange,
-		"fanout",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	q, err := ch.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
+	err := m.PublishExchange("", queue.Name, body)
 	if err != nil {
-		log.Errorf("Failed to declare queue: %v", err)
+		log.Errorf("Failed to publish message: %v", err)
 		return err
 	}
 
-	err = ch.QueueBind(
-		q.Name,   // queue name
-		"",       // routing key
-		exchange, // exchange
-		false,
-		nil,
-	)
-	if err != nil {
-		log.Errorf("Failed to bind queue: %v", err)
-		return err
-	}
+	return nil
+}
 
-	msgs, err := ch.Consume(
+func (m *Middleware) ConsumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
+	msgs, err := m.channel.Consume(
 		q.Name, // queue
 		"",     // consumer
 		true,   // auto-ack
@@ -112,14 +94,38 @@ func (m *Middleware) Consume(exchange string, key string, callback func([]byte) 
 	)
 	if err != nil {
 		log.Errorf("Failed to register a consumer: %v", err)
-		ch.Close()
+		return nil, err
 	}
 
-	for msg := range msgs {
-		if err := callback(msg.Body); err != nil {
-			log.Errorf("Error processing message: %v", err)
-		}
+	return msgs, nil
+}
+
+func (m *Middleware) ConsumeExchange(exchange string, key string) (<-chan amqp.Delivery, error) {
+	q, err := m.channel.QueueDeclare(
+		exchange+"_queue_bind", // name
+		false,                  // durable
+		false,                  // delete when unused
+		true,                   // exclusive
+		false,                  // no-wait
+		nil,                    // arguments
+	)
+	if err != nil {
+		log.Errorf("Failed to declare queue: %v", err)
+		return nil, err
 	}
 
-	return nil
+	err = m.channel.QueueBind(
+		q.Name,   // queue name
+		key,      // routing key
+		exchange, // exchange
+		false,
+		nil,
+	)
+
+	if err != nil {
+		log.Errorf("Failed to bind queue: %v", err)
+		return nil, err
+	}
+
+	return m.ConsumeQueue(&q)
 }

@@ -69,7 +69,7 @@ func (c *Client) SendGames(file *os.File) error {
 	_, _ = reader.Read()
 
 	for {
-		batch := protocol.GameMessage{
+		batch := protocol.ClientGame{
 			Lines: make([]string, 0),
 		}
 
@@ -109,7 +109,7 @@ func (c *Client) SendReviews(file *os.File) error {
 	_, _ = reader.Read()
 
 	for {
-		batch := protocol.ReviewMessage{
+		batch := protocol.ClientReview{
 			Lines: make([]string, 0),
 		}
 
@@ -139,4 +139,8 @@ func (c *Client) SendReviews(file *os.File) error {
 	}
 
 	return nil
+}
+
+func (c *Client) SendAllSent() error {
+	return protocol.Send(c.conn, &protocol.AllSent{})
 }

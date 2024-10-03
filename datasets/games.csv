@@ -1,11 +1,11 @@
-AppID,Name,Release date,Estimated owners,Price,Genres,Categories
-1001,Stellar Siege,2023-05-15,100000 - 200000,19.99,Indie;Shooter,Single-player;Multi-player
-1002,Neon Nights,2023-06-01,50000 - 100000,14.99,Indie;Adventure,Single-player
-1003,Galactic Empires,2023-04-20,200000 - 500000,29.99,Strategy;Simulation,Single-player;Multi-player
-1004,Pixel Dungeon,2023-03-10,75000 - 150000,9.99,RPG;Roguelike,Single-player
-1005,Cyber Infiltrator,2023-07-05,150000 - 300000,24.99,Shooter;Action,Single-player;Multi-player
-1006,Time Warp Puzzle,2023-02-28,25000 - 50000,4.99,Puzzle;Indie,Single-player
-1007,Medieval Conquest,2023-08-12,100000 - 200000,39.99,Strategy;RPG,Single-player;Multi-player
-1008,Retro Racer Deluxe,2023-01-15,300000 - 600000,19.99,Racing;Arcade,Single-player;Multi-player
-1009,Zombie Survival,2023-09-01,250000 - 500000,29.99,Survival;Shooter,Single-player;Co-op
-1010,Indie Art Studio,2023-06-30,10000 - 20000,9.99,Indie;Simulation,Single-player
+AppID,Name,Year,Genres,Windows,Mac,Linux,AvgPlaytime
+1001,Stellar Siege,2023,Indie;Shooter,true,false,false,342
+1002,Neon Nights,2023,Indie;Adventure,true,false,false,178
+1003,Galactic Empires,2023,Strategy;Simulation,true,false,false,856
+1004,Pixel Dungeon,2023,RPG;Roguelike,true,false,false,523
+1005,Cyber Infiltrator,2023,Shooter;Action,true,false,false,412
+1006,Time Warp Puzzle,2023,Puzzle;Indie,true,false,false,89
+1007,Medieval Conquest,2023,Strategy;RPG,true,false,false,721
+1008,Retro Racer Deluxe,2023,Racing;Arcade,true,false,false,156
+1009,Zombie Survival,2023,Survival;Shooter,true,false,false,634
+1010,Indie Art Studio,2023,Indie;Simulation,true,false,false,267

@@ -1,12 +1,15 @@
 package protocol
 
-import "strings"
+import (
+	"strings"
+)
 
 type MessageType int32
 
 const (
 	MessageTypeGame MessageType = iota
 	MessageTypeReview
+	MessageTypeAllSent
 )
 
 // Protocolo de comunicacion entre cliente y servidor
@@ -17,36 +20,50 @@ type Message interface {
 	Decode(data string) error
 }
 
-type GameMessage struct {
+type ClientGame struct {
 	Lines []string
 }
 
-func (m GameMessage) GetMessageType() MessageType {
+func (m *ClientGame) GetMessageType() MessageType {
 	return MessageTypeGame
 }
 
-func (m GameMessage) Encode() string {
+func (m *ClientGame) Encode() string {
 	return strings.Join(m.Lines, "\n")
 }
 
-func (m *GameMessage) Decode(data string) error {
+func (m *ClientGame) Decode(data string) error {
 	m.Lines = strings.Split(data, "\n")
 	return nil
 }
 
-type ReviewMessage struct {
+type ClientReview struct {
 	Lines []string
 }
 
-func (m ReviewMessage) GetMessageType() MessageType {
+func (m *ClientReview) GetMessageType() MessageType {
 	return MessageTypeReview
 }
 
-func (m ReviewMessage) Encode() string {
+func (m *ClientReview) Encode() string {
 	return strings.Join(m.Lines, "\n")
 }
 
-func (m *ReviewMessage) Decode(data string) error {
+func (m *ClientReview) Decode(data string) error {
 	m.Lines = strings.Split(data, "\n")
+	return nil
+}
+
+type AllSent struct{}
+
+func (m *AllSent) GetMessageType() MessageType {
+	return MessageTypeAllSent
+}
+
+func (m *AllSent) Encode() string {
+	return ""
+}
+
+func (m *AllSent) Decode(data string) error {
 	return nil
 }

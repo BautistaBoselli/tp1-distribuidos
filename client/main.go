@@ -91,6 +91,16 @@ func main() {
 		log.Criticalf("Error sending reviews: %s", err)
 		return
 	}
+
+	err = client.SendAllSent()
+	if err != nil {
+		log.Criticalf("Error sending all sent: %s", err)
+		return
+	}
+
+	log.Info("All games and reviews sent")
+
+	select {}
 }
 
 func openFile(path string) (*os.File, error) {

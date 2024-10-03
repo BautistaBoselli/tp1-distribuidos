@@ -28,7 +28,7 @@ func TestSendAndReceiveMessage(t *testing.T) {
 		}
 
 		assert.Equal(t, received.MessageType, MessageTypeGame)
-		game := GameMessage{}
+		game := ClientGame{}
 		game.Decode(received.Data)
 
 		assert.Equal(t, len(game.Lines), 2)
@@ -43,7 +43,7 @@ func TestSendAndReceiveMessage(t *testing.T) {
 		panic(err)
 	}
 
-	msg := GameMessage{
+	msg := ClientGame{
 		Lines: []string{"Hello, World!", "This is a test"},
 	}
 
