@@ -8,10 +8,11 @@ import (
 )
 
 type Mapper struct {
-	id           int
-	middleware   *middleware.Middleware
-	statsFile    *os.File
-	gamesQueue   *middleware.GamesQueue
+	id         int
+	middleware *middleware.Middleware
+	statsFile  *os.File
+	gamesQueue *middleware.GamesQueue
+	// reviewsListener?
 	reviewsQueue *middleware.ReviewsQueue
 }
 
