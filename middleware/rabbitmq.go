@@ -44,8 +44,6 @@ func (m *Middleware) PublishExchange(exchange string, key string, body interface
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
 
-	// msg := "HOLAAA"
-
 	err := encoder.Encode(body)
 	if err != nil {
 		log.Errorf("Failed to encode message: %v", err)
@@ -100,7 +98,7 @@ func (m *Middleware) ConsumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
 	return msgs, nil
 }
 
-func (m *Middleware) ConsumeExchange(exchange string, key string) (<-chan amqp.Delivery, error) {
+func (m *Middleware) BindExchange(exchange string, key string) (*amqp.Queue, error) {
 	q, err := m.channel.QueueDeclare(
 		exchange+"_queue_bind", // name
 		false,                  // durable
@@ -127,5 +125,5 @@ func (m *Middleware) ConsumeExchange(exchange string, key string) (<-chan amqp.D
 		return nil, err
 	}
 
-	return m.ConsumeQueue(&q)
+	return &q, nil
 }

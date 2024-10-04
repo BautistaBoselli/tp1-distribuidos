@@ -17,6 +17,7 @@ all:
 
 docker-image:
 	docker build -f ./server/Dockerfile -t "server:latest" .
+	docker build -f ./mapper/Dockerfile -t "mapper:latest" .
 	docker build -f ./client/Dockerfile -t "client:latest" .
 	# Execute this command from time to time to clean up intermediate stages generated 
 	# during client build (your hard drive will like this :) ). Don't left uncommented if you 

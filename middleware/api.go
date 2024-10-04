@@ -3,6 +3,8 @@ package middleware
 import (
 	"bytes"
 	"encoding/gob"
+
+	"github.com/streadway/amqp"
 )
 
 func (m *Middleware) Declare() error {
@@ -55,18 +57,32 @@ func (m *Middleware) DeclareReviewsExchange() error {
 	return nil
 }
 
-func (m *Middleware) SendGameBatch(message *[]Game) error {
+type GamesQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (m *Middleware) ListenGames() (*GamesQueue, error) {
+	queue, err := m.BindExchange("games", "")
+	if err != nil {
+		return nil, err
+	}
+
+	return &GamesQueue{queue: queue, middleware: m}, nil
+}
+
+func (m *Middleware) SendGameBatch(message *GameBatch) error {
 	return m.PublishExchange("games", "", message)
 }
 
-func (m *Middleware) ConsumeGameBatch(callback func(message *[]Game) error) error {
-	msgs, err := m.ConsumeExchange("games", "")
+func (gq *GamesQueue) Consume(callback func(message *GameBatch) error) error {
+	msgs, err := gq.middleware.ConsumeQueue(gq.queue)
 	if err != nil {
 		return err
 	}
 
 	for msg := range msgs {
-		var res []Game
+		var res GameBatch
 
 		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
 		err := decoder.Decode(&res)
@@ -80,12 +96,27 @@ func (m *Middleware) ConsumeGameBatch(callback func(message *[]Game) error) erro
 	return nil
 }
 
+type ReviewsQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (m *Middleware) ListenReviews() (*ReviewsQueue, error) {
+	queue, err := m.BindExchange("reviews", "")
+	if err != nil {
+		log.Errorf("Failed to bind exchange: %v", err)
+		return nil, err
+	}
+
+	return &ReviewsQueue{queue: queue, middleware: m}, nil
+}
+
 func (m *Middleware) SendReviewBatch(message *[]Review) error {
 	return m.PublishExchange("reviews", "", message)
 }
 
-func (m *Middleware) ConsumeReviewBatch(callback func(message *[]Review) error) error {
-	msgs, err := m.ConsumeExchange("reviews", "")
+func (rq *ReviewsQueue) Consume(callback func(message *[]Review) error) error {
+	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
 	if err != nil {
 		return err
 	}

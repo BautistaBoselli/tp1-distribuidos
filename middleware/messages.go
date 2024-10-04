@@ -47,6 +47,11 @@ func NewGame(record []string) *Game {
 	}
 }
 
+type GameBatch struct {
+	Games []Game
+	Last  bool
+}
+
 type Review struct {
 	AppId string
 	Text  string

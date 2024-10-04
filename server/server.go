@@ -5,7 +5,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared/protocol"
 )
@@ -64,8 +63,6 @@ func (s *Server) Close() {
 
 func (s *Server) Run() {
 	defer s.Close()
-
-	s.consumeMessages()
 
 	client, err := s.acceptNewConnection()
 	if err != nil {
@@ -140,68 +137,65 @@ func (s *Server) handleConnection(client *Client) {
 	}
 }
 
-func (s *Server) consumeMessages() {
-	log.Info("Starting to consume messages")
+// func (s *Server) consumeMessages() {
+// 	log.Info("Starting to consume messages")
 
-	go func() {
-		for {
-			err := s.middleware.ConsumeGameBatch(func(gameBatch *[]middleware.Game) error {
-				for _, game := range *gameBatch {
-					log.Infof("MAP GAME: %s", game.Name)
-				}
-				return nil
-			})
-			if err != nil {
-				log.Errorf("Failed to consume from games exchange: %v", err)
-				time.Sleep(5 * time.Second)
-			}
-		}
-	}()
+// 	go func() {
+// 		err := s.middleware.ConsumeGameBatch(func(gameBatch *[]middleware.Game) error {
+// 			for _, game := range *gameBatch {
+// 				log.Infof("MAP GAME: %s", game.Name)
+// 			}
+// 			return nil
+// 		})
+// 		if err != nil {
+// 			log.Errorf("Failed to consume from games exchange: %v", err)
+// 			time.Sleep(5 * time.Second)
+// 		}
 
-	go func() {
-		for {
-			err := s.middleware.ConsumeReviewBatch(func(reviewBatch *[]middleware.Review) error {
-				for _, review := range *reviewBatch {
-					log.Infof("MAP REVIEW: %s", review.Text)
-				}
-				return nil
-			})
-			if err != nil {
-				log.Errorf("Failed to consume from reviews exchange: %v", err)
-				time.Sleep(5 * time.Second)
-			}
-		}
-	}()
+// 	}()
 
-	log.Info("Set up consumers, waiting for messages...")
+// 	go func() {
+// 		err := s.middleware.ConsumeReviewBatch(func(reviewBatch *[]middleware.Review) error {
+// 			for _, review := range *reviewBatch {
+// 				log.Infof("MAP REVIEW: %s", review.Text)
+// 			}
+// 			return nil
+// 		})
+// 		if err != nil {
+// 			log.Errorf("Failed to consume from reviews exchange: %v", err)
+// 			time.Sleep(5 * time.Second)
+// 		}
+// 	}()
 
-}
+// 	log.Info("Set up consumers, waiting for messages...")
+
+// }
 
 const gamesBatchSize = 2
 
 func (s *Server) handleGames() {
-	gameBatch := make([]middleware.Game, 0)
+	gameBatch := middleware.GameBatch{Games: make([]middleware.Game, 0), Last: false}
 
 	for game := range s.games {
 		for _, line := range game.Lines {
 			record := strings.Split(line, ",")
-			gameBatch = append(gameBatch, *middleware.NewGame(record))
+			gameBatch.Games = append(gameBatch.Games, *middleware.NewGame(record))
 
-			if len(gameBatch) == gamesBatchSize {
+			if len(gameBatch.Games) == gamesBatchSize {
+				log.Debugf("SENDING GAME BATCH: %d", len(gameBatch.Games))
 				err := s.middleware.SendGameBatch(&gameBatch)
 				if err != nil {
 					log.Errorf("Failed to publish game message: %v", err)
 				}
-				gameBatch = make([]middleware.Game, 0)
+				gameBatch.Games = make([]middleware.Game, 0)
 			}
 		}
 	}
 
-	if len(gameBatch) > 0 {
-		err := s.middleware.SendGameBatch(&gameBatch)
-		if err != nil {
-			log.Errorf("Failed to publish game message: %v", err)
-		}
+	gameBatch.Last = true
+	err := s.middleware.SendGameBatch(&gameBatch)
+	if err != nil {
+		log.Errorf("Failed to publish game message: %v", err)
 	}
 
 	log.Info("All games received and sent to middleware")

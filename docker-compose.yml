@@ -12,6 +12,18 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      mapper:
+        condition: service_started
+
+  mapper:
+    container_name: mapper
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      
+
 
   client1:
     container_name: client1
