@@ -73,11 +73,12 @@ func (m *Mapper) Run() {
 func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
 	log.Info("Starting to consume messages")
 
-	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameBatch) error {
+	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameBatch, ack func()) error {
 		for _, game := range gameBatch.Games {
 			log.Infof("MAP GAME: %s", game.Name)
 			// escribe en el archivo stats.csv
 		}
+		ack()
 		if gameBatch.Last {
 			wg.Done()
 		}
@@ -95,11 +96,12 @@ func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
 func (m *Mapper) consumeReviewsMessages() {
 	log.Info("Starting to consume messages")
 
-	err := m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review) error {
+	err := m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func ()) error {
 		for _, review := range *reviewBatch {
 			log.Infof("MAP REVIEWS: %s", review.Text)
 			// rellena el archivo stats.csv
 		}
+		ack()
 		return nil
 	})
 	if err != nil {

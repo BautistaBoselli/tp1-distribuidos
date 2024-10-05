@@ -75,7 +75,7 @@ func (m *Middleware) SendGameBatch(message *GameBatch) error {
 	return m.PublishExchange("games", "", message)
 }
 
-func (gq *GamesQueue) Consume(callback func(message *GameBatch) error) error {
+func (gq *GamesQueue) Consume(callback func(message *GameBatch, ack func()) error) error {
 	msgs, err := gq.middleware.ConsumeQueue(gq.queue)
 	if err != nil {
 		return err
@@ -90,7 +90,9 @@ func (gq *GamesQueue) Consume(callback func(message *GameBatch) error) error {
 			log.Errorf("Failed to decode message: %v", err)
 			continue
 		}
-		callback(&res)
+		callback(&res, func() {
+			msg.Ack(false)
+		})
 	}
 
 	return nil
@@ -115,7 +117,7 @@ func (m *Middleware) SendReviewBatch(message *[]Review) error {
 	return m.PublishExchange("reviews", "", message)
 }
 
-func (rq *ReviewsQueue) Consume(callback func(message *[]Review) error) error {
+func (rq *ReviewsQueue) Consume(callback func(message *[]Review, ack func()) error) error {
 	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
 	if err != nil {
 		return err
@@ -130,7 +132,9 @@ func (rq *ReviewsQueue) Consume(callback func(message *[]Review) error) error {
 			log.Errorf("Failed to decode message: %v", err)
 			continue
 		}
-		callback(&res)
+		callback(&res, func() {
+			msg.Ack(false)
+		})
 	}
 
 	return nil
