@@ -21,6 +21,8 @@ func InitConfig() (*Config, error) {
 	v.BindEnv("id", "CLI_ID")
 	v.BindEnv("server.address", "CLI_SERVER_ADDRESS")
 	v.BindEnv("log.level", "CLI_LOG_LEVEL")
+	v.BindEnv("server.gamesBatchAmount", "CLI_GAMES_BATCH_AMOUNT")
+	v.BindEnv("server.reviewsBatchAmount", "CLI_REVIEWS_BATCH_AMOUNT")
 
 	v.SetConfigFile("./config.yml")
 	if err := v.ReadInConfig(); err != nil {
@@ -54,7 +56,7 @@ func main() {
 
 	PrintConfig(env)
 
-	server, err := NewServer(env.Server.Address)
+	server, err := NewServer(&env.Server)
 
 	if err != nil {
 		log.Criticalf("Error creating server: %s", err)

@@ -10,7 +10,9 @@ import (
 )
 
 type ServerConfig struct {
-	Address string `mapstructure:"address"`
+	Address            string `mapstructure:"address"`
+	GamesBatchAmount   int    `mapstructure:"gamesBatchAmount"`
+	ReviewsBatchAmount int    `mapstructure:"reviewsBatchAmount"`
 }
 
 type LogConfig struct {
@@ -29,10 +31,11 @@ type Server struct {
 	gamesFinished   bool
 	reviews         chan protocol.ClientReview
 	reviewsFinished bool
+	config          *ServerConfig
 }
 
-func NewServer(address string) (*Server, error) {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", address)
+func NewServer(config *ServerConfig) (*Server, error) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", config.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +57,7 @@ func NewServer(address string) (*Server, error) {
 		gamesFinished:   false,
 		reviews:         make(chan protocol.ClientReview),
 		reviewsFinished: false,
+		config:          config,
 	}, nil
 }
 
@@ -137,41 +141,6 @@ func (s *Server) handleConnection(client *Client) {
 	}
 }
 
-// func (s *Server) consumeMessages() {
-// 	log.Info("Starting to consume messages")
-
-// 	go func() {
-// 		err := s.middleware.ConsumeGameBatch(func(gameBatch *[]middleware.Game) error {
-// 			for _, game := range *gameBatch {
-// 				log.Infof("MAP GAME: %s", game.Name)
-// 			}
-// 			return nil
-// 		})
-// 		if err != nil {
-// 			log.Errorf("Failed to consume from games exchange: %v", err)
-// 			time.Sleep(5 * time.Second)
-// 		}
-
-// 	}()
-
-// 	go func() {
-// 		err := s.middleware.ConsumeReviewBatch(func(reviewBatch *[]middleware.Review) error {
-// 			for _, review := range *reviewBatch {
-// 				log.Infof("MAP REVIEW: %s", review.Text)
-// 			}
-// 			return nil
-// 		})
-// 		if err != nil {
-// 			log.Errorf("Failed to consume from reviews exchange: %v", err)
-// 			time.Sleep(5 * time.Second)
-// 		}
-// 	}()
-
-// 	log.Info("Set up consumers, waiting for messages...")
-
-// }
-
-const gamesBatchSize = 2
 
 func (s *Server) handleGames() {
 	gameBatch := middleware.GameBatch{Games: make([]middleware.Game, 0), Last: false}
@@ -181,7 +150,7 @@ func (s *Server) handleGames() {
 			record := strings.Split(line, ",")
 			gameBatch.Games = append(gameBatch.Games, *middleware.NewGame(record))
 
-			if len(gameBatch.Games) == gamesBatchSize {
+			if len(gameBatch.Games) == s.config.GamesBatchAmount {
 				log.Debugf("SENDING GAME BATCH: %d", len(gameBatch.Games))
 				err := s.middleware.SendGameBatch(&gameBatch)
 				if err != nil {
@@ -201,7 +170,6 @@ func (s *Server) handleGames() {
 	log.Info("All games received and sent to middleware")
 }
 
-const reviewsBatchSize = 3
 
 func (s *Server) handleReviews() {
 	reviewBatch := make([]middleware.Review, 0)
@@ -213,7 +181,7 @@ func (s *Server) handleReviews() {
 
 			log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
 
-			if len(reviewBatch) == reviewsBatchSize {
+			if len(reviewBatch) == s.config.ReviewsBatchAmount {
 				log.Debugf("SENDING REVIEW BATCH: %d", len(reviewBatch))
 				err := s.middleware.SendReviewBatch(&reviewBatch)
 				if err != nil {
