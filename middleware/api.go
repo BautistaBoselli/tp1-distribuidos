@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"encoding/gob"
+	"strconv"
 
 	"github.com/streadway/amqp"
 )
@@ -22,7 +23,7 @@ func (m *Middleware) Declare() error {
 func (m *Middleware) DeclareGamesExchange() error {
 	err := m.channel.ExchangeDeclare(
 		"games",
-		"fanout",
+		"topic",
 		true,  // durable
 		false, // auto-deleted
 		false, // internal
@@ -62,8 +63,8 @@ type GamesQueue struct {
 	middleware *Middleware
 }
 
-func (m *Middleware) ListenGames() (*GamesQueue, error) {
-	queue, err := m.BindExchange("games", "")
+func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
+	queue, err := m.BindExchange("games", shardId)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,10 @@ func (m *Middleware) ListenGames() (*GamesQueue, error) {
 }
 
 func (m *Middleware) SendGameBatch(message *GameBatch) error {
-	return m.PublishExchange("games", "", message)
+	shardId := message.Game.AppId % 2
+	stringShardId := strconv.Itoa(shardId)
+
+	return m.PublishExchange("games", stringShardId, message)
 }
 
 func (gq *GamesQueue) Consume(callback func(message *GameBatch, ack func()) error) error {

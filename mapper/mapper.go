@@ -10,14 +10,14 @@ import (
 type Mapper struct {
 	id         int
 	middleware *middleware.Middleware
-	statsFile  *os.File
+	gamesFile  *os.File
 	gamesQueue *middleware.GamesQueue
 	// reviewsListener?
 	reviewsQueue *middleware.ReviewsQueue
 }
 
 func NewMapper() (*Mapper, error) {
-	statsFile, err := os.Create("stats.csv")
+	gamesFile, err := os.Create("games.csv")
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func NewMapper() (*Mapper, error) {
 		return nil, err
 	}
 
-	gq, err := middleware.ListenGames()
+	gq, err := middleware.ListenGames("*")
 	if err != nil {
 		return nil, err
 	}
@@ -40,14 +40,14 @@ func NewMapper() (*Mapper, error) {
 	return &Mapper{
 		id:           0,
 		middleware:   middleware,
-		statsFile:    statsFile,
+		gamesFile:    gamesFile,
 		gamesQueue:   gq,
 		reviewsQueue: rq,
 	}, nil
 }
 
 func (m *Mapper) Close() error {
-	if err := m.statsFile.Close(); err != nil {
+	if err := m.gamesFile.Close(); err != nil {
 		return err
 	}
 	return nil
@@ -74,15 +74,20 @@ func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
 	log.Info("Starting to consume messages")
 
 	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameBatch, ack func()) error {
-		for _, game := range gameBatch.Games {
-			log.Infof("MAP GAME: %s", game.Name)
-			// escribe en el archivo stats.csv
-		}
-		ack()
 		if gameBatch.Last {
 			wg.Done()
+			ack()
+			return nil
 		}
+
+		log.Infof("MAP GAME: %s", gameBatch.Game.Name)
+
+		// escribe en el archivo games.csv
+
+		// log.Infof("GAME STATS: %s", gameStats)
+		ack()
 		return nil
+
 	})
 	if err != nil {
 		log.Errorf("Failed to consume from games exchange: %v", err)
@@ -96,7 +101,7 @@ func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
 func (m *Mapper) consumeReviewsMessages() {
 	log.Info("Starting to consume messages")
 
-	err := m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func ()) error {
+	err := m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func()) error {
 		for _, review := range *reviewBatch {
 			log.Infof("MAP REVIEWS: %s", review.Text)
 			// rellena el archivo stats.csv

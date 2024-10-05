@@ -6,7 +6,7 @@ import (
 )
 
 type Game struct {
-	AppId       string
+	AppId       int
 	Name        string
 	Year        int
 	Genres      []string
@@ -26,6 +26,11 @@ const linuxIndex = 6
 const avgPlaytimeIndex = 7
 
 func NewGame(record []string) *Game {
+	appId, err := strconv.Atoi(record[appIdIndex])
+	if err != nil {
+		return nil
+	}
+
 	year, err := strconv.Atoi(record[yearIndex])
 	if err != nil {
 		return nil
@@ -36,7 +41,7 @@ func NewGame(record []string) *Game {
 		return nil
 	}
 	return &Game{
-		AppId:       record[appIdIndex],
+		AppId:       appId,
 		Name:        record[nameIndex],
 		Year:        year,
 		Genres:      strings.Split(record[genreIndex], ","),
@@ -48,8 +53,8 @@ func NewGame(record []string) *Game {
 }
 
 type GameBatch struct {
-	Games []Game
-	Last  bool
+	Game *Game
+	Last bool
 }
 
 type Review struct {
