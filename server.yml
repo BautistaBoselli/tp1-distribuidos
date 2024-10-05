@@ -8,3 +8,5 @@ mapper:
   amount: 5
 sharding:
   amount: 2
+query1:
+  resultInterval: 5

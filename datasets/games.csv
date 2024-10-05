@@ -1,11 +1,11 @@
 AppID,Name,Year,Genres,Windows,Mac,Linux,AvgPlaytime
-1001,Stellar Siege,2023,Indie;Shooter,true,false,false,342
-1002,Neon Nights,2023,Indie;Adventure,true,false,false,178
-1003,Galactic Empires,2023,Strategy;Simulation,true,false,false,856
+1001,Stellar Siege,2023,Indie;Shooter,true,false,true,342
+1002,Neon Nights,2023,Indie;Adventure,true,true,false,178
+1003,Galactic Empires,2023,Strategy;Simulation,false,true,true,856
 1004,Pixel Dungeon,2023,RPG;Roguelike,true,false,false,523
-1005,Cyber Infiltrator,2023,Shooter;Action,true,false,false,412
+1005,Cyber Infiltrator,2023,Shooter;Action,true,true,false,412
 1006,Time Warp Puzzle,2023,Puzzle;Indie,true,false,false,89
-1007,Medieval Conquest,2023,Strategy;RPG,true,false,false,721
-1008,Retro Racer Deluxe,2023,Racing;Arcade,true,false,false,156
+1007,Medieval Conquest,2023,Strategy;RPG,false,false,false,721
+1008,Retro Racer Deluxe,2023,Racing;Arcade,true,false,true,156
 1009,Zombie Survival,2023,Survival;Shooter,true,false,false,634
-1010,Indie Art Studio,2023,Indie;Simulation,true,false,false,267
+1010,Indie Art Studio,2023,Indie;Simulation,true,true,false,267
