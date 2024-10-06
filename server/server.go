@@ -141,27 +141,21 @@ func (s *Server) handleConnection(client *Client) {
 	}
 }
 
-
 func (s *Server) handleGames() {
-	gameBatch := middleware.GameBatch{Games: make([]middleware.Game, 0), Last: false}
-
 	for game := range s.games {
 		for _, line := range game.Lines {
 			record := strings.Split(line, ",")
-			gameBatch.Games = append(gameBatch.Games, *middleware.NewGame(record))
+			gameBatch := middleware.GameBatch{Game: middleware.NewGame(record), Last: false}
 
-			if len(gameBatch.Games) == s.config.GamesBatchAmount {
-				log.Debugf("SENDING GAME BATCH: %d", len(gameBatch.Games))
-				err := s.middleware.SendGameBatch(&gameBatch)
-				if err != nil {
-					log.Errorf("Failed to publish game message: %v", err)
-				}
-				gameBatch.Games = make([]middleware.Game, 0)
+			err := s.middleware.SendGameBatch(&gameBatch)
+			if err != nil {
+				log.Errorf("Failed to publish game message: %v", err)
 			}
 		}
 	}
 
-	gameBatch.Last = true
+	gameBatch := middleware.GameBatch{Game: &middleware.Game{}, Last: true}
+
 	err := s.middleware.SendGameBatch(&gameBatch)
 	if err != nil {
 		log.Errorf("Failed to publish game message: %v", err)
@@ -169,7 +163,6 @@ func (s *Server) handleGames() {
 
 	log.Info("All games received and sent to middleware")
 }
-
 
 func (s *Server) handleReviews() {
 	reviewBatch := make([]middleware.Review, 0)

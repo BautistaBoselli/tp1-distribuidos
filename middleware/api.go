@@ -3,6 +3,8 @@ package middleware
 import (
 	"bytes"
 	"encoding/gob"
+	"strconv"
+	"strings"
 
 	"github.com/streadway/amqp"
 )
@@ -16,13 +18,17 @@ func (m *Middleware) Declare() error {
 		return err
 	}
 
+	if err := m.DeclareStatsExchange(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (m *Middleware) DeclareGamesExchange() error {
 	err := m.channel.ExchangeDeclare(
 		"games",
-		"fanout",
+		"topic",
 		true,  // durable
 		false, // auto-deleted
 		false, // internal
@@ -57,13 +63,32 @@ func (m *Middleware) DeclareReviewsExchange() error {
 	return nil
 }
 
+func (m *Middleware) DeclareStatsExchange() error {
+	err := m.channel.ExchangeDeclare(
+		"stats",
+		"topic",
+		true,  // durable
+		false, // auto-deleted
+		false, // internal
+		false, // no-wait
+		nil,   // arguments
+	)
+
+	if err != nil {
+		log.Errorf("Failed to declare exchange: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 type GamesQueue struct {
 	queue      *amqp.Queue
 	middleware *Middleware
 }
 
-func (m *Middleware) ListenGames() (*GamesQueue, error) {
-	queue, err := m.BindExchange("games", "")
+func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
+	queue, err := m.BindExchange("games", shardId)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +97,10 @@ func (m *Middleware) ListenGames() (*GamesQueue, error) {
 }
 
 func (m *Middleware) SendGameBatch(message *GameBatch) error {
-	return m.PublishExchange("games", "", message)
+	shardId := message.Game.AppId % 2
+	stringShardId := strconv.Itoa(shardId)
+
+	return m.PublishExchange("games", stringShardId, message)
 }
 
 func (gq *GamesQueue) Consume(callback func(message *GameBatch, ack func()) error) error {
@@ -138,4 +166,14 @@ func (rq *ReviewsQueue) Consume(callback func(message *[]Review, ack func()) err
 	}
 
 	return nil
+}
+
+func (m *Middleware) SendStats(message *Stats) error {
+	shardId := message.AppId % 2
+	stringShardId := strconv.Itoa(shardId)
+	topic := stringShardId + "." + strings.Join(message.Genres, ".")
+
+	log.Infof("Sending stats to topic %s", topic)
+	return m.PublishExchange("stats", stringShardId, message)
+
 }
