@@ -117,8 +117,8 @@ type Query4Result struct {
 }
 
 type Query5Result struct {
-	AppId string
-	Name  string
+	AppId                 string
+	Name                  string
 	NegativeReviewsAmount int
 	TotalReviewsAmount    int
 }
