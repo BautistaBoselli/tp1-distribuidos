@@ -1,7 +1,11 @@
 package main
 
 import (
+	"encoding/csv"
+	"io"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
@@ -82,9 +86,20 @@ func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
 
 		log.Infof("MAP GAME: %s", gameBatch.Game.Name)
 
-		// escribe en el archivo games.csv
+		writer := csv.NewWriter(m.gamesFile)
 
-		// log.Infof("GAME STATS: %s", gameStats)
+		gameStats := []string{
+			strconv.Itoa(gameBatch.Game.AppId),
+			gameBatch.Game.Name,
+			strconv.Itoa(gameBatch.Game.Year),
+			strings.Join(gameBatch.Game.Genres, ","),
+		}
+
+		if err := writer.Write(gameStats); err != nil {
+			log.Errorf("Failed to write to games.csv: %v", err)
+		}
+		writer.Flush()
+
 		ack()
 		return nil
 
@@ -101,10 +116,40 @@ func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
 func (m *Mapper) consumeReviewsMessages() {
 	log.Info("Starting to consume messages")
 
-	err := m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func()) error {
+	file, err := os.Open("games.csv")
+	if err != nil {
+		log.Errorf("action: open file | result: fail")
+		return
+	}
+	defer file.Close()
+
+	err = m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func()) error {
 		for _, review := range *reviewBatch {
 			log.Infof("MAP REVIEWS: %s", review.Text)
-			// rellena el archivo stats.csv
+
+			if _, err := file.Seek(0, 0); err != nil {
+				log.Errorf("action: reset file reader | result: fail")
+				return err
+			}
+
+			reader := csv.NewReader(file)
+			for {
+				record, err := reader.Read()
+				if err == io.EOF {
+					log.Errorf("action: crear_stats | result: fail")
+
+					break
+				}
+				if err != nil {
+					log.Errorf("action: crear_stats | result: fail")
+					return err
+				}
+				if record[0] == review.AppId {
+					stats := middleware.NewStats(record, &review)
+					log.Infof("MAP STATS: %s", stats)
+					break
+				}
+			}
 		}
 		ack()
 		return nil

@@ -87,3 +87,25 @@ type Stats struct {
 	Positives int
 	Negatives int
 }
+
+func NewStats(game []string, review *Review) *Stats {
+	if review.Score > 0 {
+		return &Stats{
+			AppId:     game[appIdIndex],
+			Name:      game[nameIndex],
+			Genres:    strings.Split(game[genreIndex], ","),
+			Text:      review.Text,
+			Positives: 1,
+			Negatives: 0,
+		}
+	}
+
+	return &Stats{
+		AppId:     game[appIdIndex],
+		Name:      game[nameIndex],
+		Genres:    strings.Split(game[genreIndex], ","),
+		Text:      review.Text,
+		Positives: 0,
+		Negatives: 1,
+	}
+}
