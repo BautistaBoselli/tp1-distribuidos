@@ -6,7 +6,7 @@ import (
 )
 
 type Game struct {
-	AppId       string
+	AppId       int
 	Name        string
 	Year        int
 	Genres      []string
@@ -26,6 +26,11 @@ const linuxIndex = 6
 const avgPlaytimeIndex = 7
 
 func NewGame(record []string) *Game {
+	appId, err := strconv.Atoi(record[appIdIndex])
+	if err != nil {
+		return nil
+	}
+
 	year, err := strconv.Atoi(record[yearIndex])
 	if err != nil {
 		return nil
@@ -36,10 +41,10 @@ func NewGame(record []string) *Game {
 		return nil
 	}
 	return &Game{
-		AppId:       record[appIdIndex],
+		AppId:       appId,
 		Name:        record[nameIndex],
 		Year:        year,
-		Genres:      strings.Split(record[genreIndex], ","),
+		Genres:      strings.Split(record[genreIndex], ";"),
 		Windows:     record[windowsIndex] == "true",
 		Mac:         record[macIndex] == "true",
 		Linux:       record[linuxIndex] == "true",
@@ -48,8 +53,8 @@ func NewGame(record []string) *Game {
 }
 
 type GameBatch struct {
-	Games []Game
-	Last  bool
+	Game *Game
+	Last bool
 }
 
 type Review struct {
@@ -75,7 +80,7 @@ func NewReview(record []string) *Review {
 }
 
 type Stats struct {
-	AppId     string
+	AppId     int
 	Name      string
 	Text      string
 	Genres    []string
@@ -116,4 +121,30 @@ type Query5Result struct {
 	Name  string
 	NegativeReviewsAmount int
 	TotalReviewsAmount    int
+}
+
+func NewStats(game []string, review *Review) *Stats {
+	appId, err := strconv.Atoi(game[appIdIndex])
+	if err != nil {
+		return nil
+	}
+	if review.Score > 0 {
+		return &Stats{
+			AppId:     appId,
+			Name:      game[nameIndex],
+			Genres:    strings.Split(game[genreIndex], ","),
+			Text:      review.Text,
+			Positives: 1,
+			Negatives: 0,
+		}
+	}
+
+	return &Stats{
+		AppId:     appId,
+		Name:      game[nameIndex],
+		Genres:    strings.Split(game[genreIndex], ","),
+		Text:      review.Text,
+		Positives: 0,
+		Negatives: 1,
+	}
 }

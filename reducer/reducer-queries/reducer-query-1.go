@@ -29,17 +29,16 @@ func (r *ReducerQuery1) Close() {
 func (r *ReducerQuery1) Run() {
 	log.Infof("Reducer Query 1 running")
 
-	resultsQueue, err := r.middleware.ListenGames() // esto despues va a ser listenResults
+	resultsQueue, err := r.middleware.ListenGames("") // esto despues va a ser listenResults
 	if err != nil {
 		log.Fatalf("action: listen reviews| result: error | message: %s", err)
 		return
 	}
 
 	resultsQueue.Consume(func(msg *middleware.GameBatch, ack func()) error {
-		for _, game := range msg.Games {
-			// r.processResult(&game)
-			log.Infof("Game: %v", game)
-		}
+		// r.processResult(&game)
+		log.Infof("Game: %v", msg.Game)
+
 		ack()
 
 		return nil
