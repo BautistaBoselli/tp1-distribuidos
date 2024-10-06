@@ -82,3 +82,38 @@ type Stats struct {
 	Positives int
 	Negatives int
 }
+
+type Query1Result struct {
+	AppId   string
+	Name    string
+	Windows int64
+	Mac     int64
+	Linux   int64
+	Final   bool
+}
+
+type Query2Result struct {
+	AppId       string
+	Name        string
+	AvgPlaytime int64
+	Final       bool
+	// Year 	  int ponerle que devuelva esto?
+}
+
+type Query3Result struct {
+	AppId                 string
+	Name                  string
+	PositiveReviewsAmount int
+}
+
+type Query4Result struct {
+	AppId string
+	Name  string
+}
+
+type Query5Result struct {
+	AppId string
+	Name  string
+	NegativeReviewsAmount int
+	TotalReviewsAmount    int
+}
