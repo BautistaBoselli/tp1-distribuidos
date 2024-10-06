@@ -123,6 +123,8 @@ func (m *Mapper) consumeReviewsMessages() {
 	}
 	defer file.Close()
 
+	reader := csv.NewReader(file)
+
 	err = m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func()) error {
 		for _, review := range *reviewBatch {
 			log.Infof("MAP REVIEWS: %s", review.Text)
@@ -132,7 +134,6 @@ func (m *Mapper) consumeReviewsMessages() {
 				return err
 			}
 
-			reader := csv.NewReader(file)
 			for {
 				record, err := reader.Read()
 				if err == io.EOF {
