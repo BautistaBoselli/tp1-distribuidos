@@ -147,6 +147,10 @@ func (m *Mapper) consumeReviewsMessages() {
 				if record[0] == review.AppId {
 					stats := middleware.NewStats(record, &review)
 					log.Infof("MAP STATS: %s", stats)
+					err := m.middleware.SendStats(stats)
+					if err != nil {
+						log.Errorf("Failed to publish stats message: %v", err)
+					}
 					break
 				}
 			}

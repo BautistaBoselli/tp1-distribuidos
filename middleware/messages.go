@@ -44,7 +44,7 @@ func NewGame(record []string) *Game {
 		AppId:       appId,
 		Name:        record[nameIndex],
 		Year:        year,
-		Genres:      strings.Split(record[genreIndex], ","),
+		Genres:      strings.Split(record[genreIndex], ";"),
 		Windows:     record[windowsIndex] == "true",
 		Mac:         record[macIndex] == "true",
 		Linux:       record[linuxIndex] == "true",
@@ -80,7 +80,7 @@ func NewReview(record []string) *Review {
 }
 
 type Stats struct {
-	AppId     string
+	AppId     int
 	Name      string
 	Text      string
 	Genres    []string
@@ -89,9 +89,13 @@ type Stats struct {
 }
 
 func NewStats(game []string, review *Review) *Stats {
+	appId, err := strconv.Atoi(game[appIdIndex])
+	if err != nil {
+		return nil
+	}
 	if review.Score > 0 {
 		return &Stats{
-			AppId:     game[appIdIndex],
+			AppId:     appId,
 			Name:      game[nameIndex],
 			Genres:    strings.Split(game[genreIndex], ","),
 			Text:      review.Text,
@@ -101,7 +105,7 @@ func NewStats(game []string, review *Review) *Stats {
 	}
 
 	return &Stats{
-		AppId:     game[appIdIndex],
+		AppId:     appId,
 		Name:      game[nameIndex],
 		Genres:    strings.Split(game[genreIndex], ","),
 		Text:      review.Text,

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"strconv"
+	"strings"
 
 	"github.com/streadway/amqp"
 )
@@ -14,6 +15,10 @@ func (m *Middleware) Declare() error {
 	}
 
 	if err := m.DeclareReviewsExchange(); err != nil {
+		return err
+	}
+
+	if err := m.DeclareStatsExchange(); err != nil {
 		return err
 	}
 
@@ -43,6 +48,25 @@ func (m *Middleware) DeclareReviewsExchange() error {
 	err := m.channel.ExchangeDeclare(
 		"reviews",
 		"fanout",
+		true,  // durable
+		false, // auto-deleted
+		false, // internal
+		false, // no-wait
+		nil,   // arguments
+	)
+
+	if err != nil {
+		log.Errorf("Failed to declare exchange: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (m *Middleware) DeclareStatsExchange() error {
+	err := m.channel.ExchangeDeclare(
+		"stats",
+		"topic",
 		true,  // durable
 		false, // auto-deleted
 		false, // internal
@@ -142,4 +166,14 @@ func (rq *ReviewsQueue) Consume(callback func(message *[]Review, ack func()) err
 	}
 
 	return nil
+}
+
+func (m *Middleware) SendStats(message *Stats) error {
+	shardId := message.AppId % 2
+	stringShardId := strconv.Itoa(shardId)
+	topic := stringShardId + "." + strings.Join(message.Genres, ".")
+
+	log.Infof("Sending stats to topic %s", topic)
+	return m.PublishExchange("stats", stringShardId, message)
+
 }
