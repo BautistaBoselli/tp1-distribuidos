@@ -72,6 +72,12 @@ func main() {
 	
 	case 2:
 		reduc = reducer.NewReducerQuery2(middleware)
+
+	case 3:
+		reduc = reducer.NewReducerQuery3(middleware)
+
+	case 4:
+		reduc = reducer.NewReducerQuery4(middleware)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
