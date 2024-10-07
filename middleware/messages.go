@@ -138,3 +138,10 @@ func NewStats(game []string, review *Review) *Stats {
 		Negatives: 1,
 	}
 }
+
+type Result struct {
+	QueryId             int
+	IsFragmentedMessage bool
+	IsFinalMessage      bool
+	Result              any
+}

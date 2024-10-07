@@ -22,6 +22,10 @@ func (m *Middleware) Declare() error {
 		return err
 	}
 
+	if err := m.DeclareResultsExchange(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -79,6 +83,23 @@ func (m *Middleware) DeclareStatsExchange() error {
 		return err
 	}
 
+	return nil
+}
+
+func (m *Middleware) DeclareResultsExchange() error {
+	err := m.channel.ExchangeDeclare(
+		"results",
+		"topic",
+		true,  // durable
+		false, // auto-deleted
+		false, // internal
+		false, // no-wait
+		nil,   // arguments
+	)
+	if err != nil {
+		log.Errorf("Failed to declare results exchange: %v", err)
+		return err
+	}
 	return nil
 }
 
@@ -176,4 +197,49 @@ func (m *Middleware) SendStats(message *Stats) error {
 	log.Infof("Sending stats to topic %s", topic)
 	return m.PublishExchange("stats", stringShardId, message)
 
+}
+
+type ResultsQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (m *Middleware) ListenResults(queryId string) (*ResultsQueue, error) {
+	queue, err := m.BindExchange("results", queryId+".#")
+	if err != nil {
+		return nil, err
+	}
+	return &ResultsQueue{queue: queue, middleware: m}, nil
+}
+
+func (m *Middleware) SendResult(queryId string, result *Result) error {
+	log.Infof("Sending result from query %s", queryId)
+	return m.PublishExchange("results", queryId, result)
+}
+
+func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error) error {
+	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		var res Result
+
+		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
+		if err := decoder.Decode(&res); err != nil {
+			log.Errorf("Failed to decode result message: %v", err)
+			continue
+		}
+
+		err = callback(&res, func() {
+			msg.Ack(false)
+		})
+
+		if err != nil {
+			log.Errorf("Failed to process result message: %v", err)
+		}
+	}
+
+	return nil
 }
