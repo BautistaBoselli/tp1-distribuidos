@@ -69,6 +69,9 @@ func main() {
 	switch env.ReducerId {
 	case 1:
 		reduc = reducer.NewReducerQuery1(middleware)
+	
+	case 2:
+		reduc = reducer.NewReducerQuery2(middleware)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

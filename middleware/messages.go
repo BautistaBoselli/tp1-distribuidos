@@ -98,29 +98,19 @@ type Query1Result struct {
 }
 
 type Query2Result struct {
-	AppId       string
-	Name        string
-	AvgPlaytime int64
-	Final       bool
-	// Year 	  int ponerle que devuelva esto?
+	TopGames []Game
 }
 
 type Query3Result struct {
-	AppId                 string
-	Name                  string
-	PositiveReviewsAmount int
+	TopGames []Stats
 }
 
 type Query4Result struct {
-	AppId string
-	Name  string
+	Stats []Stats
 }
 
 type Query5Result struct {
-	AppId                 string
-	Name                  string
-	NegativeReviewsAmount int
-	TotalReviewsAmount    int
+	Stats []Stats
 }
 
 func NewStats(game []string, review *Review) *Stats {
