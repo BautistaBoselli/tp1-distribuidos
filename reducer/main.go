@@ -20,9 +20,14 @@ type LogConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+type ShardingConfig struct {
+	Amount int `mapstructure:"amount"`
+}
+
 type Config struct {
 	Log       LogConfig
 	ReducerId int
+	Sharding  ShardingConfig
 }
 
 func InitConfig() (*Config, error) {
@@ -31,6 +36,7 @@ func InitConfig() (*Config, error) {
 	// Configue viper to read env vars with the CLI_ prefix
 	v.BindEnv("query2.nodes", "CLI_QUERY2_NODES")
 	v.BindEnv("reducerId", "CLI_REDUCER_ID")
+	v.BindEnv("sharding.amount", "CLI_SHARDING_AMOUNT")
 
 	v.SetConfigFile("./config.yml")
 	if err := v.ReadInConfig(); err != nil {
@@ -59,7 +65,7 @@ func main() {
 
 	PrintConfig(env)
 
-	middleware, err := middleware.NewMiddleware()
+	middleware, err := middleware.NewMiddleware(env.Sharding.Amount)
 	if err != nil {
 		log.Fatalf("action: creating middleware | result: error | message: %s", err)
 	}

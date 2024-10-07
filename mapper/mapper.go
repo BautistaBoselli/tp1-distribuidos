@@ -20,13 +20,15 @@ type Mapper struct {
 	reviewsQueue *middleware.ReviewsQueue
 }
 
+const shardingAmount = 2
+
 func NewMapper() (*Mapper, error) {
 	gamesFile, err := os.Create("games.csv")
 	if err != nil {
 		return nil, err
 	}
 
-	middleware, err := middleware.NewMiddleware()
+	middleware, err := middleware.NewMiddleware(shardingAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +64,7 @@ func (m *Mapper) Run() {
 
 	wg := sync.WaitGroup{}
 
-	wg.Add(1)
+	wg.Add(shardingAmount)
 	go m.consumeGameMessages(&wg)
 	wg.Wait()
 

@@ -19,9 +19,14 @@ type LogConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+type ShardingConfig struct {
+	Amount int `mapstructure:"amount"`
+}
+
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
-	Log    LogConfig    `mapstructure:"log"`
+	Server   ServerConfig   `mapstructure:"server"`
+	Log      LogConfig      `mapstructure:"log"`
+	Sharding ShardingConfig `mapstructure:"sharding"`
 }
 
 type Server struct {
@@ -31,11 +36,11 @@ type Server struct {
 	gamesFinished   bool
 	reviews         chan protocol.ClientReview
 	reviewsFinished bool
-	config          *ServerConfig
+	config          *Config
 }
 
-func NewServer(config *ServerConfig) (*Server, error) {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", config.Address)
+func NewServer(config *Config) (*Server, error) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", config.Server.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +50,7 @@ func NewServer(config *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	middleware, err := middleware.NewMiddleware()
+	middleware, err := middleware.NewMiddleware(config.Sharding.Amount)
 	if err != nil {
 		return nil, err
 	}
@@ -154,11 +159,9 @@ func (s *Server) handleGames() {
 		}
 	}
 
-	gameBatch := middleware.GameBatch{Game: &middleware.Game{}, Last: true}
-
-	err := s.middleware.SendGameBatch(&gameBatch)
+	err := s.middleware.SendGameFinished()
 	if err != nil {
-		log.Errorf("Failed to publish game message: %v", err)
+		log.Errorf("Failed to publish game finished message: %v", err)
 	}
 
 	log.Info("All games received and sent to middleware")
@@ -174,7 +177,7 @@ func (s *Server) handleReviews() {
 
 			log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
 
-			if len(reviewBatch) == s.config.ReviewsBatchAmount {
+			if len(reviewBatch) == s.config.Server.ReviewsBatchAmount {
 				log.Debugf("SENDING REVIEW BATCH: %d", len(reviewBatch))
 				err := s.middleware.SendReviewBatch(&reviewBatch)
 				if err != nil {

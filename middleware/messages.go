@@ -89,8 +89,6 @@ type Stats struct {
 }
 
 type Query1Result struct {
-	AppId   string
-	Name    string
 	Windows int64
 	Mac     int64
 	Linux   int64
@@ -101,8 +99,6 @@ type Query2Result struct {
 	AppId       string
 	Name        string
 	AvgPlaytime int64
-	Final       bool
-	// Year 	  int ponerle que devuelva esto?
 }
 
 type Query3Result struct {

@@ -97,10 +97,24 @@ func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
 }
 
 func (m *Middleware) SendGameBatch(message *GameBatch) error {
-	shardId := message.Game.AppId % 2
+	shardId := message.Game.AppId % m.shardingAmount
 	stringShardId := strconv.Itoa(shardId)
 
 	return m.PublishExchange("games", stringShardId, message)
+}
+
+func (m Middleware) SendGameFinished() error {
+
+	for shardId := range m.shardingAmount {
+		stringShardId := strconv.Itoa(shardId)
+		err := m.PublishExchange("games", stringShardId, &GameBatch{Game: &Game{}, Last: true})
+		if err != nil {
+			log.Errorf("Failed to send game finished to shard %s: %v", stringShardId, err)
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (gq *GamesQueue) Consume(callback func(message *GameBatch, ack func()) error) error {

@@ -11,11 +11,12 @@ import (
 var log = logging.MustGetLogger("log")
 
 type Middleware struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
+	shardingAmount int
+	conn           *amqp.Connection
+	channel        *amqp.Channel
 }
 
-func NewMiddleware() (*Middleware, error) {
+func NewMiddleware(shardingAmount int) (*Middleware, error) {
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		return nil, err
@@ -26,7 +27,7 @@ func NewMiddleware() (*Middleware, error) {
 		return nil, err
 	}
 
-	middleware := &Middleware{conn: conn, channel: channel}
+	middleware := &Middleware{conn: conn, channel: channel, shardingAmount: shardingAmount}
 
 	err = middleware.Declare()
 	if err != nil {

@@ -9,4 +9,4 @@ mapper:
 sharding:
   amount: 2
 query1:
-  resultInterval: 5
+  resultInterval: 2
