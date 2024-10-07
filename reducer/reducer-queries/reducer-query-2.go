@@ -8,7 +8,7 @@ const topGamesSize = 10
 
 type ReducerQuery2 struct {
 	middleware *middleware.Middleware
-	// pendingAnswers  int no se si es necesario este campo para la query 1
+	// pendingAnswers  int aca si es necesario este campo para saber cuando mandar la respuesta final
 	TopGames []middleware.Game
 }
 
