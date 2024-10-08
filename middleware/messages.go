@@ -19,11 +19,11 @@ type Game struct {
 const appIdIndex = 0
 const nameIndex = 1
 const yearIndex = 2
-const genreIndex = 3
-const windowsIndex = 4
-const macIndex = 5
-const linuxIndex = 6
-const avgPlaytimeIndex = 7
+const genreIndex = 36
+const windowsIndex = 17
+const macIndex = 18
+const linuxIndex = 19
+const avgPlaytimeIndex = 29
 
 func NewGame(record []string) *Game {
 	appId, err := strconv.Atoi(record[appIdIndex])
@@ -31,7 +31,7 @@ func NewGame(record []string) *Game {
 		return nil
 	}
 
-	year, err := strconv.Atoi(record[yearIndex])
+	year, err := strconv.Atoi(record[yearIndex][len(record[yearIndex])-4:])
 	if err != nil {
 		return nil
 	}
@@ -40,16 +40,18 @@ func NewGame(record []string) *Game {
 	if err != nil {
 		return nil
 	}
-	return &Game{
+	game := &Game{
 		AppId:       appId,
 		Name:        record[nameIndex],
 		Year:        year,
-		Genres:      strings.Split(record[genreIndex], ";"),
+		Genres:      strings.Split(record[genreIndex], ","),
 		Windows:     record[windowsIndex] == "true",
 		Mac:         record[macIndex] == "true",
 		Linux:       record[linuxIndex] == "true",
 		AvgPlaytime: avgPlaytime,
 	}
+	println(game)
+	return game
 }
 
 type GameMsg struct {
@@ -64,8 +66,8 @@ type Review struct {
 }
 
 const appIdIndexReview = 0
-const textIndexReview = 1
-const scoreIndexReview = 2
+const textIndexReview = 2
+const scoreIndexReview = 3
 
 func NewReview(record []string) *Review {
 	score, err := strconv.Atoi(record[scoreIndexReview])

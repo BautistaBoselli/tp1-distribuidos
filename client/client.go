@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/csv"
+	"bufio"
 	"io"
 	"net"
 	"os"
-	"strings"
 	"tp1-distribuidos/shared/protocol"
 )
 
@@ -65,25 +64,33 @@ func (c *Client) SendGames(file *os.File) error {
 	defer file.Close()
 	log.Infof("action: enviar_juegos | result: in_progress | client: %v", c.config.ID)
 
-	reader := csv.NewReader(file)
-	_, _ = reader.Read()
+	// reader := csv.NewReader(file)
+	// _, _ = reader.Read()
 
+	reader := bufio.NewReader(file)
+	reader.ReadString('\n')
+
+	i := 0
 	for {
+		i++
+		if i > 50 {
+			break
+		}
 		batch := protocol.ClientGame{
 			Lines: make([]string, 0),
 		}
 
 		for i := 0; i < c.config.Batch.Amount; i++ {
-			record, err := reader.Read()
+			record, err := reader.ReadString('\n')
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				log.Errorf("action: enviar_juegos | result: fail | client: %v | error: %v", c.config.ID, err)
+				log.Errorf("action: enviar_juegos | result: fail | client: %v | error csv: %v", c.config.ID, err)
 				return err
 			}
 
-			batch.Lines = append(batch.Lines, strings.Join(record, ","))
+			batch.Lines = append(batch.Lines, record)
 		}
 
 		if len(batch.Lines) == 0 {
@@ -105,16 +112,23 @@ func (c *Client) SendReviews(file *os.File) error {
 	defer file.Close()
 	log.Infof("action: enviar_reviews | result: in_progress | client: %v", c.config.ID)
 
-	reader := csv.NewReader(file)
-	_, _ = reader.Read()
+	reader := bufio.NewReader(file)
+	reader.ReadString('\n')
 
+	i := 0
 	for {
+		i++
+		if i > 50 {
+			break
+		}
+
+		println("SENDING REVIEWSSSS")
 		batch := protocol.ClientReview{
 			Lines: make([]string, 0),
 		}
 
 		for i := 0; i < c.config.Batch.Amount; i++ {
-			record, err := reader.Read()
+			record, err := reader.ReadString('\n')
 			if err == io.EOF {
 				break
 			}
@@ -123,12 +137,14 @@ func (c *Client) SendReviews(file *os.File) error {
 				return err
 			}
 
-			batch.Lines = append(batch.Lines, strings.Join(record, ","))
+			batch.Lines = append(batch.Lines, record)
 		}
 
 		if len(batch.Lines) == 0 {
 			break
 		}
+
+		println("SENDING REVIEWSSSS 2")
 
 		err := protocol.Send(c.conn, &batch)
 		if err != nil {

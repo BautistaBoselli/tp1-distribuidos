@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"errors"
 	"net"
 	"strconv"
@@ -149,10 +150,17 @@ func (s *Server) handleConnection(client *Client) {
 func (s *Server) handleGames() {
 	for game := range s.games {
 		for _, line := range game.Lines {
-			record := strings.Split(line, ",")
+			println("line", line)
+			reader := csv.NewReader(strings.NewReader(line))
+			record, err := reader.Read()
+			println("record", record)
+			if err != nil {
+				log.Errorf("Failed to read game line: %v", err)
+				continue
+			}
 			gameMsg := middleware.GameMsg{Game: middleware.NewGame(record), Last: false}
 
-			err := s.middleware.SendGameMsg(&gameMsg)
+			err = s.middleware.SendGameMsg(&gameMsg)
 			if err != nil {
 				log.Errorf("Failed to publish game message: %v", err)
 			}
@@ -172,7 +180,12 @@ func (s *Server) handleReviews() {
 
 	for review := range s.reviews {
 		for _, line := range review.Lines {
-			record := strings.Split(line, ",")
+			reader := csv.NewReader(strings.NewReader(line))
+			record, err := reader.Read()
+			if err != nil {
+				log.Errorf("Failed to read review line: %v", err)
+				continue
+			}
 			reviewBatch = append(reviewBatch, *middleware.NewReview(record))
 
 			log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
