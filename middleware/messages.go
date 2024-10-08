@@ -143,5 +143,5 @@ type Result struct {
 	QueryId             int
 	IsFragmentedMessage bool
 	IsFinalMessage      bool
-	Result              any
+	Payload              any
 }
