@@ -14,6 +14,7 @@ type Middleware struct {
 	shardingAmount int
 	conn           *amqp.Connection
 	channel        *amqp.Channel
+	reviewsQueue   *amqp.Queue
 }
 
 func NewMiddleware(shardingAmount int) (*Middleware, error) {
@@ -26,6 +27,11 @@ func NewMiddleware(shardingAmount int) (*Middleware, error) {
 	if err != nil {
 		return nil, err
 	}
+	// channel.Qos(
+	// 	5,     // prefetch count
+	// 	0,     // prefetch size
+	// 	false, // global
+	// )
 
 	middleware := &Middleware{conn: conn, channel: channel, shardingAmount: shardingAmount}
 

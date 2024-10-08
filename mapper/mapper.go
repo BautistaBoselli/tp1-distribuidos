@@ -86,7 +86,7 @@ func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
 			return nil
 		}
 
-		log.Infof("MAP GAME: %s", gameBatch.Game.Name)
+		log.Debugf("MAP GAME: %s", gameBatch.Game.Name)
 
 		writer := csv.NewWriter(m.gamesFile)
 
@@ -129,7 +129,7 @@ func (m *Mapper) consumeReviewsMessages() {
 
 	err = m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func()) error {
 		for _, review := range *reviewBatch {
-			log.Infof("MAP REVIEWS: %s", review.Text)
+			log.Debugf("MAP REVIEWS: %s", review.Text)
 
 			if _, err := file.Seek(0, 0); err != nil {
 				log.Errorf("action: reset file reader | result: fail")
@@ -149,7 +149,8 @@ func (m *Mapper) consumeReviewsMessages() {
 				}
 				if record[0] == review.AppId {
 					stats := middleware.NewStats(record, &review)
-					log.Infof("MAP STATS: %s", stats)
+					log.Debugf("MAP STATS: %s", stats)
+
 					err := m.middleware.SendStats(stats)
 					if err != nil {
 						log.Errorf("Failed to publish stats message: %v", err)
