@@ -13,7 +13,8 @@ const resultsBatchSize = 10
 type ReducerQuery5 struct {
 	middleware       *middleware.Middleware
 	pendingAnswers   int
-	totalReviews     int
+	totalGames       int
+	totalNegativeReviews     int
 	query5File       *os.File
 	query5FileWriter *csv.Writer
 }
@@ -28,7 +29,8 @@ func NewReducerQuery5(middleware *middleware.Middleware) (*ReducerQuery5, error)
 	return &ReducerQuery5{
 		middleware:       middleware,
 		pendingAnswers:   2, // por ahora hardcodeado indicando que son 2 nodos mandando
-		totalReviews:     0, // inicializa en 0
+		totalGames:       0, // inicializa en 0
+		totalNegativeReviews:     0, // inicializa en 0
 		query5File:       query5File,
 		query5FileWriter: csv.NewWriter(query5File),
 	}, nil
@@ -42,7 +44,7 @@ func (r *ReducerQuery5) Close() {
 func (r *ReducerQuery5) Run() {
 	defer r.Close()
 
-	resultsQueue, err := r.middleware.ListenResults("1") // esto despues va a ser el numero correspondiente de la query a la que este escuchando este reducer
+	resultsQueue, err := r.middleware.ListenResults("5") // esto despues va a ser el numero correspondiente de la query a la que este escuchando este reducer
 	if err != nil {
 		log.Fatalf("action: listen reviews| result: error | message: %s", err)
 		return
@@ -67,23 +69,27 @@ func (r *ReducerQuery5) Run() {
 }
 
 func (r *ReducerQuery5) processResult(result *middleware.Result) {
-	// r.totalReviews += result.Payload.
-	// r.query5FileWriter.Write([]string{strconv.Itoa(r.Result.AppId), s.Name, strconv.Itoa(s.Negatives)})
 
-	// test
 	switch result.Payload.(type) {
-	case *middleware.Stats:
-		stats := result.Payload.(*middleware.Stats)
-		r.totalReviews += stats.Negatives
-		r.query5FileWriter.Write([]string{strconv.Itoa(stats.AppId), stats.Name, strconv.Itoa(stats.Negatives)})
-		r.query5FileWriter.Flush()
+
+	case []*middleware.Stats:
+		stats := result.Payload.([]*middleware.Stats)
+
+		for _, stat := range stats {
+			r.totalGames += 1
+			r.totalNegativeReviews += stat.Negatives
+			r.query5FileWriter.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
+			r.query5FileWriter.Flush()
+		}
 	}
+
 }
 
 func (r *ReducerQuery5) sendFinalResult() {
 	queryFileReader := csv.NewReader(r.query5File)
 	resultsBuffer := make([]string, resultsBatchSize)
-	upperPercentile := r.totalReviews * 90 / 100
+	avgNegativeReviews := r.totalNegativeReviews / r.totalGames
+	upperPercentile := avgNegativeReviews * 90 / 100 // recien me doy cuenta que esto esta mal porque no estoy calculando el cuantil 90, sino que estoy calculando el 90% de la media
 
 	for {
 		stat, err := queryFileReader.Read()
@@ -107,12 +113,15 @@ func (r *ReducerQuery5) sendFinalResult() {
 		}
 
 		if len(resultsBuffer) == resultsBatchSize {
-			r.middleware.SendResult("5", &middleware.Result{
+			if err := r.middleware.SendResult("5", &middleware.Result{
 				QueryId:             5,
 				IsFragmentedMessage: false,
 				IsFinalMessage:      false,
 				Payload:             resultsBuffer,
-			})
+			}); err != nil {
+				log.Errorf("action: send result | result: error | message: %s", err)
+			}
+
 			resultsBuffer = make([]string, resultsBatchSize)
 		}
 	}
