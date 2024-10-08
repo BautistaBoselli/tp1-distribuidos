@@ -46,12 +46,13 @@ func (q *Query3) Run() {
 		return
 	}
 
-	statsQueue.Consume(func(message *middleware.Stats, ack func()) error {
-		q.processStats(message)
+	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
+		q.processStats(message.Stats)
 		ack()
-		q.sendResult()
 		return nil
 	})
+
+	q.sendResult()
 }
 
 func (q *Query3) processStats(message *middleware.Stats) {

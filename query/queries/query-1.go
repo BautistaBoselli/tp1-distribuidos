@@ -45,17 +45,13 @@ func (q *Query1) Run() {
 		return
 	}
 
-	gamesQueue.Consume(func(message *middleware.GameBatch, ack func()) error {
-		if message.Last {
-			q.sendResult(true)
-			ack()
-			return nil
-		}
-
+	gamesQueue.Consume(func(message *middleware.GameMsg, ack func()) error {
 		q.processGame(message.Game)
 		ack()
 		return nil
 	})
+
+	q.sendResult(true)
 }
 
 func (q *Query1) processGame(game *middleware.Game) {

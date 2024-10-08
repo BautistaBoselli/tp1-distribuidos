@@ -52,7 +52,7 @@ func NewGame(record []string) *Game {
 	}
 }
 
-type GameBatch struct {
+type GameMsg struct {
 	Game *Game
 	Last bool
 }
@@ -77,6 +77,11 @@ func NewReview(record []string) *Review {
 		Text:  record[textIndexReview],
 		Score: score,
 	}
+}
+
+type ReviewsBatch struct {
+	Reviews []Review
+	Last    int
 }
 
 type Stats struct {
@@ -143,4 +148,9 @@ func NewStats(game []string, review *Review) *Stats {
 		Positives: 0,
 		Negatives: 1,
 	}
+}
+
+type StatsMsg struct {
+	Stats *Stats
+	Last  bool
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
 )
@@ -62,30 +61,14 @@ func (m *Mapper) Close() error {
 func (m *Mapper) Run() {
 	defer m.Close()
 
-	wg := sync.WaitGroup{}
-
-	wg.Add(shardingAmount)
-	go m.consumeGameMessages(&wg)
-	wg.Wait()
-
+	m.consumeGameMessages()
 	m.consumeReviewsMessages()
-
-	// send stats to stats pubsub
-
-	select {}
-
 }
 
-func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
+func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
-	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameBatch, ack func()) error {
-		if gameBatch.Last {
-			wg.Done()
-			ack()
-			return nil
-		}
-
+	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameMsg, ack func()) error {
 		log.Debugf("MAP GAME: %s", gameBatch.Game.Name)
 
 		writer := csv.NewWriter(m.gamesFile)
@@ -127,8 +110,8 @@ func (m *Mapper) consumeReviewsMessages() {
 
 	reader := csv.NewReader(file)
 
-	err = m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func()) error {
-		for _, review := range *reviewBatch {
+	err = m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsBatch, ack func()) error {
+		for _, review := range reviewBatch.Reviews {
 			log.Debugf("MAP REVIEWS: %s", review.Text)
 
 			if _, err := file.Seek(0, 0); err != nil {
@@ -140,7 +123,6 @@ func (m *Mapper) consumeReviewsMessages() {
 				record, err := reader.Read()
 				if err == io.EOF {
 					log.Errorf("action: crear_stats | result: fail")
-
 					break
 				}
 				if err != nil {
@@ -151,7 +133,7 @@ func (m *Mapper) consumeReviewsMessages() {
 					stats := middleware.NewStats(record, &review)
 					log.Debugf("MAP STATS: %s", stats)
 
-					err := m.middleware.SendStats(stats)
+					err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
 					if err != nil {
 						log.Errorf("Failed to publish stats message: %v", err)
 					}

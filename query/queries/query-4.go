@@ -46,11 +46,13 @@ func (q *Query4) Run() {
 		return
 	}
 
-	statsQueue.Consume(func(message *middleware.Stats, ack func()) error {
-		q.processStats(message)
+	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
+		q.processStats(message.Stats)
 		ack()
 		return nil
 	})
+
+	q.sendResultFinal()
 }
 
 func (q *Query4) processStats(message *middleware.Stats) {
@@ -67,6 +69,10 @@ func (q *Query4) processStats(message *middleware.Stats) {
 
 func (q *Query4) sendResult(message *middleware.Stats) {
 	log.Infof("Query 4 [PARTIAL]: %s", message.Name)
+}
+
+func (q *Query4) sendResultFinal() {
+	log.Infof("Query 4 [FINAL]")
 }
 
 func isEnglish(message *middleware.Stats) bool {

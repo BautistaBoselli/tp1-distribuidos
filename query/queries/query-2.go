@@ -36,7 +36,7 @@ func (q *Query2) Run() {
 		return
 	}
 
-	gamesQueue.Consume(func(message *middleware.GameBatch, ack func()) error {
+	gamesQueue.Consume(func(message *middleware.GameMsg, ack func()) error {
 		if message.Last {
 			q.sendResult()
 			ack()
@@ -47,6 +47,8 @@ func (q *Query2) Run() {
 		ack()
 		return nil
 	})
+
+	q.sendResult()
 }
 
 func (q *Query2) processGame(game *middleware.Game) {

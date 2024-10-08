@@ -35,7 +35,7 @@ func (r *ReducerQuery1) Run() {
 		return
 	}
 
-	resultsQueue.Consume(func(msg *middleware.GameBatch, ack func()) error {
+	resultsQueue.Consume(func(msg *middleware.GameMsg, ack func()) error {
 		// r.processResult(&game)
 		log.Infof("Game: %v", msg.Game)
 
