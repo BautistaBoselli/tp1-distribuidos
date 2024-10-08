@@ -1,7 +1,7 @@
 app_id,review_text,review_score
 1001,Buen concepto pero necesita más contenido.,0
 1001,Me encanta la atmósfera del juego. Muy inmersivo.,1
-1001,Demasiados bugs. Necesita más pulido.,0
+1001,Demasiados bugs. Necesita más pulido.,1
 1005,Acción intensa y una historia cyberpunk cautivadora.,1
 1002,Una experiencia visual única. La historia es fascinante.,1
 1002,Corto pero dulce. Valdría la pena a mitad de precio.,1
@@ -15,14 +15,15 @@ app_id,review_text,review_score
 1004,Necesita más variedad en los elementos y enemigos.,1
 1005,Gráficos impresionantes pero la historia es predecible.,1
 1005,Problemas de equilibrio en las armas. Necesita parches.,0
-1006,Rompecabezas ingenioso con mecánicas de viaje en el tiempo únicas.,1
-1006,Corto pero dulce. Perfecto para los amantes de los puzzles.,1
+1003,Bugs frecuentes arruinan la experiencia.,0
 1006,Demasiado fácil. Se queda corto en contenido.,0
 1006,Un concepto interesante pero la ejecución podría mejorar.,1
 1007,Una epopeya medieval con estrategia profunda y RPG.,1
 1007,Bugs frecuentes y problemas de rendimiento.,0
 1007,La mejor combinación de estrategia y RPG que he jugado.,1
 1007,DLCs caros. El juego base se siente incompleto.,0
+1003,Bugs frecuentes arruinan la experiencia.,0
+1003,Bugs frecuentes arruinan la experiencia.,0
 1008,Diversión arcade pura. Trae recuerdos de la vieja escuela.,1
 1008,Buen juego pero necesita más pistas y modos.,1
 1008,El multijugador local es increíblemente divertido.,1
@@ -31,11 +32,12 @@ app_id,review_text,review_score
 1009,Necesita más variedad de zombies y armas.,1
 1004,Adictivo y desafiante. Perfecto para sesiones cortas.,1
 1009,Problemas de conexión en el modo cooperativo.,0
+1003,Bugs frecuentes arruinan la experiencia.,0
 1001,Un shooter indie impresionante. Gráficos increíbles y jugabilidad fluida.,1
 1005,El multijugador es divertido pero necesita más mapas.,1
 1009,Una experiencia de supervivencia zombie sólida.,1
 1010,Una experiencia creativa única. Perfecto para relajarse.,1
-1010,Faltan algunas herramientas básicas de edición.,0
+1010,Faltan algunas herramientas básicas de edición.,1
 1010,Una excelente manera de expresar la creatividad.,1
-1010,Interfaz confusa. Necesita un mejor tutorial.,0
+1010,Interfaz confusa. Necesita un mejor tutorial.,1
 1002,Una joya indie. Altamente recomendado para fans del género.,1

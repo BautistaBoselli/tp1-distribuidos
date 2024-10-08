@@ -2,8 +2,11 @@ package queries
 
 import (
 	"fmt"
+	"slices"
 	"tp1-distribuidos/middleware"
 )
+
+const QUERY2_TOP_SIZE = 10
 
 type Query2 struct {
 	middleware *middleware.Middleware
@@ -16,7 +19,7 @@ func NewQuery2(m *middleware.Middleware, shardId int) *Query2 {
 	return &Query2{
 		middleware: m,
 		shardId:    shardId,
-		topPlayed:  make([]middleware.Game, 0, 10),
+		topPlayed:  make([]middleware.Game, 0, QUERY2_TOP_SIZE),
 	}
 }
 
@@ -47,6 +50,10 @@ func (q *Query2) Run() {
 }
 
 func (q *Query2) processGame(game *middleware.Game) {
+	if game.Year < 2010 || game.Year > 2019 || !slices.Contains(game.Genres, "Indie") {
+		return
+	}
+
 	// Find the position where the new game should be inserted
 	insertIndex := len(q.topPlayed)
 	for i, topGame := range q.topPlayed {
@@ -56,15 +63,15 @@ func (q *Query2) processGame(game *middleware.Game) {
 		}
 	}
 
-	// If the game should be in the top 10
-	if insertIndex < 10 {
+	// If the game should be in the top TOP_SIZE
+	if insertIndex < QUERY2_TOP_SIZE {
 		q.topPlayed = append(q.topPlayed, middleware.Game{})
 		copy(q.topPlayed[insertIndex+1:], q.topPlayed[insertIndex:])
 		q.topPlayed[insertIndex] = *game
 	}
 
-	if len(q.topPlayed) > 10 {
-		q.topPlayed = q.topPlayed[:10]
+	if len(q.topPlayed) > QUERY2_TOP_SIZE {
+		q.topPlayed = q.topPlayed[:QUERY2_TOP_SIZE]
 	}
 
 }

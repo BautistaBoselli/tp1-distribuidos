@@ -94,6 +94,12 @@ func main() {
 	case 2:
 		log.Info("Running query 2")
 		query = queries.NewQuery2(middleware, env.ShardId)
+	case 3:
+		log.Info("Running query 3")
+		query = queries.NewQuery3(middleware, env.ShardId)
+	case 4:
+		log.Info("Running query 4")
+		query = queries.NewQuery4(middleware, env.ShardId)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)

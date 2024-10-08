@@ -12,13 +12,23 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      mapper:
+      mapper-1:
+        condition: service_started
+      mapper-2:
         condition: service_started
       queries-1-1:
         condition: service_started
 
-  mapper:
-    container_name: mapper
+  mapper-1:
+    container_name: mapper-1
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  mapper-2:
+    container_name: mapper-2
     image: mapper:latest
     entrypoint: /mapper
     depends_on:
@@ -91,6 +101,59 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+
+  queries-3-0:
+    container_name: queries-3-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=3
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        
+  queries-3-1:
+    container_name: queries-3-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=3
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+ 
+
+  queries-4-0:
+    container_name: queries-4-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=4
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        
+  queries-4-1:
+    container_name: queries-4-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=4
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
  
 
   rabbitmq:
@@ -105,7 +168,7 @@ services:
       interval: 2s
       timeout: 1s
       retries: 5
-      start_period: 5s
+      start_period: 3s
     environment:
       RABBITMQ_DEFAULT_LOG_LEVEL: error
       RABBITMQ_LOG_LEVELS: "connection=error"
