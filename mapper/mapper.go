@@ -69,8 +69,6 @@ func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
 	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameMsg, ack func()) error {
-		log.Debugf("MAP GAME: %d", gameBatch.Game.AppId)
-
 		writer := csv.NewWriter(m.gamesFile)
 
 		gameStats := []string{
@@ -107,7 +105,12 @@ func (m *Mapper) consumeReviewsMessages() {
 		return
 	}
 	defer file.Close()
+	i := 0
 	err = m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsBatch, ack func()) error {
+		i += len(reviewBatch.Reviews)
+		if i%1000 == 0 {
+			log.Infof("Processed %d reviews", i)
+		}
 		for _, review := range reviewBatch.Reviews {
 			if _, err := file.Seek(0, 0); err != nil {
 				log.Errorf("action: reset file reader | result: fail")
@@ -128,7 +131,7 @@ func (m *Mapper) consumeReviewsMessages() {
 				}
 				if record[0] == review.AppId {
 					stats := middleware.NewStats(record, &review)
-					log.Debugf("MAP STATS: %d", stats.AppId)
+					// log.Debugf("MAP STATS: %d", stats.AppId)
 
 					err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
 					if err != nil {

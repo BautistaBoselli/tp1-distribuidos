@@ -53,7 +53,7 @@ func (m *Middleware) DeclareReviewsQueue() error {
 		false,     // no-wait
 		nil,       // arguments
 	)
-
+	log.Infof("Declared queue: %v", queue.Name)
 	m.reviewsQueue = &queue
 
 	if err != nil {
@@ -93,7 +93,12 @@ func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
 }
 
 func (m *Middleware) SendGameMsg(message *GameMsg) error {
-	shardId := message.Game.AppId % m.shardingAmount
+	totalInt := 0
+	for _, char := range strconv.Itoa(message.Game.AppId) {
+		int, _ := strconv.Atoi(string(char))
+		totalInt += int
+	}
+	shardId := totalInt % m.shardingAmount
 	stringShardId := strconv.Itoa(shardId)
 
 	return m.PublishExchange("games", stringShardId, message)
@@ -158,14 +163,17 @@ func (m *Middleware) SendReviewBatch(message *ReviewsBatch) error {
 
 func (m Middleware) SendReviewsFinished(last int) error {
 	if last == m.shardingAmount+1 {
+		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED")
 		return m.SendStatsFinished()
 	}
+	log.Infof("Another mapper finished %d", last)
 	return m.PublishQueue(m.reviewsQueue, &ReviewsBatch{Last: last})
 }
 
 type ReviewsQueue struct {
 	queue      *amqp.Queue
 	middleware *Middleware
+	finished   bool
 }
 
 func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func()) error) error {
@@ -185,9 +193,17 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func())
 		}
 
 		if res.Last > 0 {
-			rq.middleware.SendReviewsFinished(res.Last + 1)
-			msg.Ack(false)
-			break
+			log.Infof("Received Last message: %v", res.Last)
+			if !rq.finished {
+				rq.middleware.SendReviewsFinished(res.Last + 1)
+				rq.finished = true
+				msg.Ack(false)
+				continue
+			} else {
+				log.Infof("Received Last again, ignoring and NACKing...")
+				msg.Nack(false, true)
+				continue
+			}
 		}
 
 		callback(&res, func() {
@@ -199,9 +215,13 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func())
 }
 
 func (m *Middleware) SendStats(message *StatsMsg) error {
-	shardId := message.Stats.AppId % m.shardingAmount
-	stringShardId := strconv.Itoa(shardId)
-	topic := stringShardId + "." + strings.Join(message.Stats.Genres, ".")
+	totalInt := 0
+	for _, char := range strconv.Itoa(message.Stats.AppId) {
+		int, _ := strconv.Atoi(string(char))
+		totalInt += int
+	}
+	shardId := totalInt % m.shardingAmount
+	topic := strconv.Itoa(shardId) + "." + strings.Join(message.Stats.Genres, ".")
 
 	return m.PublishExchange("stats", topic, message)
 }
@@ -210,6 +230,7 @@ func (m *Middleware) SendStatsFinished() error {
 	for shardId := range m.shardingAmount {
 		stringShardId := strconv.Itoa(shardId)
 		topic := stringShardId + ".Indie.Action"
+		log.Infof("Sending stats finished to shard %s", topic)
 		err := m.PublishExchange("stats", topic, &StatsMsg{Stats: &Stats{}, Last: true})
 		if err != nil {
 			log.Errorf("Failed to send stats finished to shard %s: %v", topic, err)

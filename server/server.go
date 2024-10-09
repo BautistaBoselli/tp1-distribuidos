@@ -120,14 +120,13 @@ func (s *Server) handleConnection(client *Client) {
 		switch msg.MessageType {
 
 		case protocol.MessageTypeGame:
-			log.Infof("action: receive_games | result: success")
 			game := protocol.ClientGame{}
 			game.Decode(msg.Data)
 			s.games <- game
 
 		case protocol.MessageTypeReview:
-			log.Infof("action: receive_reviews | result: success")
 			if !s.gamesFinished {
+				log.Infof("action: receive_games | result: success")
 				s.gamesFinished = true
 				close(s.games)
 			}
@@ -136,6 +135,7 @@ func (s *Server) handleConnection(client *Client) {
 			s.reviews <- review
 
 		case protocol.MessageTypeAllSent:
+			log.Infof("action: receive_reviews | result: success")
 			log.Infof("action: receive_all_sent | result: success")
 			s.reviewsFinished = true
 			close(s.reviews)

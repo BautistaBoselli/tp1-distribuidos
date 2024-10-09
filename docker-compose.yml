@@ -16,24 +16,22 @@ services:
         condition: service_started
       mapper-2:
         condition: service_started
+      queries-1-0:
+        condition: service_started
       queries-1-1:
         condition: service_started
-
-  mapper-1:
-    container_name: mapper-1
-    image: mapper:latest
-    entrypoint: /mapper
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-
-  mapper-2:
-    container_name: mapper-2
-    image: mapper:latest
-    entrypoint: /mapper
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
+      queries-2-0:
+        condition: service_started
+      queries-2-1:
+        condition: service_started
+      queries-3-0:
+        condition: service_started
+      queries-3-1:
+        condition: service_started
+      queries-4-0:
+        condition: service_started
+      queries-4-1:
+        condition: service_started
       
   client1:
     container_name: client1
@@ -50,6 +48,23 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
+
+  mapper-1:
+    container_name: mapper-1
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  mapper-2:
+    container_name: mapper-2
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
 
   queries-1-0:
     container_name: queries-1-0
@@ -127,7 +142,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
- 
 
   queries-4-0:
     container_name: queries-4-0

@@ -45,12 +45,11 @@ func NewGame(record []string) *Game {
 		Name:        record[nameIndex],
 		Year:        year,
 		Genres:      strings.Split(record[genreIndex], ","),
-		Windows:     record[windowsIndex] == "true",
-		Mac:         record[macIndex] == "true",
-		Linux:       record[linuxIndex] == "true",
+		Windows:     record[windowsIndex] == "True",
+		Mac:         record[macIndex] == "True",
+		Linux:       record[linuxIndex] == "True",
 		AvgPlaytime: avgPlaytime,
 	}
-	println(game)
 	return game
 }
 

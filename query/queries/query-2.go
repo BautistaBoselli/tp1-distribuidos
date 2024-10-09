@@ -82,6 +82,6 @@ func (q *Query2) sendResult() {
 	log.Infof("Query 2 [FINAL]")
 
 	for i, game := range q.topPlayed {
-		log.Debugf("Top %d game: %s (%.2f)", i+1, game.Name, game.AvgPlaytime)
+		log.Debugf("Top %d game: %s (%d)", i+1, game.Name, game.AvgPlaytime)
 	}
 }

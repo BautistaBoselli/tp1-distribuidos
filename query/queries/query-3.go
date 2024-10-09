@@ -8,7 +8,7 @@ import (
 	"tp1-distribuidos/shared"
 )
 
-const QUERY3_TOP_SIZE = 2
+const QUERY3_TOP_SIZE = 5
 
 type Query3 struct {
 	middleware *middleware.Middleware
