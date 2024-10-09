@@ -10,6 +10,12 @@ import (
 )
 
 func (m *Middleware) Declare() error {
+	gob.Register(Query1Result{})
+	gob.Register(Query2Result{})
+	gob.Register(Query3Result{})
+	gob.Register(Query4Result{})
+	gob.Register(Query5Result{})
+
 	if err := m.DeclareGamesExchange(); err != nil {
 		return err
 	}

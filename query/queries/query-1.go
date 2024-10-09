@@ -74,10 +74,26 @@ func (q *Query1) processGame(game *middleware.Game) {
 func (q *Query1) sendResult(final bool) {
 	q.result.Final = final
 
+	result := &middleware.Result{
+		QueryId:             1,
+		IsFinalMessage:      final,
+		IsFragmentedMessage: false,
+		Payload:             q.result,
+	}
+
 	if q.result.Final {
 		log.Infof("Query 1 [FINAL] - Shard %d - Windows: %d, Linux: %d, Mac: %d", q.shardId, q.result.Windows, q.result.Linux, q.result.Mac)
+		
+		if err := q.middleware.SendResult("1", result); err != nil {
+			log.Errorf("Failed to send result: %v", err)
+		}
+
 	} else {
 		log.Infof("Query 1 [PARTIAL] - Shard %d - Windows: %d, Linux: %d, Mac: %d", q.shardId, q.result.Windows, q.result.Linux, q.result.Mac)
+
+		if err := q.middleware.SendResult("1", result); err != nil {
+			log.Errorf("Failed to send result: %v", err)
+		}	
 	}
 
 	q.result = middleware.Query1Result{

@@ -80,7 +80,20 @@ func (q *Query2) processGame(game *middleware.Game) {
 
 func (q *Query2) sendResult() {
 	log.Infof("Query 2 [FINAL]")
+	query2Result := middleware.Query2Result{
+		TopGames: q.topPlayed,
+	}
 
+	result := middleware.Result{
+		QueryId:             2,
+		IsFinalMessage:      true,
+		IsFragmentedMessage: false,
+		Payload:             query2Result,
+	}
+
+	if err := q.middleware.SendResult("2", &result); err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
 	for i, game := range q.topPlayed {
 		log.Debugf("Top %d game: %s (%d)", i+1, game.Name, game.AvgPlaytime)
 	}

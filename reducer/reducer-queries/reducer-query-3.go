@@ -4,7 +4,7 @@ import (
 	"tp1-distribuidos/middleware"
 )
 
-const topStatsSize = 10
+const topStatsSize = 5
 
 type ReducerQuery3 struct {
 	middleware     *middleware.Middleware
@@ -15,7 +15,7 @@ type ReducerQuery3 struct {
 func NewReducerQuery3(middleware *middleware.Middleware) *ReducerQuery3 {
 	return &ReducerQuery3{
 		middleware:     middleware,
-		pendingAnswers: 5, // despues cambiar por middleware.ShardingAmount o algo que indique los nodos
+		pendingAnswers: 2, // despues cambiar por middleware.ShardingAmount o algo que indique los nodos
 	}
 }
 
@@ -28,7 +28,7 @@ func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []
 	i := 0
 	j := 0
 
-	for i < len(topStats1) && j < len(topStats2) {
+	for i < len(topStats1) && j < len(topStats2) && len(merged) < topStatsSize {
 		if topStats1[i].Positives > topStats2[j].Positives {
 			merged = append(merged, topStats1[i])
 			i++
@@ -36,24 +36,14 @@ func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []
 			merged = append(merged, topStats2[j])
 			j++
 		}
-
-		if len(merged) == topStatsSize {
-			break
-		}
 	}
 
-	for i < len(topStats1) {
-		if len(merged) == topStatsSize {
-			break
-		}
+	for i < len(topStats1) && len(merged) < topStatsSize {
 		merged = append(merged, topStats1[i])
 		i++
 	}
 
-	for j < len(topStats2) {
-		if len(merged) == topStatsSize {
-			break
-		}
+	for j < len(topStats2) && len(merged) < topStatsSize {
 		merged = append(merged, topStats2[j])
 		j++
 	}
@@ -70,7 +60,8 @@ func (r *ReducerQuery3) Run() {
 		return
 	}
 
-	resultsQueue.Consume(func(result *middleware.Result, ack func()) error { // cambiar despues por stats
+	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
+		log.Infof("Result: %v", result)
 		r.processResult(result)
 
 		ack()
@@ -89,25 +80,29 @@ func (r *ReducerQuery3) Run() {
 
 func (r *ReducerQuery3) processResult(result *middleware.Result) {
 	switch result.Payload.(type) {
-	case []middleware.Stats:
-		r.TopStats = r.mergeTopStats(r.TopStats, result.Payload.([]middleware.Stats))
+	case middleware.Query3Result:
+		r.TopStats = r.mergeTopStats(r.TopStats, result.Payload.(middleware.Query3Result).TopStats)
 	}
 }
 
 func (r *ReducerQuery3) SendResult() {
-	query3Result := &middleware.Query3Result{
-		TopStats: r.TopStats,
+	// query3Result := &middleware.Query3Result{
+	// 	TopStats: r.TopStats,
+	// }
+
+	// result := &middleware.Result{
+	// 	QueryId:             3,
+	// 	IsFragmentedMessage: false,
+	// 	IsFinalMessage:      true,
+	// 	Payload:             query3Result,
+	// }
+
+	for i, stat := range r.TopStats {
+		log.Infof("Top %d Stat: %v", i + 1, stat)
 	}
 
-	result := &middleware.Result{
-		QueryId:             3,
-		IsFragmentedMessage: false,
-		IsFinalMessage:      true,
-		Payload:             query3Result,
-	}
-
-	err := r.middleware.SendResult("", result)
-	if err != nil {
-		log.Errorf("Failed to send result: %v", err)
-	}
+	// err := r.middleware.SendResult("", result)
+	// if err != nil {
+	// 	log.Errorf("Failed to send result: %v", err)
+	// }
 }

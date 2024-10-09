@@ -15,7 +15,7 @@ type ReducerQuery2 struct {
 func NewReducerQuery2(middleware *middleware.Middleware) *ReducerQuery2 {
 	return &ReducerQuery2{
 		middleware:     middleware,
-		pendingAnswers: 5, // despues cambiar por middleware.ShardingAmount o algo que indique los nodos
+		pendingAnswers: 2, // despues cambiar por middleware.ShardingAmount o algo que indique los nodos
 	}
 }
 
@@ -28,7 +28,7 @@ func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []m
 	i := 0
 	j := 0
 
-	for i < len(topGames1) && j < len(topGames2) {
+	for i < len(topGames1) && j < len(topGames2) && len(merged) < topGamesSize {
 		if topGames1[i].AvgPlaytime > topGames2[j].AvgPlaytime {
 			merged = append(merged, topGames1[i])
 			i++
@@ -37,23 +37,14 @@ func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []m
 			j++
 		}
 
-		if len(merged) == topGamesSize {
-			break
-		}
 	}
 
-	for i < len(topGames1) {
-		if len(merged) == topGamesSize {
-			break
-		}
+	for i < len(topGames1) && len(merged) < topGamesSize {
 		merged = append(merged, topGames1[i])
 		i++
 	}
 
-	for j < len(topGames2) {
-		if len(merged) == topGamesSize {
-			break
-		}
+	for j < len(topGames2) && len(merged) < topGamesSize{
 		merged = append(merged, topGames2[j])
 		j++
 	}
@@ -71,6 +62,7 @@ func (r *ReducerQuery2) Run() {
 	}
 
 	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
+		log.Infof("Top games: %v", result.Payload.(middleware.Query2Result))
 		r.processResult(result)
 
 		ack()
@@ -89,25 +81,30 @@ func (r *ReducerQuery2) Run() {
 
 func (r *ReducerQuery2) processResult(result *middleware.Result) {
 	switch result.Payload.(type) {
-	case []middleware.Game:
-		r.TopGames = r.mergeTopGames(r.TopGames, result.Payload.([]middleware.Game))
+	case middleware.Query2Result:
+		r.TopGames = r.mergeTopGames(r.TopGames, result.Payload.(middleware.Query2Result).TopGames)
 	}
 }
 
 func (r *ReducerQuery2) SendResult() {
-	query2Result := &middleware.Query2Result{
-		TopGames: r.TopGames,
-	}
+	// query2Result := &middleware.Query2Result{
+	// 	TopGames: r.TopGames,
+	// }
 
-	result := &middleware.Result{
-		QueryId:             2,
-		IsFinalMessage:      true,
-		IsFragmentedMessage: false,
-		Payload:             query2Result,
-	}
+	// result := &middleware.Result{
+	// 	QueryId:             2,
+	// 	IsFinalMessage:      true,
+	// 	IsFragmentedMessage: false,
+	// 	Payload:             query2Result,
+	// }
 
-	err := r.middleware.SendResult("2", result)
-	if err != nil {
-		log.Errorf("Failed to send result: %v", err)
+	// log.Infof("Sending result: %v", result)
+	for i, game := range r.TopGames {
+		log.Infof("Top %d Game: %v", i + 1, game)
 	}
+	// log.Infof("Top Games: %v", r.TopGames)
+	// err := r.middleware.SendResult("2", result)
+	// if err != nil {
+	// 	log.Errorf("Failed to send result: %v", err)
+	// }
 }

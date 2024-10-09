@@ -68,4 +68,20 @@ func (q *Query3) sendResult() {
 	for _, game := range top {
 		log.Infof("Game: %s (Positives: %d, Negatives: %d)", game.Name, game.Positives, game.Negatives)
 	}
+
+	query3Result := middleware.Query3Result{
+		TopStats: top,
+	}
+
+	result := &middleware.Result{
+		Payload:             query3Result,
+		IsFinalMessage:      true,
+		QueryId:             3,
+		IsFragmentedMessage: false,
+	}
+
+	if err := q.middleware.SendResult("3", result); err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
+
 }

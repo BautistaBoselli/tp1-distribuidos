@@ -147,7 +147,7 @@ type Result struct {
 	QueryId             int
 	IsFragmentedMessage bool
 	IsFinalMessage      bool
-	Payload             any
+	Payload             interface{}
 }
 
 type StatsMsg struct {

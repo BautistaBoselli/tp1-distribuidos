@@ -10,9 +10,9 @@ var log = logging.MustGetLogger("log")
 
 type ReducerQuery1 struct {
 	middleware *middleware.Middleware
-	Windows int64
-	Mac     int64
-	Linux   int64
+	Windows    int64
+	Mac        int64
+	Linux      int64
 }
 
 func NewReducerQuery1(middleware *middleware.Middleware) *ReducerQuery1 {
@@ -69,8 +69,10 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 		IsFinalMessage:      isFinalMessage,
 	}
 
-	err := r.middleware.SendResult("1", result)
-	if err != nil {
-		log.Errorf("Failed to send result: %v", err)
-	}
+	log.Infof("Reducer Query 1: Windows: %d, Mac: %d, Linux: %d", r.Windows, r.Mac, r.Linux)
+	log.Debug(result)
+	// err := r.middleware.SendResult("1", result)
+	// if err != nil {
+	// 	log.Errorf("Failed to send result: %v", err)
+	// }
 }
