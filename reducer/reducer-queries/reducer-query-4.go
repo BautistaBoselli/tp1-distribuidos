@@ -39,25 +39,17 @@ func (r *ReducerQuery4) Run() {
 
 func (r *ReducerQuery4) processResult(result *middleware.Result) {
 	switch result.Payload.(type) {
-	case string:
-		r.sendResult(result.Payload.(string), result.IsFinalMessage) // aca mandamos el juego porque la query 4 es un pasamanos nada mas
+	case middleware.Query4Result:
+		// r.sendResult(result.Payload.(string), result.IsFinalMessage) // aca mandamos el juego porque la query 4 es un pasamanos nada mas
+		r.sendResult(result)
 	}
 }
 
-func (r *ReducerQuery4) sendResult(game string, isFinalMessage bool) {
-	query4Result := &middleware.Query4Result{
-		Game: game,
-	}
+func (r *ReducerQuery4) sendResult(result *middleware.Result) {
+	// err := r.middleware.SendResult("", result)
+	// if err != nil {
+	// 	log.Errorf("Failed to send result: %v", err)
+	// }
 
-	result := &middleware.Result{
-		QueryId:             4,
-		IsFinalMessage:      isFinalMessage,
-		IsFragmentedMessage: false,
-		Payload:             query4Result,
-	}
-
-	err := r.middleware.SendResult("", result)
-	if err != nil {
-		log.Errorf("Failed to send result: %v", err)
-	}
+	log.Infof("Reducer Game: %v", result.Payload.(middleware.Query4Result).Game)
 }

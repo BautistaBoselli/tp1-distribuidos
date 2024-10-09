@@ -69,10 +69,33 @@ func (q *Query4) processStats(message *middleware.Stats) {
 
 func (q *Query4) sendResult(message *middleware.Stats) {
 	log.Infof("Query 4 [PARTIAL]: %s", message.Name)
+	query4Result := middleware.Query4Result{
+		Game: message.Name,
+	}
+
+	result := &middleware.Result{
+		QueryId:             4,
+		Payload:             query4Result,
+		IsFragmentedMessage: false,
+		IsFinalMessage:      false,
+	}
+
+	if err := q.middleware.SendResult("4", result); err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
 }
 
 func (q *Query4) sendResultFinal() {
 	log.Infof("Query 4 [FINAL]")
+	result := &middleware.Result{
+		QueryId:             4,
+		IsFinalMessage:      true,
+		IsFragmentedMessage: false,
+	}
+
+	if err := q.middleware.SendResult("4", result); err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
 }
 
 func isEnglish(message *middleware.Stats) bool {
