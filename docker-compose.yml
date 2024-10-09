@@ -12,19 +12,27 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      mapper:
+      mapper-1:
         condition: service_started
-
-  mapper:
-    container_name: mapper
-    image: mapper:latest
-    entrypoint: /mapper
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
+      mapper-2:
+        condition: service_started
+      queries-1-0:
+        condition: service_started
+      queries-1-1:
+        condition: service_started
+      queries-2-0:
+        condition: service_started
+      queries-2-1:
+        condition: service_started
+      queries-3-0:
+        condition: service_started
+      queries-3-1:
+        condition: service_started
+      queries-4-0:
+        condition: service_started
+      queries-4-1:
+        condition: service_started
       
-
-
   client1:
     container_name: client1
     image: client:latest
@@ -33,13 +41,134 @@ services:
       - CLI_ID=1
     volumes:
       - ./client.yml:/config.yml
-      - ./datasets/games.csv:/games.csv
-      - ./datasets/reviews.csv:/reviews.csv
+      - ../datasets/games_s.csv:/games.csv
+      - ../datasets/reviews_s.csv:/reviews.csv
     depends_on:
       server:
         condition: service_started
       rabbitmq:
         condition: service_healthy
+
+  mapper-1:
+    container_name: mapper-1
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  mapper-2:
+    container_name: mapper-2
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+
+  queries-1-0:
+    container_name: queries-1-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=1
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  queries-1-1:
+    container_name: queries-1-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=1
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  queries-2-0:
+    container_name: queries-2-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=2
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        
+  queries-2-1:
+    container_name: queries-2-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=2
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  queries-3-0:
+    container_name: queries-3-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=3
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        
+  queries-3-1:
+    container_name: queries-3-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=3
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  queries-4-0:
+    container_name: queries-4-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=4
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        
+  queries-4-1:
+    container_name: queries-4-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=4
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+ 
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -53,7 +182,7 @@ services:
       interval: 2s
       timeout: 1s
       retries: 5
-      start_period: 5s
+      start_period: 3s
     environment:
       RABBITMQ_DEFAULT_LOG_LEVEL: error
       RABBITMQ_LOG_LEVELS: "connection=error"

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"errors"
 	"net"
 	"strconv"
@@ -19,9 +20,14 @@ type LogConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+type ShardingConfig struct {
+	Amount int `mapstructure:"amount"`
+}
+
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
-	Log    LogConfig    `mapstructure:"log"`
+	Server   ServerConfig   `mapstructure:"server"`
+	Log      LogConfig      `mapstructure:"log"`
+	Sharding ShardingConfig `mapstructure:"sharding"`
 }
 
 type Server struct {
@@ -31,11 +37,11 @@ type Server struct {
 	gamesFinished   bool
 	reviews         chan protocol.ClientReview
 	reviewsFinished bool
-	config          *ServerConfig
+	config          *Config
 }
 
-func NewServer(config *ServerConfig) (*Server, error) {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", config.Address)
+func NewServer(config *Config) (*Server, error) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", config.Server.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +51,7 @@ func NewServer(config *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	middleware, err := middleware.NewMiddleware()
+	middleware, err := middleware.NewMiddleware(config.Sharding.Amount)
 	if err != nil {
 		return nil, err
 	}
@@ -114,14 +120,13 @@ func (s *Server) handleConnection(client *Client) {
 		switch msg.MessageType {
 
 		case protocol.MessageTypeGame:
-			log.Infof("action: receive_games | result: success")
 			game := protocol.ClientGame{}
 			game.Decode(msg.Data)
 			s.games <- game
 
 		case protocol.MessageTypeReview:
-			log.Infof("action: receive_reviews | result: success")
 			if !s.gamesFinished {
+				log.Infof("action: receive_games | result: success")
 				s.gamesFinished = true
 				close(s.games)
 			}
@@ -130,6 +135,7 @@ func (s *Server) handleConnection(client *Client) {
 			s.reviews <- review
 
 		case protocol.MessageTypeAllSent:
+			log.Infof("action: receive_reviews | result: success")
 			log.Infof("action: receive_all_sent | result: success")
 			s.reviewsFinished = true
 			close(s.reviews)
@@ -144,21 +150,24 @@ func (s *Server) handleConnection(client *Client) {
 func (s *Server) handleGames() {
 	for game := range s.games {
 		for _, line := range game.Lines {
-			record := strings.Split(line, ",")
-			gameBatch := middleware.GameBatch{Game: middleware.NewGame(record), Last: false}
+			reader := csv.NewReader(strings.NewReader(line))
+			record, err := reader.Read()
+			if err != nil {
+				log.Errorf("Failed to read game error: %v", err)
+				continue
+			}
+			gameMsg := middleware.GameMsg{Game: middleware.NewGame(record), Last: false}
 
-			err := s.middleware.SendGameBatch(&gameBatch)
+			err = s.middleware.SendGameMsg(&gameMsg)
 			if err != nil {
 				log.Errorf("Failed to publish game message: %v", err)
 			}
 		}
 	}
 
-	gameBatch := middleware.GameBatch{Game: &middleware.Game{}, Last: true}
-
-	err := s.middleware.SendGameBatch(&gameBatch)
+	err := s.middleware.SendGameFinished()
 	if err != nil {
-		log.Errorf("Failed to publish game message: %v", err)
+		log.Errorf("Failed to publish game finished message: %v", err)
 	}
 
 	log.Info("All games received and sent to middleware")
@@ -169,14 +178,21 @@ func (s *Server) handleReviews() {
 
 	for review := range s.reviews {
 		for _, line := range review.Lines {
-			record := strings.Split(line, ",")
+			reader := csv.NewReader(strings.NewReader(line))
+			reader.LazyQuotes = true
+			reader.FieldsPerRecord = -1
+			record, err := reader.Read()
+			if err != nil {
+				log.Errorf("Failed to read review error: %v", err)
+				continue
+			}
 			reviewBatch = append(reviewBatch, *middleware.NewReview(record))
 
-			log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
+			// log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
 
-			if len(reviewBatch) == s.config.ReviewsBatchAmount {
-				log.Debugf("SENDING REVIEW BATCH: %d", len(reviewBatch))
-				err := s.middleware.SendReviewBatch(&reviewBatch)
+			if len(reviewBatch) == s.config.Server.ReviewsBatchAmount {
+				// log.Debugf("SENDING REVIEW BATCH: %d", len(reviewBatch))
+				err := s.middleware.SendReviewBatch(&middleware.ReviewsBatch{Reviews: reviewBatch})
 				if err != nil {
 					log.Errorf("Failed to publish review message: %v", err)
 				}
@@ -186,11 +202,16 @@ func (s *Server) handleReviews() {
 	}
 
 	if len(reviewBatch) > 0 {
-		log.Debugf("SENDING LAST REVIEW BATCH: %d", len(reviewBatch))
-		err := s.middleware.SendReviewBatch(&reviewBatch)
+		err := s.middleware.SendReviewBatch(&middleware.ReviewsBatch{Reviews: reviewBatch})
 		if err != nil {
 			log.Errorf("Failed to publish review message: %v", err)
 		}
+	}
+
+	err := s.middleware.SendReviewsFinished(1)
+	if err != nil {
+		log.Errorf("Failed to publish review message: %v", err)
+
 	}
 
 	log.Info("All reviews received and sent to middleware")

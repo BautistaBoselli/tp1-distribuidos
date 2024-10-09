@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"tp1-distribuidos/shared"
 
 	"github.com/op/go-logging"
 )
@@ -12,6 +13,8 @@ import (
 var log = logging.MustGetLogger("log")
 
 func main() {
+	shared.InitLogger("DEBUG")
+
 	mapper, err := NewMapper()
 	if err != nil {
 		log.Criticalf("Error creating mapper: %s", err)

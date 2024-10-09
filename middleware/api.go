@@ -14,7 +14,7 @@ func (m *Middleware) Declare() error {
 		return err
 	}
 
-	if err := m.DeclareReviewsExchange(); err != nil {
+	if err := m.DeclareReviewsQueue(); err != nil {
 		return err
 	}
 
@@ -48,19 +48,20 @@ func (m *Middleware) DeclareGamesExchange() error {
 	return nil
 }
 
-func (m *Middleware) DeclareReviewsExchange() error {
-	err := m.channel.ExchangeDeclare(
-		"reviews",
-		"fanout",
-		true,  // durable
-		false, // auto-deleted
-		false, // internal
-		false, // no-wait
-		nil,   // arguments
+func (m *Middleware) DeclareReviewsQueue() error {
+	queue, err := m.channel.QueueDeclare(
+		"reviews", // name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // no-wait
+		nil,       // arguments
 	)
+	log.Infof("Declared queue: %v", queue.Name)
+	m.reviewsQueue = &queue
 
 	if err != nil {
-		log.Errorf("Failed to declare exchange: %v", err)
+		log.Errorf("Failed to declare queue: %v", err)
 		return err
 	}
 
@@ -103,11 +104,6 @@ func (m *Middleware) DeclareResultsExchange() error {
 	return nil
 }
 
-type GamesQueue struct {
-	queue      *amqp.Queue
-	middleware *Middleware
-}
-
 func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
 	queue, err := m.BindExchange("games", shardId)
 	if err != nil {
@@ -117,21 +113,45 @@ func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
 	return &GamesQueue{queue: queue, middleware: m}, nil
 }
 
-func (m *Middleware) SendGameBatch(message *GameBatch) error {
-	shardId := message.Game.AppId % 2
+func (m *Middleware) SendGameMsg(message *GameMsg) error {
+	totalInt := 0
+	for _, char := range strconv.Itoa(message.Game.AppId) {
+		int, _ := strconv.Atoi(string(char))
+		totalInt += int
+	}
+	shardId := totalInt % m.shardingAmount
 	stringShardId := strconv.Itoa(shardId)
 
 	return m.PublishExchange("games", stringShardId, message)
 }
 
-func (gq *GamesQueue) Consume(callback func(message *GameBatch, ack func()) error) error {
+func (m Middleware) SendGameFinished() error {
+
+	for shardId := range m.shardingAmount {
+		stringShardId := strconv.Itoa(shardId)
+		err := m.PublishExchange("games", stringShardId, &GameMsg{Game: &Game{}, Last: true})
+		if err != nil {
+			log.Errorf("Failed to send game finished to shard %s: %v", stringShardId, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+type GamesQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (gq *GamesQueue) Consume(callback func(message *GameMsg, ack func()) error) error {
 	msgs, err := gq.middleware.ConsumeQueue(gq.queue)
 	if err != nil {
 		return err
 	}
 
 	for msg := range msgs {
-		var res GameBatch
+		var res GameMsg
 
 		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
 		err := decoder.Decode(&res)
@@ -139,6 +159,13 @@ func (gq *GamesQueue) Consume(callback func(message *GameBatch, ack func()) erro
 			log.Errorf("Failed to decode message: %v", err)
 			continue
 		}
+
+		if res.Last {
+			msg.Ack(false)
+			log.Debugf("LAST GAME")
+			break
+		}
+
 		callback(&res, func() {
 			msg.Ack(false)
 		})
@@ -147,33 +174,37 @@ func (gq *GamesQueue) Consume(callback func(message *GameBatch, ack func()) erro
 	return nil
 }
 
+func (m *Middleware) ListenReviews() (*ReviewsQueue, error) {
+	return &ReviewsQueue{queue: m.reviewsQueue, middleware: m}, nil
+}
+
+func (m *Middleware) SendReviewBatch(message *ReviewsBatch) error {
+	return m.PublishQueue(m.reviewsQueue, message)
+}
+
+func (m Middleware) SendReviewsFinished(last int) error {
+	if last == m.shardingAmount+1 {
+		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED")
+		return m.SendStatsFinished()
+	}
+	log.Infof("Another mapper finished %d", last)
+	return m.PublishQueue(m.reviewsQueue, &ReviewsBatch{Last: last})
+}
+
 type ReviewsQueue struct {
 	queue      *amqp.Queue
 	middleware *Middleware
+	finished   bool
 }
 
-func (m *Middleware) ListenReviews() (*ReviewsQueue, error) {
-	queue, err := m.BindExchange("reviews", "")
-	if err != nil {
-		log.Errorf("Failed to bind exchange: %v", err)
-		return nil, err
-	}
-
-	return &ReviewsQueue{queue: queue, middleware: m}, nil
-}
-
-func (m *Middleware) SendReviewBatch(message *[]Review) error {
-	return m.PublishExchange("reviews", "", message)
-}
-
-func (rq *ReviewsQueue) Consume(callback func(message *[]Review, ack func()) error) error {
+func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func()) error) error {
 	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
 	if err != nil {
 		return err
 	}
 
 	for msg := range msgs {
-		var res []Review
+		var res ReviewsBatch
 
 		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
 		err := decoder.Decode(&res)
@@ -181,6 +212,21 @@ func (rq *ReviewsQueue) Consume(callback func(message *[]Review, ack func()) err
 			log.Errorf("Failed to decode message: %v", err)
 			continue
 		}
+
+		if res.Last > 0 {
+			log.Infof("Received Last message: %v", res.Last)
+			if !rq.finished {
+				rq.middleware.SendReviewsFinished(res.Last + 1)
+				rq.finished = true
+				msg.Ack(false)
+				continue
+			} else {
+				log.Infof("Received Last again, ignoring and NACKing...")
+				msg.Nack(false, true)
+				continue
+			}
+		}
+
 		callback(&res, func() {
 			msg.Ack(false)
 		})
@@ -189,14 +235,74 @@ func (rq *ReviewsQueue) Consume(callback func(message *[]Review, ack func()) err
 	return nil
 }
 
-func (m *Middleware) SendStats(message *Stats) error {
-	shardId := message.AppId % 2
-	stringShardId := strconv.Itoa(shardId)
-	topic := stringShardId + "." + strings.Join(message.Genres, ".")
+func (m *Middleware) SendStats(message *StatsMsg) error {
+	totalInt := 0
+	for _, char := range strconv.Itoa(message.Stats.AppId) {
+		int, _ := strconv.Atoi(string(char))
+		totalInt += int
+	}
+	shardId := totalInt % m.shardingAmount
+	topic := strconv.Itoa(shardId) + "." + strings.Join(message.Stats.Genres, ".")
 
-	log.Infof("Sending stats to topic %s", topic)
-	return m.PublishExchange("stats", stringShardId, message)
+	return m.PublishExchange("stats", topic, message)
+}
 
+func (m *Middleware) SendStatsFinished() error {
+	for shardId := range m.shardingAmount {
+		stringShardId := strconv.Itoa(shardId)
+		topic := stringShardId + ".Indie.Action"
+		log.Infof("Sending stats finished to shard %s", topic)
+		err := m.PublishExchange("stats", topic, &StatsMsg{Stats: &Stats{}, Last: true})
+		if err != nil {
+			log.Errorf("Failed to send stats finished to shard %s: %v", topic, err)
+			return err
+		}
+	}
+	return nil
+}
+
+type StatsQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (m *Middleware) ListenStats(shardId string, genre string) (*StatsQueue, error) {
+	queue, err := m.BindExchange("stats", shardId+".#."+genre+".#")
+	if err != nil {
+		return nil, err
+	}
+
+	return &StatsQueue{queue: queue, middleware: m}, nil
+}
+
+func (sq *StatsQueue) Consume(callback func(message *StatsMsg, ack func()) error) error {
+	msgs, err := sq.middleware.ConsumeQueue(sq.queue)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		var res StatsMsg
+
+		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
+		err := decoder.Decode(&res)
+		if err != nil {
+			log.Errorf("Failed to decode message: %v", err)
+			continue
+		}
+
+		if res.Last {
+			log.Infof("Last stats received, sending to reducer")
+			msg.Ack(false)
+			break
+		}
+
+		callback(&res, func() {
+			msg.Ack(false)
+		})
+	}
+
+	return nil
 }
 
 type ResultsQueue struct {

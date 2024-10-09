@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
 )
@@ -20,13 +19,15 @@ type Mapper struct {
 	reviewsQueue *middleware.ReviewsQueue
 }
 
+const shardingAmount = 2
+
 func NewMapper() (*Mapper, error) {
 	gamesFile, err := os.Create("games.csv")
 	if err != nil {
 		return nil, err
 	}
 
-	middleware, err := middleware.NewMiddleware()
+	middleware, err := middleware.NewMiddleware(shardingAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -60,32 +61,14 @@ func (m *Mapper) Close() error {
 func (m *Mapper) Run() {
 	defer m.Close()
 
-	wg := sync.WaitGroup{}
-
-	wg.Add(1)
-	go m.consumeGameMessages(&wg)
-	wg.Wait()
-
+	m.consumeGameMessages()
 	m.consumeReviewsMessages()
-
-	// send stats to stats pubsub
-
-	select {}
-
 }
 
-func (m *Mapper) consumeGameMessages(wg *sync.WaitGroup) {
+func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
-	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameBatch, ack func()) error {
-		if gameBatch.Last {
-			wg.Done()
-			ack()
-			return nil
-		}
-
-		log.Infof("MAP GAME: %s", gameBatch.Game.Name)
-
+	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameMsg, ack func()) error {
 		writer := csv.NewWriter(m.gamesFile)
 
 		gameStats := []string{
@@ -122,33 +105,35 @@ func (m *Mapper) consumeReviewsMessages() {
 		return
 	}
 	defer file.Close()
-
-	reader := csv.NewReader(file)
-
-	err = m.reviewsQueue.Consume(func(reviewBatch *[]middleware.Review, ack func()) error {
-		for _, review := range *reviewBatch {
-			log.Infof("MAP REVIEWS: %s", review.Text)
-
+	i := 0
+	err = m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsBatch, ack func()) error {
+		i += len(reviewBatch.Reviews)
+		if i%1000 == 0 {
+			log.Infof("Processed %d reviews", i)
+		}
+		for _, review := range reviewBatch.Reviews {
 			if _, err := file.Seek(0, 0); err != nil {
 				log.Errorf("action: reset file reader | result: fail")
 				return err
 			}
 
+			reader := csv.NewReader(file)
+
 			for {
 				record, err := reader.Read()
 				if err == io.EOF {
-					log.Errorf("action: crear_stats | result: fail")
-
+					log.Errorf("action: crear_stats | result: fail | error: %v", err)
 					break
 				}
 				if err != nil {
-					log.Errorf("action: crear_stats | result: fail")
+					log.Errorf("action: crear_stats | result: fail | error: %v", err)
 					return err
 				}
 				if record[0] == review.AppId {
 					stats := middleware.NewStats(record, &review)
-					log.Infof("MAP STATS: %s", stats)
-					err := m.middleware.SendStats(stats)
+					// log.Debugf("MAP STATS: %d", stats.AppId)
+
+					err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
 					if err != nil {
 						log.Errorf("Failed to publish stats message: %v", err)
 					}
@@ -166,4 +151,5 @@ func (m *Mapper) consumeReviewsMessages() {
 
 	log.Info("Review messages consumed")
 
+	select {}
 }

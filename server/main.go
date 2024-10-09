@@ -56,7 +56,7 @@ func main() {
 
 	PrintConfig(env)
 
-	server, err := NewServer(&env.Server)
+	server, err := NewServer(env)
 
 	if err != nil {
 		log.Criticalf("Error creating server: %s", err)

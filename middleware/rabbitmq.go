@@ -11,11 +11,13 @@ import (
 var log = logging.MustGetLogger("log")
 
 type Middleware struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
+	shardingAmount int
+	conn           *amqp.Connection
+	channel        *amqp.Channel
+	reviewsQueue   *amqp.Queue
 }
 
-func NewMiddleware() (*Middleware, error) {
+func NewMiddleware(shardingAmount int) (*Middleware, error) {
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		return nil, err
@@ -25,8 +27,13 @@ func NewMiddleware() (*Middleware, error) {
 	if err != nil {
 		return nil, err
 	}
+	// channel.Qos(
+	// 	5,     // prefetch count
+	// 	0,     // prefetch size
+	// 	false, // global
+	// )
 
-	middleware := &Middleware{conn: conn, channel: channel}
+	middleware := &Middleware{conn: conn, channel: channel, shardingAmount: shardingAmount}
 
 	err = middleware.Declare()
 	if err != nil {
@@ -100,12 +107,12 @@ func (m *Middleware) ConsumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
 
 func (m *Middleware) BindExchange(exchange string, key string) (*amqp.Queue, error) {
 	q, err := m.channel.QueueDeclare(
-		exchange+"_queue_bind", // name
-		false,                  // durable
-		false,                  // delete when unused
-		true,                   // exclusive
-		false,                  // no-wait
-		nil,                    // arguments
+		"",    // name
+		false, // durable
+		false, // delete when unused
+		true,  // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		log.Errorf("Failed to declare queue: %v", err)
