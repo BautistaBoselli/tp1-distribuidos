@@ -28,7 +28,7 @@ func (r *ReducerQuery1) Close() {
 func (r *ReducerQuery1) Run() {
 	log.Infof("Reducer Query 1 running")
 
-	resultsQueue, err := r.middleware.ListenResults("")
+	resultsQueue, err := r.middleware.ListenResults("1")
 	if err != nil {
 		log.Fatalf("action: listen reviews| result: error | message: %s", err)
 		return

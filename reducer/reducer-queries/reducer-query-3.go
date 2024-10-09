@@ -7,14 +7,15 @@ import (
 const topStatsSize = 10
 
 type ReducerQuery3 struct {
-	middleware *middleware.Middleware
-	// pendingAnswers  int mismo caso que en reducer query 2
-	TopStats []middleware.Stats
+	middleware     *middleware.Middleware
+	pendingAnswers int
+	TopStats       []middleware.Stats
 }
 
 func NewReducerQuery3(middleware *middleware.Middleware) *ReducerQuery3 {
 	return &ReducerQuery3{
-		middleware: middleware,
+		middleware:     middleware,
+		pendingAnswers: 5, // despues cambiar por middleware.ShardingAmount o algo que indique los nodos
 	}
 }
 
@@ -63,35 +64,50 @@ func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []
 func (r *ReducerQuery3) Run() {
 	defer r.Close()
 
-	resultsQueue, err := r.middleware.ListenGames("") // cambiar esto despues a listenStats
+	resultsQueue, err := r.middleware.ListenResults("3")
 	if err != nil {
 		log.Fatalf("action: listen stats | result: error | message: %s", err)
 		return
 	}
 
-	resultsQueue.Consume(func(msg *middleware.GameBatch, ack func()) error { // cambiar despues por stats
-		// r.processResult(msg)
-		log.Infof("Stats: %v", msg)
+	resultsQueue.Consume(func(result *middleware.Result, ack func()) error { // cambiar despues por stats
+		r.processResult(result)
+
 		ack()
+
+		if result.IsFinalMessage { // como no hay resultados parciales esto en teoria pasa siempre pero por las dudas
+			r.pendingAnswers--
+		}
+
+		if r.pendingAnswers == 0 {
+			r.SendResult()
+		}
+
 		return nil
 	})
-
-	// agregar logica para que despues de contar todos los finished se envie
-	// la respuesta al server
 }
 
-func (r *ReducerQuery3) processResult(stats *middleware.Stats) {
-	r.TopStats = append(r.TopStats, *stats)
+func (r *ReducerQuery3) processResult(result *middleware.Result) {
+	switch result.Payload.(type) {
+	case []middleware.Stats:
+		r.TopStats = r.mergeTopStats(r.TopStats, result.Payload.([]middleware.Stats))
+	}
 }
-	
 
 func (r *ReducerQuery3) SendResult() {
-	// result := &middleware.Query3Result{
-	// 	TopStats: r.TopStats,
-	// }
+	query3Result := &middleware.Query3Result{
+		TopStats: r.TopStats,
+	}
 
-	// err := r.middleware.SendQuery3Result(result)
-	// if err != nil {
-	// 	log.Errorf("Failed to send result: %v", err)
-	// }
+	result := &middleware.Result{
+		QueryId:             3,
+		IsFragmentedMessage: false,
+		IsFinalMessage:      true,
+		Payload:             query3Result,
+	}
+
+	err := r.middleware.SendResult("", result)
+	if err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
 }

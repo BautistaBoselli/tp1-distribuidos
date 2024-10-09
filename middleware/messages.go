@@ -102,7 +102,7 @@ type Query2Result struct {
 }
 
 type Query3Result struct {
-	TopGames []Stats
+	TopStats []Stats
 }
 
 type Query4Result struct {

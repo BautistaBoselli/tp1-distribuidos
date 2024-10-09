@@ -64,7 +64,7 @@ func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []m
 func (r *ReducerQuery2) Run() {
 	log.Infof("Reducer Query 2 running")
 
-	resultsQueue, err := r.middleware.ListenResults("")
+	resultsQueue, err := r.middleware.ListenResults("2")
 	if err != nil {
 		log.Fatalf("action: listen reviews| result: error | message: %s", err)
 		return
