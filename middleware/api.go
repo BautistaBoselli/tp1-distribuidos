@@ -203,7 +203,6 @@ func (m *Middleware) SendStats(message *StatsMsg) error {
 	stringShardId := strconv.Itoa(shardId)
 	topic := stringShardId + "." + strings.Join(message.Stats.Genres, ".")
 
-	log.Infof("Sending stats to topic %s", topic)
 	return m.PublishExchange("stats", topic, message)
 }
 

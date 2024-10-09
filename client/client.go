@@ -73,9 +73,9 @@ func (c *Client) SendGames(file *os.File) error {
 	i := 0
 	for {
 		i++
-		if i > 50 {
-			break
-		}
+		// if i > 50 {
+		// 	break
+		// }
 		batch := protocol.ClientGame{
 			Lines: make([]string, 0),
 		}
@@ -90,7 +90,7 @@ func (c *Client) SendGames(file *os.File) error {
 				return err
 			}
 
-			batch.Lines = append(batch.Lines, record)
+			batch.Lines = append(batch.Lines, record[:len(record)-1])
 		}
 
 		if len(batch.Lines) == 0 {
@@ -118,11 +118,10 @@ func (c *Client) SendReviews(file *os.File) error {
 	i := 0
 	for {
 		i++
-		if i > 50 {
-			break
-		}
+		// if i > 50 {
+		// 	break
+		// }
 
-		println("SENDING REVIEWSSSS")
 		batch := protocol.ClientReview{
 			Lines: make([]string, 0),
 		}
@@ -137,14 +136,12 @@ func (c *Client) SendReviews(file *os.File) error {
 				return err
 			}
 
-			batch.Lines = append(batch.Lines, record)
+			batch.Lines = append(batch.Lines, record[:len(record)-1])
 		}
 
 		if len(batch.Lines) == 0 {
 			break
 		}
-
-		println("SENDING REVIEWSSSS 2")
 
 		err := protocol.Send(c.conn, &batch)
 		if err != nil {

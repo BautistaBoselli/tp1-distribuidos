@@ -62,7 +62,7 @@ func (q *Query4) processStats(message *middleware.Stats) {
 
 	updatedStat := shared.UpsertStatsFile(q.filename, message)
 
-	if updatedStat.Negatives == QUERY4_MIN_NEGATIVES {
+	if message.Negatives == 1 && updatedStat.Negatives == QUERY4_MIN_NEGATIVES {
 		q.sendResult(updatedStat)
 	}
 }

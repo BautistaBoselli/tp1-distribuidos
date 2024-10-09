@@ -150,12 +150,10 @@ func (s *Server) handleConnection(client *Client) {
 func (s *Server) handleGames() {
 	for game := range s.games {
 		for _, line := range game.Lines {
-			println("line", line)
 			reader := csv.NewReader(strings.NewReader(line))
 			record, err := reader.Read()
-			println("record", record)
 			if err != nil {
-				log.Errorf("Failed to read game line: %v", err)
+				log.Errorf("Failed to read game error: %v", err)
 				continue
 			}
 			gameMsg := middleware.GameMsg{Game: middleware.NewGame(record), Last: false}
@@ -181,17 +179,19 @@ func (s *Server) handleReviews() {
 	for review := range s.reviews {
 		for _, line := range review.Lines {
 			reader := csv.NewReader(strings.NewReader(line))
+			reader.LazyQuotes = true
+			reader.FieldsPerRecord = -1
 			record, err := reader.Read()
 			if err != nil {
-				log.Errorf("Failed to read review line: %v", err)
+				log.Errorf("Failed to read review error: %v", err)
 				continue
 			}
 			reviewBatch = append(reviewBatch, *middleware.NewReview(record))
 
-			log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
+			// log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
 
 			if len(reviewBatch) == s.config.Server.ReviewsBatchAmount {
-				log.Debugf("SENDING REVIEW BATCH: %d", len(reviewBatch))
+				// log.Debugf("SENDING REVIEW BATCH: %d", len(reviewBatch))
 				err := s.middleware.SendReviewBatch(&middleware.ReviewsBatch{Reviews: reviewBatch})
 				if err != nil {
 					log.Errorf("Failed to publish review message: %v", err)

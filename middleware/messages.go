@@ -134,8 +134,8 @@ func NewStats(game []string, review *Review) *Stats {
 	if review.Score > 0 {
 		return &Stats{
 			AppId:     appId,
-			Name:      game[nameIndex],
-			Genres:    strings.Split(game[genreIndex], ","),
+			Name:      game[1],
+			Genres:    strings.Split(game[3], ","),
 			Text:      review.Text,
 			Positives: 1,
 			Negatives: 0,
@@ -144,8 +144,8 @@ func NewStats(game []string, review *Review) *Stats {
 
 	return &Stats{
 		AppId:     appId,
-		Name:      game[nameIndex],
-		Genres:    strings.Split(game[genreIndex], ","),
+		Name:      game[1],
+		Genres:    strings.Split(game[3], ","),
 		Text:      review.Text,
 		Positives: 0,
 		Negatives: 1,

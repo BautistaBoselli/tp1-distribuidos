@@ -2,6 +2,8 @@ package protocol
 
 import (
 	"strings"
+
+	"github.com/op/go-logging"
 )
 
 type MessageType int32
@@ -31,6 +33,8 @@ func (m *ClientGame) GetMessageType() MessageType {
 func (m *ClientGame) Encode() string {
 	return strings.Join(m.Lines, "\n")
 }
+
+var log = logging.MustGetLogger("DEBUG")
 
 func (m *ClientGame) Decode(data string) error {
 	m.Lines = strings.Split(data, "\n")
