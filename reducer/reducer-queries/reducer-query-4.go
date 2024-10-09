@@ -21,36 +21,43 @@ func (r *ReducerQuery4) Close() {
 func (r *ReducerQuery4) Run() {
 	defer r.Close()
 
-	resultsQueue, err := r.middleware.ListenGames("") // esto despues va a ser listenResults
+	resultsQueue, err := r.middleware.ListenResults("4")
 	if err != nil {
 		log.Fatalf("action: listen reviews| result: error | message: %s", err)
 		return
 	}
 
-	resultsQueue.Consume(func(msg *middleware.GameBatch, ack func()) error {
-		// r.processResult(&game)
-		log.Infof("Game: %v", msg.Game)
+	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
+		r.processResult(result)
 
 		ack()
 
 		return nil
 	})
 
-	// agregar logica despues para manejar el caso del envio final, cuando 
-	// hay que cortar de escuchar mensajes
 }
 
-func (r *ReducerQuery4) processResult(game *middleware.Query4Result) { // despues este interface va a ser el result
-	// r.sendResult(&game) // aca mandamos el juego porque la query 4 es un pasamanos nada mas
+func (r *ReducerQuery4) processResult(result *middleware.Result) {
+	switch result.Payload.(type) {
+	case string:
+		r.sendResult(result.Payload.(string), result.IsFinalMessage) // aca mandamos el juego porque la query 4 es un pasamanos nada mas
+	}
 }
 
-func (r *ReducerQuery4) sendResult(game *middleware.Query4Result) {
-	// result := &middleware.Query4Result{
-	// 	Game: game.Game,
-	// }
+func (r *ReducerQuery4) sendResult(game string, isFinalMessage bool) {
+	query4Result := &middleware.Query4Result{
+		Game: game,
+	}
 
-	// r.middleware.SendQuery4Result(result)
-	// if err != nil {
-	// 	log.Errorf("Failed to send result: %v", err)
-	// }
+	result := &middleware.Result{
+		QueryId:             4,
+		IsFinalMessage:      isFinalMessage,
+		IsFragmentedMessage: false,
+		Payload:             query4Result,
+	}
+
+	err := r.middleware.SendResult("", result)
+	if err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
 }

@@ -106,7 +106,7 @@ type Query3Result struct {
 }
 
 type Query4Result struct {
-	Stats []Stats
+	Game string
 }
 
 type Query5Result struct {
