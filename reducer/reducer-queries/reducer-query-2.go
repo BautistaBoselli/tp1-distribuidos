@@ -7,15 +7,15 @@ import (
 const topGamesSize = 10
 
 type ReducerQuery2 struct {
-	middleware *middleware.Middleware
-	// pendingAnswers  int aca si es necesario este campo para saber cuando mandar la respuesta final
-	TopGames []middleware.Game
+	middleware     *middleware.Middleware
+	pendingAnswers int
+	TopGames       []middleware.Game
 }
 
 func NewReducerQuery2(middleware *middleware.Middleware) *ReducerQuery2 {
 	return &ReducerQuery2{
-		middleware: middleware,
-		// TopGames:   make([]middleware.Game, 0), esto no se por que no le gusta pero no creo que haga falta porque se recalcula siempre
+		middleware:     middleware,
+		pendingAnswers: 5, // despues cambiar por middleware.ShardingAmount o algo que indique los nodos
 	}
 }
 
@@ -64,33 +64,50 @@ func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []m
 func (r *ReducerQuery2) Run() {
 	log.Infof("Reducer Query 2 running")
 
-	resultsQueue, err := r.middleware.ListenGames("") // esto despues va a ser listenResults
+	resultsQueue, err := r.middleware.ListenResults("")
 	if err != nil {
 		log.Fatalf("action: listen reviews| result: error | message: %s", err)
 		return
 	}
 
-	resultsQueue.Consume(func(msg *middleware.GameBatch, ack func()) error {
-		// r.processResult(&game)
-		log.Infof("Game: %v", msg.Game)
+	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
+		r.processResult(result)
 
 		ack()
+
+		if result.IsFinalMessage { // en teoria todos van a ser finales pero por las dudasssss
+			r.pendingAnswers--
+		}
+
+		if r.pendingAnswers == 0 {
+			r.SendResult()
+		}
 
 		return nil
 	})
 }
 
-func (r *ReducerQuery2) processResult(game *middleware.Query2Result) { // despues este interface va a ser el result
-	r.TopGames = r.mergeTopGames(r.TopGames, game.TopGames)
+func (r *ReducerQuery2) processResult(result *middleware.Result) {
+	switch result.Payload.(type) {
+	case []middleware.Game:
+		r.TopGames = r.mergeTopGames(r.TopGames, result.Payload.([]middleware.Game))
+	}
 }
 
 func (r *ReducerQuery2) SendResult() {
-	// result := &middleware.Query2Result{
-	// 	TopGames: r.TopGames,
-	// }
+	query2Result := &middleware.Query2Result{
+		TopGames: r.TopGames,
+	}
 
-	// err := r.middleware.SendQuery2Result(result)
-	// if err != nil {
-	// 	log.Errorf("Failed to send result: %v", err)
-	// }
+	result := &middleware.Result{
+		QueryId:             2,
+		IsFinalMessage:      true,
+		IsFragmentedMessage: false,
+		Payload:             query2Result,
+	}
+
+	err := r.middleware.SendResult("2", result)
+	if err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
 }
