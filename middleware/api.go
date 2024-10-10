@@ -16,6 +16,8 @@ func (m *Middleware) Declare() error {
 	gob.Register(Query4Result{})
 	gob.Register(Query5Result{})
 
+	gob.Register(Response{})
+
 	if err := m.DeclareGamesExchange(); err != nil {
 		return err
 	}
@@ -29,6 +31,10 @@ func (m *Middleware) Declare() error {
 	}
 
 	if err := m.DeclareResultsExchange(); err != nil {
+		return err
+	}
+
+	if err := m.DeclareResponsesQueue(); err != nil {
 		return err
 	}
 
@@ -107,6 +113,26 @@ func (m *Middleware) DeclareResultsExchange() error {
 		log.Errorf("Failed to declare results exchange: %v", err)
 		return err
 	}
+	return nil
+}
+
+func (m *Middleware) DeclareResponsesQueue() error {
+	queue, err := m.channel.QueueDeclare(
+		"responses", // name
+		true,        // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
+	)
+	log.Infof("Declared queue: %v", queue.Name)
+	m.responsesQueue = &queue
+
+	if err != nil {
+		log.Errorf("Failed to declare queue: %v", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -351,6 +377,59 @@ func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error
 		if err != nil {
 			log.Errorf("Failed to process result message: %v", err)
 		}
+	}
+
+	return nil
+}
+
+type ResponsesQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+	finished   bool
+}
+
+func (m *Middleware) ListenResponses() (*ResponsesQueue, error) {
+	return &ResponsesQueue{queue: m.responsesQueue, middleware: m}, nil
+}
+
+func (m *Middleware) SendResponse(response *Response) error {
+	return m.PublishQueue(m.responsesQueue, response)
+}
+
+func (rq *ResponsesQueue) Consume(callback func(message *Response, ack func()) error) error {
+	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		var res Response
+
+		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
+		err := decoder.Decode(&res)
+		if err != nil {
+			log.Errorf("Failed to decode message: %v", err)
+			continue
+		}
+
+		if res.Last {
+			// quizas tiene que ser mayor a la cantidad de queries (5) y usar el finished
+			log.Infof("Received Last response %v", res)
+			if !rq.finished {
+				rq.middleware.SendResponse(&Response{Last: true})
+				rq.finished = true
+				msg.Ack(false)
+				break
+			} else {
+				log.Infof("Received Last again, ignoring and NACKing...")
+				msg.Nack(false, true)
+				continue
+			}
+		}
+
+		callback(&res, func() {
+			msg.Ack(false)
+		})
 	}
 
 	return nil

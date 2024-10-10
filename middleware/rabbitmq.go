@@ -12,10 +12,11 @@ import (
 var log = logging.MustGetLogger("log")
 
 type Middleware struct {
-	Config       *config.Config
-	conn         *amqp.Connection
-	channel      *amqp.Channel
-	reviewsQueue *amqp.Queue
+	Config         *config.Config
+	conn           *amqp.Connection
+	channel        *amqp.Channel
+	reviewsQueue   *amqp.Queue
+	responsesQueue *amqp.Queue
 }
 
 func NewMiddleware(config *config.Config) (*Middleware, error) {

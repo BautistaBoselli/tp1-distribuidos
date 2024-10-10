@@ -112,13 +112,11 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 			if stat.Negatives < negatives || writtenStats >= gamesNeeded {
 				break
 			}
-			log.Infof("writing stat query %v", stat)
 			writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
 			writtenStats++
 			queryStats = queryStats[1:]
 		}
 
-		log.Infof("writing stored record %v", storedRecord)
 		writer.Write(storedRecord)
 		writtenStats++
 	}
@@ -127,7 +125,6 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 		if writtenStats >= gamesNeeded {
 			break
 		}
-		log.Infof("writing stat query after for %v", stat)
 		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
 		writtenStats++
 	}

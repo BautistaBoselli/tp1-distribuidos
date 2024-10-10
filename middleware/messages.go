@@ -154,3 +154,8 @@ type StatsMsg struct {
 	Stats *Stats
 	Last  bool
 }
+
+type Response struct {
+	Result *Result
+	Last   bool
+}

@@ -64,6 +64,7 @@ func (s *Server) Run() {
 	go s.handleConnection(client)
 	go s.handleGames()
 	go s.handleReviews()
+	go s.handleResponses()
 
 	select {}
 
@@ -196,6 +197,26 @@ func (s *Server) handleReviews() {
 	}
 
 	log.Info("All reviews received and sent to middleware")
+}
+
+func (s *Server) handleResponses() {
+
+	responseQueue, err := s.middleware.ListenResponses()
+	if err != nil {
+		log.Errorf("Failed to listen responses: %v", err)
+		return
+	}
+
+	err = responseQueue.Consume(func(response *middleware.Response, ack func()) error {
+		log.Infof("Received response: %v", response)
+		ack()
+		// send to client
+		log.Infof("Sending response to client: %v", response)
+		return nil
+	})
+	if err != nil {
+		log.Errorf("Failed to consume from responses exchange: %v", err)
+	}
 }
 
 func (s *Server) handleDisconnect(client *Client, err error) {

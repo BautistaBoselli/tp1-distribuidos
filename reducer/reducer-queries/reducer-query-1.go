@@ -70,8 +70,15 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 
 	log.Infof("Reducer Query 1: Windows: %d, Mac: %d, Linux: %d", r.Windows, r.Mac, r.Linux)
 	log.Debug(result)
-	// err := r.middleware.SendResult("1", result)
-	// if err != nil {
-	// 	log.Errorf("Failed to send result: %v", err)
-	// }
+
+	response := &middleware.Response{
+		Result: result,
+		Last:   isFinalMessage,
+	}
+
+	log.Infof("Sending a response from query 1: %v", response)
+	err := r.middleware.SendResponse(response)
+	if err != nil {
+		log.Errorf("Failed to send response: %v", err)
+	}
 }
