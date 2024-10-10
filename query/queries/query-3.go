@@ -1,7 +1,6 @@
 package queries
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"tp1-distribuidos/middleware"
@@ -17,15 +16,10 @@ type Query3 struct {
 }
 
 func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
-	files := make([]*os.File, 100)
-	for i := 0; i < 100; i++ {
-		filename := fmt.Sprintf("query-3-%d.csv", i)
-		file, err := os.Create(filename)
-		if err != nil {
-			log.Errorf("Error creating file: %s", err)
-			return nil
-		}
-		files[i] = file
+	files, err := shared.InitStoreFiles("query-3", 100)
+	if err != nil {
+		log.Errorf("Error initializing store files: %s", err)
+		return nil
 	}
 
 	return &Query3{
@@ -36,6 +30,9 @@ func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
 }
 
 func (q *Query3) Close() {
+	for _, file := range q.files {
+		file.Close()
+	}
 	q.middleware.Close()
 }
 
@@ -51,7 +48,7 @@ func (q *Query3) Run() {
 	i := 0
 	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
 		i++
-		if i % 100000 == 0 {
+		if i%100000 == 0 {
 			log.Infof("Query 3 Processed %d stats", i)
 		}
 		q.processStats(message.Stats)

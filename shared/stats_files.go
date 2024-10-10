@@ -16,9 +16,7 @@ import (
 var log = logging.MustGetLogger("log")
 
 func UpsertStatsFile(queryname string, message *middleware.Stats) *middleware.Stats {
-	// file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
-	// log.Infof("Processing stats: %v", message.AppId)
-	file, err := getStoreFile(queryname, strconv.Itoa(message.AppId))
+	file, err := GetStoreROnly(queryname, strconv.Itoa(message.AppId), 100)
 	if err != nil {
 		log.Errorf("Error opening file: %s", err)
 		return nil
@@ -84,14 +82,6 @@ func UpsertStatsFile(queryname string, message *middleware.Stats) *middleware.St
 	}
 	return message
 }
-func getFilename(queryname string, appId string) string {
-	total := 0
-	for i, char := range appId {
-		total += int(char) * i
-	}
-	hash := total % 100
-	return fmt.Sprintf("%s-%d.csv", queryname, hash)
-}
 
 func GetTopStats(queryname string, cant int, compare func(a *middleware.Stats, b *middleware.Stats) bool) []middleware.Stats {
 	top := make([]middleware.Stats, 0)
@@ -142,15 +132,6 @@ func GetTopStats(queryname string, cant int, compare func(a *middleware.Stats, b
 	}
 
 	return top
-}
-
-func getStoreFile(filename string, appId string) (*os.File, error) {
-
-	filename = getFilename(filename, appId)
-	// log.Infof("Get ting file: %s", filename)
-	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
-	// return os.Open("store.csv")
-	// return m.gamesFiles[hash], nil
 }
 
 func parseStat(record []string) (*middleware.Stats, error) {
