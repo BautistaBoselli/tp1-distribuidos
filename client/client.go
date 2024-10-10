@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 	"tp1-distribuidos/shared/protocol"
 )
 
@@ -148,7 +149,7 @@ func (c *Client) SendReviews(file *os.File) error {
 			log.Errorf("action: enviar_reviews | result: fail | client: %v | error: %v", c.config.ID, err)
 			return err
 		}
-		// time.Sleep(100 * time.Millisecond)
+		time.Sleep(30 * time.Millisecond)
 
 	}
 

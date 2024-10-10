@@ -40,7 +40,7 @@ func (q *Query4) Close() {
 func (q *Query4) Run() {
 	log.Info("Query 4 running")
 
-	statsQueue, err := q.middleware.ListenStats(strconv.Itoa(q.shardId), "*")
+	statsQueue, err := q.middleware.ListenStats(strconv.Itoa(q.shardId), "Action")
 	if err != nil {
 		log.Errorf("Error listening stats: %s", err)
 		return
