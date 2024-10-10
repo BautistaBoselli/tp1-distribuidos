@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
+
+	"github.com/rylans/getlang"
 )
 
 type Query4 struct {
@@ -44,7 +46,12 @@ func (q *Query4) Run() {
 		return
 	}
 
+	i := 0
 	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
+		i++
+		if i%25000 == 0 {
+			log.Infof("Query 4 Processed %d stats", i)
+		}
 		q.processStats(message.Stats)
 		ack()
 		return nil
@@ -97,5 +104,7 @@ func (q *Query4) sendResultFinal() {
 }
 
 func isEnglish(message *middleware.Stats) bool {
-	return true
+	lang := getlang.FromString(message.Text)
+	// log.Infof("Language: %s", lang.LanguageName())
+	return lang.LanguageName() == "English"
 }
