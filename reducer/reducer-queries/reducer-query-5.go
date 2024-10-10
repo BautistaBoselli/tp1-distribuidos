@@ -156,7 +156,12 @@ func (r *ReducerQuery5) sendFinalResult() {
 	batch := middleware.Query5Result{
 		Stats: make([]middleware.Stats, 0),
 	}
-	for range gamesNeeded {
+
+	i := 0
+	for {
+		if i >= gamesNeeded {
+			break
+		}
 		record, err := reader.Read()
 		if err == io.EOF {
 			break
@@ -178,6 +183,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 			Name:      record[1],
 			Negatives: negatives,
 		})
+		i++
 
 		if len(batch.Stats) == resultsBatchSize {
 			result := middleware.Result{
@@ -205,5 +211,8 @@ func (r *ReducerQuery5) sendFinalResult() {
 	// if err := r.middleware.SendResult("5", &result); err != nil {
 	// 	log.Fatalf("action: send final result | result: error | message: %s", err)
 	// }
-	log.Infof("sending result %v", result)
+	log.Infof("sending result")
+	for _, stat := range result.Payload.(middleware.Query5Result).Stats {
+		log.Infof("sending stat %s: %d", stat.Name, stat.Negatives)
+	}
 }
