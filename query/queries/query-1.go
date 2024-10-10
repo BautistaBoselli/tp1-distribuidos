@@ -77,8 +77,7 @@ func (q *Query1) sendResult(final bool) {
 	result := &middleware.Result{
 		QueryId:        1,
 		IsFinalMessage: final,
-		// IsFragmentedMessage: false,
-		Payload: q.result,
+		Payload:        q.result,
 	}
 
 	if q.result.Final {

@@ -63,9 +63,8 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 	}
 
 	result := &middleware.Result{
-		QueryId: 1,
-		Payload: query1Result,
-		// IsFragmentedMessage: false,
+		QueryId:        1,
+		Payload:        query1Result,
 		IsFinalMessage: isFinalMessage,
 	}
 

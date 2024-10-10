@@ -179,8 +179,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 
 		if len(batch.Stats) == resultsBatchSize {
 			result := middleware.Result{
-				QueryId: 5,
-				// IsFragmentedMessage: false,
+				QueryId:        5,
 				IsFinalMessage: true,
 				Payload:        batch,
 			}
@@ -196,8 +195,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	}
 
 	result := middleware.Result{
-		QueryId: 5,
-		// IsFragmentedMessage: false,
+		QueryId:        5,
 		IsFinalMessage: true,
 		Payload:        batch,
 	}

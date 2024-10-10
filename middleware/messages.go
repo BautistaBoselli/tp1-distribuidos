@@ -145,8 +145,7 @@ func NewStats(game []string, review *Review) *Stats {
 }
 
 type Result struct {
-	QueryId int
-	// IsFragmentedMessage bool
+	QueryId        int
 	IsFinalMessage bool
 	Payload        interface{}
 }
