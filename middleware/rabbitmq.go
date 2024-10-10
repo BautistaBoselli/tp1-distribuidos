@@ -36,7 +36,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 
 	middleware := &Middleware{conn: conn, channel: channel, Config: config}
 
-	err = middleware.Declare()
+	err = middleware.declare()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (m *Middleware) Close() error {
 	return m.conn.Close()
 }
 
-func (m *Middleware) PublishExchange(exchange string, key string, body interface{}) error {
+func (m *Middleware) publishExchange(exchange string, key string, body interface{}) error {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
 
@@ -77,9 +77,9 @@ func (m *Middleware) PublishExchange(exchange string, key string, body interface
 	return nil
 }
 
-func (m *Middleware) PublishQueue(queue *amqp.Queue, body interface{}) error {
+func (m *Middleware) publishQueue(queue *amqp.Queue, body interface{}) error {
 
-	err := m.PublishExchange("", queue.Name, body)
+	err := m.publishExchange("", queue.Name, body)
 	if err != nil {
 		log.Errorf("Failed to publish message: %v", err)
 		return err
@@ -88,7 +88,7 @@ func (m *Middleware) PublishQueue(queue *amqp.Queue, body interface{}) error {
 	return nil
 }
 
-func (m *Middleware) ConsumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
+func (m *Middleware) consumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
 	msgs, err := m.channel.Consume(
 		q.Name, // queue
 		"",     // consumer
@@ -106,7 +106,7 @@ func (m *Middleware) ConsumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
 	return msgs, nil
 }
 
-func (m *Middleware) BindExchange(exchange string, key string) (*amqp.Queue, error) {
+func (m *Middleware) bindExchange(exchange string, key string) (*amqp.Queue, error) {
 	q, err := m.channel.QueueDeclare(
 		"",    // name
 		false, // durable

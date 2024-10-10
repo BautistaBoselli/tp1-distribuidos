@@ -9,33 +9,33 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func (m *Middleware) Declare() error {
+func (m *Middleware) declare() error {
 	gob.Register(Query1Result{})
 	gob.Register(Query2Result{})
 	gob.Register(Query3Result{})
 	gob.Register(Query4Result{})
 	gob.Register(Query5Result{})
 
-	if err := m.DeclareGamesExchange(); err != nil {
+	if err := m.declareGamesExchange(); err != nil {
 		return err
 	}
 
-	if err := m.DeclareReviewsQueue(); err != nil {
+	if err := m.declareReviewsQueue(); err != nil {
 		return err
 	}
 
-	if err := m.DeclareStatsExchange(); err != nil {
+	if err := m.declareStatsExchange(); err != nil {
 		return err
 	}
 
-	if err := m.DeclareResultsExchange(); err != nil {
+	if err := m.declareResultsExchange(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m *Middleware) DeclareGamesExchange() error {
+func (m *Middleware) declareGamesExchange() error {
 	err := m.channel.ExchangeDeclare(
 		"games",
 		"topic",
@@ -54,7 +54,7 @@ func (m *Middleware) DeclareGamesExchange() error {
 	return nil
 }
 
-func (m *Middleware) DeclareReviewsQueue() error {
+func (m *Middleware) declareReviewsQueue() error {
 	queue, err := m.channel.QueueDeclare(
 		"reviews", // name
 		true,      // durable
@@ -74,7 +74,7 @@ func (m *Middleware) DeclareReviewsQueue() error {
 	return nil
 }
 
-func (m *Middleware) DeclareStatsExchange() error {
+func (m *Middleware) declareStatsExchange() error {
 	err := m.channel.ExchangeDeclare(
 		"stats",
 		"topic",
@@ -93,7 +93,7 @@ func (m *Middleware) DeclareStatsExchange() error {
 	return nil
 }
 
-func (m *Middleware) DeclareResultsExchange() error {
+func (m *Middleware) declareResultsExchange() error {
 	err := m.channel.ExchangeDeclare(
 		"results",
 		"topic",
@@ -111,7 +111,7 @@ func (m *Middleware) DeclareResultsExchange() error {
 }
 
 func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
-	queue, err := m.BindExchange("games", shardId)
+	queue, err := m.bindExchange("games", shardId)
 	if err != nil {
 		return nil, err
 	}
@@ -128,14 +128,14 @@ func (m *Middleware) SendGameMsg(message *GameMsg) error {
 	shardId := totalInt % m.Config.Sharding.Amount
 	stringShardId := strconv.Itoa(shardId)
 
-	return m.PublishExchange("games", stringShardId, message)
+	return m.publishExchange("games", stringShardId, message)
 }
 
 func (m Middleware) SendGameFinished() error {
 
 	for shardId := range m.Config.Sharding.Amount {
 		stringShardId := strconv.Itoa(shardId)
-		err := m.PublishExchange("games", stringShardId, &GameMsg{Game: &Game{}, Last: true})
+		err := m.publishExchange("games", stringShardId, &GameMsg{Game: &Game{}, Last: true})
 		if err != nil {
 			log.Errorf("Failed to send game finished to shard %s: %v", stringShardId, err)
 			return err
@@ -151,7 +151,7 @@ type GamesQueue struct {
 }
 
 func (gq *GamesQueue) Consume(callback func(message *GameMsg, ack func()) error) error {
-	msgs, err := gq.middleware.ConsumeQueue(gq.queue)
+	msgs, err := gq.middleware.consumeQueue(gq.queue)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (m *Middleware) ListenReviews() (*ReviewsQueue, error) {
 }
 
 func (m *Middleware) SendReviewBatch(message *ReviewsBatch) error {
-	return m.PublishQueue(m.reviewsQueue, message)
+	return m.publishQueue(m.reviewsQueue, message)
 }
 
 func (m Middleware) SendReviewsFinished(last int) error {
@@ -194,7 +194,7 @@ func (m Middleware) SendReviewsFinished(last int) error {
 		return m.SendStatsFinished()
 	}
 	log.Infof("Another mapper finished %d", last)
-	return m.PublishQueue(m.reviewsQueue, &ReviewsBatch{Last: last})
+	return m.publishQueue(m.reviewsQueue, &ReviewsBatch{Last: last})
 }
 
 type ReviewsQueue struct {
@@ -204,7 +204,7 @@ type ReviewsQueue struct {
 }
 
 func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func()) error) error {
-	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
+	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func (m *Middleware) SendStats(message *StatsMsg) error {
 	shardId := totalInt % m.Config.Sharding.Amount
 	topic := strconv.Itoa(shardId) + "." + strings.Join(message.Stats.Genres, ".")
 
-	return m.PublishExchange("stats", topic, message)
+	return m.publishExchange("stats", topic, message)
 }
 
 func (m *Middleware) SendStatsFinished() error {
@@ -258,7 +258,7 @@ func (m *Middleware) SendStatsFinished() error {
 		stringShardId := strconv.Itoa(shardId)
 		topic := stringShardId + ".Indie.Action"
 		log.Infof("Sending stats finished to shard %s", topic)
-		err := m.PublishExchange("stats", topic, &StatsMsg{Stats: &Stats{}, Last: true})
+		err := m.publishExchange("stats", topic, &StatsMsg{Stats: &Stats{}, Last: true})
 		if err != nil {
 			log.Errorf("Failed to send stats finished to shard %s: %v", topic, err)
 			return err
@@ -273,7 +273,7 @@ type StatsQueue struct {
 }
 
 func (m *Middleware) ListenStats(shardId string, genre string) (*StatsQueue, error) {
-	queue, err := m.BindExchange("stats", shardId+".#."+genre+".#")
+	queue, err := m.bindExchange("stats", shardId+".#."+genre+".#")
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func (m *Middleware) ListenStats(shardId string, genre string) (*StatsQueue, err
 }
 
 func (sq *StatsQueue) Consume(callback func(message *StatsMsg, ack func()) error) error {
-	msgs, err := sq.middleware.ConsumeQueue(sq.queue)
+	msgs, err := sq.middleware.consumeQueue(sq.queue)
 	if err != nil {
 		return err
 	}
@@ -317,7 +317,7 @@ type ResultsQueue struct {
 }
 
 func (m *Middleware) ListenResults(queryId string) (*ResultsQueue, error) {
-	queue, err := m.BindExchange("results", queryId+".#")
+	queue, err := m.bindExchange("results", queryId+".#")
 	if err != nil {
 		return nil, err
 	}
@@ -326,11 +326,11 @@ func (m *Middleware) ListenResults(queryId string) (*ResultsQueue, error) {
 
 func (m *Middleware) SendResult(queryId string, result *Result) error {
 	log.Infof("Sending result from query %s", queryId)
-	return m.PublishExchange("results", queryId, result)
+	return m.publishExchange("results", queryId, result)
 }
 
 func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error) error {
-	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
+	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
 	}

@@ -94,30 +94,6 @@ type Stats struct {
 	Negatives int
 }
 
-type Query1Result struct {
-	Windows int64
-	Mac     int64
-	Linux   int64
-	Final   bool
-}
-
-type Query2Result struct {
-	TopGames []Game
-}
-
-type Query3Result struct {
-	TopStats []Stats
-}
-
-type Query4Result struct {
-	Game string
-}
-
-type Query5Result struct {
-	Stats       []Stats
-	GamesNeeded int
-}
-
 func NewStats(game []string, review *Review) *Stats {
 	appId, err := strconv.Atoi(game[appIdIndex])
 	if err != nil {
@@ -144,13 +120,37 @@ func NewStats(game []string, review *Review) *Stats {
 	}
 }
 
+type StatsMsg struct {
+	Stats *Stats
+	Last  bool
+}
+
 type Result struct {
 	QueryId        int
 	IsFinalMessage bool
 	Payload        interface{}
 }
 
-type StatsMsg struct {
-	Stats *Stats
-	Last  bool
+type Query1Result struct {
+	Windows int64
+	Mac     int64
+	Linux   int64
+	Final   bool
+}
+
+type Query2Result struct {
+	TopGames []Game
+}
+
+type Query3Result struct {
+	TopStats []Stats
+}
+
+type Query4Result struct {
+	Game string
+}
+
+type Query5Result struct {
+	Stats       []Stats
+	GamesNeeded int
 }
