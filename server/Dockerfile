@@ -14,10 +14,10 @@ RUN go mod download
 COPY . .
 
 # Set GOCACHE
-ENV GOCACHE=/root/.cache/go-build
+# ENV GOCACHE=/root/.cache/go-build
 
 # Build the application
-RUN --mount=type=cache,target="/root/.cache/go-build" go build -o bin/server ./server
+RUN CGO_ENABLE=0 go build -o bin/server ./server
 
 FROM alpine:latest
 COPY --from=builder /app/bin/server /server

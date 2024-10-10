@@ -12,16 +12,12 @@ const resultsBatchSize = 10
 
 type ReducerQuery5 struct {
 	middleware           *middleware.Middleware
-	pendingAnswers       int
-	totalGames           int
+	pendingFinalAnswers  int
 	totalNegativeReviews int
-	query5File           *os.File
-	query5FileWriter     *csv.Writer
-	tempFilesAmount      int
 }
 
 func NewReducerQuery5(middleware *middleware.Middleware) (*ReducerQuery5, error) {
-	query5File, err := os.Create("reducer-query-5.csv")
+	_, err := os.Create("reducer-query-5.csv")
 	if err != nil {
 		log.Fatalf("action: create file | result: error | message: %s", err)
 		return nil, err
@@ -29,24 +25,19 @@ func NewReducerQuery5(middleware *middleware.Middleware) (*ReducerQuery5, error)
 
 	return &ReducerQuery5{
 		middleware:           middleware,
-		pendingAnswers:       2, // por ahora hardcodeado indicando que son 2 nodos mandando
-		totalGames:           0, // inicializa en 0
+		pendingFinalAnswers:  2, // por ahora hardcodeado indicando que son 2 nodos mandando
 		totalNegativeReviews: 0, // inicializa en 0
-		query5File:           query5File,
-		query5FileWriter:     csv.NewWriter(query5File),
-		tempFilesAmount:      0,
 	}, nil
 }
 
 func (r *ReducerQuery5) Close() {
 	r.middleware.Close()
-	r.query5File.Close()
 }
 
 func (r *ReducerQuery5) Run() {
 	defer r.Close()
 
-	resultsQueue, err := r.middleware.ListenResults("5") // esto despues va a ser el numero correspondiente de la query a la que este escuchando este reducer
+	resultsQueue, err := r.middleware.ListenResults("5")
 	if err != nil {
 		log.Fatalf("action: listen reviews| result: error | message: %s", err)
 		return
@@ -59,10 +50,10 @@ func (r *ReducerQuery5) Run() {
 		ack()
 
 		if result.IsFinalMessage {
-			r.pendingAnswers--
+			r.pendingFinalAnswers--
 		}
 
-		if r.pendingAnswers == 0 {
+		if r.pendingFinalAnswers == 0 {
 			r.sendFinalResult()
 		}
 
@@ -75,6 +66,19 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 	switch result.Payload.(type) {
 
 	case middleware.Query5Result:
+		tmpFile, err := os.Create("tmp-reducer-query-5.csv")
+		if err != nil {
+			log.Fatalf("action: create file | result: error | message: %s", err)
+			return
+		}
+
+		defer tmpFile.Close()
+
+		tmpFileWriter := csv.NewWriter(tmpFile)
+
+		queryStats := result.Payload.(middleware.Query5Result).Stats
+		reducerQuery5Reader 
+
 		// stats := result.Payload.(middleware.Query5Result)
 
 		// for _, stat := range stats {
@@ -82,9 +86,8 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 		// 	r.totalNegativeReviews += stat.Negatives
 		// 	r.query5FileWriter.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
 		// 	r.query5FileWriter.Flush()
-		}
 	}
-
+}
 
 func (r *ReducerQuery5) sendFinalResult() {
 	queryFileReader := csv.NewReader(r.query5File)
