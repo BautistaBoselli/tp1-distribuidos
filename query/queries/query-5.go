@@ -4,20 +4,17 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"strconv"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
-
-	"golang.org/x/exp/slices"
 )
 
 type Query5 struct {
-	middleware         *middleware.Middleware
-	shardId            int
-	processedStats     int
-	gamesNeeded        int
+	middleware     *middleware.Middleware
+	shardId        int
+	processedStats int
+	// gamesNeeded        int
 	minNegativeReviews int
 }
 
@@ -52,25 +49,6 @@ func (q *Query5) Close() {
 func (q *Query5) Run() {
 	log.Info("Query 5 running")
 
-	gamesQueue, err := q.middleware.ListenGames("*")
-	if err != nil {
-		log.Errorf("Error listening games: %s", err)
-		return
-	}
-
-	totalActionGames := 0
-	gamesQueue.Consume(func(message *middleware.GameMsg, ack func()) error {
-		if slices.Contains(message.Game.Genres, "Action") {
-			totalActionGames++
-		}
-		ack()
-		return nil
-	})
-
-	q.gamesNeeded = int(math.Ceil(float64(totalActionGames) / 10))
-
-	log.Infof("Query 5 - Total Action games: %d, games needed: %d", totalActionGames, q.gamesNeeded)
-
 	statsQueue, err := q.middleware.ListenStats(strconv.Itoa(q.shardId), "Action")
 	if err != nil {
 		log.Errorf("Error listening stats: %s", err)
@@ -88,6 +66,7 @@ func (q *Query5) Run() {
 		return nil
 	})
 
+	// q.calculateGamesNeeded()
 	q.calculatePercentile()
 
 	select {}
@@ -96,6 +75,61 @@ func (q *Query5) Run() {
 func (q *Query5) processStats(message *middleware.Stats) {
 	shared.UpsertStatsFile("query-5", 100, message)
 }
+
+// func (q *Query5) calculateGamesNeeded() {
+// 	totalGamesWithReviews := 0
+// 	for i := range 100 {
+// 		func() {
+// 			file, err := shared.GetStoreROnly(fmt.Sprintf("query-5-%d.csv", i))
+// 			if err != nil {
+// 				log.Errorf("Error opening file: %s", err)
+// 				return
+// 			}
+// 			defer file.Close()
+
+// 			count, err := LineCounter(file)
+// 			if err != nil {
+// 				log.Errorf("Error counting lines: %s", err)
+// 				return
+// 			}
+
+// 			totalGamesWithReviews += count
+// 		}()
+// 	}
+
+// 	q.gamesNeeded = int(math.Ceil(float64(totalGamesWithReviews) * 0.1))
+// 	log.Infof("Total Games: %d - Games needed: %d", totalGamesWithReviews, q.gamesNeeded)
+// }
+
+// func lineCounter(r io.Reader) (int, error) {
+
+// 	var count int
+// 	const lineBreak = '\n'
+
+// 	buf := make([]byte, bufio.MaxScanTokenSize)
+
+// 	for {
+// 		bufferSize, err := r.Read(buf)
+// 		if err != nil && err != io.EOF {
+// 			return 0, err
+// 		}
+
+// 		var buffPosition int
+// 		for {
+// 			i := bytes.IndexByte(buf[buffPosition:], lineBreak)
+// 			if i == -1 || bufferSize == buffPosition {
+// 				break
+// 			}
+// 			buffPosition += i + 1
+// 			count++
+// 		}
+// 		if err == io.EOF {
+// 			break
+// 		}
+// 	}
+
+// 	return count, nil
+// }
 
 func (q *Query5) calculatePercentile() {
 	q.minNegativeReviews = -1
@@ -140,10 +174,10 @@ func (q *Query5) handleRecord(record []string) {
 	}
 
 	// Si ya tenemos suficientes juegos y la cantidad de reviews negativas es menor a la mínima, no procesamos más
-	if q.processedStats >= q.gamesNeeded && stats.Negatives <= q.minNegativeReviews {
-		log.Infof("Not processing game, not enougth reviews: %d", stats.AppId)
-		return
-	}
+	// if q.processedStats >= q.gamesNeeded && stats.Negatives <= q.minNegativeReviews {
+	// 	log.Infof("Not processing game, not enougth reviews: %d", stats.AppId)
+	// 	return
+	// }
 
 	// si ya sabemos que va a ser el ultimo, lo agregamos directamente y actualizamos el minimo
 	if stats.Negatives < q.minNegativeReviews {
@@ -183,7 +217,7 @@ func (q *Query5) handleRecord(record []string) {
 	writer := csv.NewWriter(tempFile)
 
 	found := false
-	for range q.gamesNeeded {
+	for {
 		storedRecord, err := reader.Read()
 		if err == io.EOF {
 			break
@@ -225,8 +259,8 @@ func (q *Query5) sendResult() {
 	reader := csv.NewReader(file)
 
 	result := middleware.Query5Result{
-		Stats:       make([]middleware.Stats, 0),
-		GamesNeeded: q.gamesNeeded,
+		Stats: make([]middleware.Stats, 0),
+		// GamesNeeded: q.gamesNeeded,
 	}
 
 	for {

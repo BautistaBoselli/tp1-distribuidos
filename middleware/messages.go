@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -94,6 +95,49 @@ type Stats struct {
 	Negatives int
 }
 
+func NewStats(game []string, review *Review) *Stats {
+	appId, err := strconv.Atoi(game[appIdIndex])
+	if err != nil {
+		return nil
+	}
+
+	genres := strings.Split(game[3], ",")
+	if !slices.Contains(genres, "Action") {
+		review.Text = ""
+	}
+
+	if review.Score > 0 {
+		return &Stats{
+			AppId:     appId,
+			Name:      game[1],
+			Genres:    genres,
+			Text:      review.Text,
+			Positives: 1,
+			Negatives: 0,
+		}
+	}
+
+	return &Stats{
+		AppId:     appId,
+		Name:      game[1],
+		Genres:    genres,
+		Text:      review.Text,
+		Positives: 0,
+		Negatives: 1,
+	}
+}
+
+type StatsMsg struct {
+	Stats *Stats
+	Last  bool
+}
+
+type Result struct {
+	QueryId        int
+	IsFinalMessage bool
+	Payload        interface{}
+}
+
 type Query1Result struct {
 	Windows int64
 	Mac     int64
@@ -114,45 +158,8 @@ type Query4Result struct {
 }
 
 type Query5Result struct {
-	Stats       []Stats
-	GamesNeeded int
-}
-
-func NewStats(game []string, review *Review) *Stats {
-	appId, err := strconv.Atoi(game[appIdIndex])
-	if err != nil {
-		return nil
-	}
-	if review.Score > 0 {
-		return &Stats{
-			AppId:     appId,
-			Name:      game[1],
-			Genres:    strings.Split(game[3], ","),
-			Text:      review.Text,
-			Positives: 1,
-			Negatives: 0,
-		}
-	}
-
-	return &Stats{
-		AppId:     appId,
-		Name:      game[1],
-		Genres:    strings.Split(game[3], ","),
-		Text:      review.Text,
-		Positives: 0,
-		Negatives: 1,
-	}
-}
-
-type Result struct {
-	QueryId        int
-	IsFinalMessage bool
-	Payload        interface{}
-}
-
-type StatsMsg struct {
-	Stats *Stats
-	Last  bool
+	Stats []Stats
+	// GamesNeeded int
 }
 
 type Response struct {
