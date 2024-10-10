@@ -11,12 +11,13 @@ import (
 const resultsBatchSize = 10
 
 type ReducerQuery5 struct {
-	middleware       *middleware.Middleware
-	pendingAnswers   int
-	totalGames       int
-	totalNegativeReviews     int
-	query5File       *os.File
-	query5FileWriter *csv.Writer
+	middleware           *middleware.Middleware
+	pendingAnswers       int
+	totalGames           int
+	totalNegativeReviews int
+	query5File           *os.File
+	query5FileWriter     *csv.Writer
+	tempFilesAmount      int
 }
 
 func NewReducerQuery5(middleware *middleware.Middleware) (*ReducerQuery5, error) {
@@ -27,12 +28,13 @@ func NewReducerQuery5(middleware *middleware.Middleware) (*ReducerQuery5, error)
 	}
 
 	return &ReducerQuery5{
-		middleware:       middleware,
-		pendingAnswers:   2, // por ahora hardcodeado indicando que son 2 nodos mandando
-		totalGames:       0, // inicializa en 0
-		totalNegativeReviews:     0, // inicializa en 0
-		query5File:       query5File,
-		query5FileWriter: csv.NewWriter(query5File),
+		middleware:           middleware,
+		pendingAnswers:       2, // por ahora hardcodeado indicando que son 2 nodos mandando
+		totalGames:           0, // inicializa en 0
+		totalNegativeReviews: 0, // inicializa en 0
+		query5File:           query5File,
+		query5FileWriter:     csv.NewWriter(query5File),
+		tempFilesAmount:      0,
 	}, nil
 }
 
@@ -72,18 +74,17 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 
 	switch result.Payload.(type) {
 
-	case []*middleware.Stats:
-		stats := result.Payload.([]*middleware.Stats)
+	case middleware.Query5Result:
+		// stats := result.Payload.(middleware.Query5Result)
 
-		for _, stat := range stats {
-			r.totalGames += 1
-			r.totalNegativeReviews += stat.Negatives
-			r.query5FileWriter.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-			r.query5FileWriter.Flush()
+		// for _, stat := range stats {
+		// 	r.totalGames += 1
+		// 	r.totalNegativeReviews += stat.Negatives
+		// 	r.query5FileWriter.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
+		// 	r.query5FileWriter.Flush()
 		}
 	}
 
-}
 
 func (r *ReducerQuery5) sendFinalResult() {
 	queryFileReader := csv.NewReader(r.query5File)

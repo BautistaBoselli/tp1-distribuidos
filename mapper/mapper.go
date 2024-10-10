@@ -19,7 +19,7 @@ type Mapper struct {
 	reviewsQueue *middleware.ReviewsQueue
 }
 
-const shardingAmount = 2
+const shardingAmount = 5
 
 func NewMapper() (*Mapper, error) {
 	gamesFile, err := os.Create("games.csv")
@@ -97,51 +97,54 @@ func (m *Mapper) consumeGameMessages() {
 }
 
 func (m *Mapper) consumeReviewsMessages() {
-	log.Info("Starting to consume messages")
+	log.Info("Starting to consume reviews messages")
 
-	file, err := os.Open("games.csv")
-	if err != nil {
-		log.Errorf("action: open file | result: fail")
-		return
-	}
-	defer file.Close()
 	i := 0
-	err = m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsBatch, ack func()) error {
-		i += len(reviewBatch.Reviews)
-		if i%1000 == 0 {
-			log.Infof("Processed %d reviews", i)
-		}
-		for _, review := range reviewBatch.Reviews {
-			if _, err := file.Seek(0, 0); err != nil {
-				log.Errorf("action: reset file reader | result: fail")
+	err := m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsBatch, ack func()) error {
+		go func() error {
+			file, err := os.Open("games.csv")
+			if err != nil {
+				log.Errorf("action: open file | result: fail")
 				return err
 			}
-
-			reader := csv.NewReader(file)
-
-			for {
-				record, err := reader.Read()
-				if err == io.EOF {
-					log.Errorf("action: crear_stats | result: fail | error: %v", err)
-					break
-				}
-				if err != nil {
-					log.Errorf("action: crear_stats | result: fail | error: %v", err)
+			defer file.Close()
+			i += len(reviewBatch.Reviews)
+			if i%1000 == 0 {
+				log.Infof("Processed %d reviews", i)
+			}
+			for _, review := range reviewBatch.Reviews {
+				if _, err := file.Seek(0, 0); err != nil {
+					log.Errorf("action: reset file reader | result: fail")
 					return err
 				}
-				if record[0] == review.AppId {
-					stats := middleware.NewStats(record, &review)
-					// log.Debugf("MAP STATS: %d", stats.AppId)
 
-					err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
-					if err != nil {
-						log.Errorf("Failed to publish stats message: %v", err)
+				reader := csv.NewReader(file)
+
+				for {
+					record, err := reader.Read()
+					if err == io.EOF {
+						// log.Errorf("action: crear_stats | result: fail | error: %v", err)
+						break // siguiente review
 					}
-					break
+					if err != nil {
+						log.Errorf("action: crear_stats | result: fail | error: %v", err)
+						return err
+					}
+					if record[0] == review.AppId {
+						stats := middleware.NewStats(record, &review)
+						// log.Debugf("MAP STATS: %d", stats.AppId)
+
+						err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
+						if err != nil {
+							log.Errorf("Failed to publish stats message: %v", err)
+						}
+						break
+					}
 				}
 			}
-		}
-		ack()
+			ack()
+			return nil
+		}()
 		return nil
 	})
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 	"tp1-distribuidos/shared/protocol"
 )
 
@@ -115,12 +116,12 @@ func (c *Client) SendReviews(file *os.File) error {
 	reader := bufio.NewReader(file)
 	reader.ReadString('\n')
 
-	i := 0
+	// i := 0
 	for {
-		i++
-		// if i > 50 {
-		// 	break
-		// }
+		// i++
+		// // if i > 50 {
+		// // 	break
+		// // }
 
 		batch := protocol.ClientReview{
 			Lines: make([]string, 0),
@@ -148,6 +149,7 @@ func (c *Client) SendReviews(file *os.File) error {
 			log.Errorf("action: enviar_reviews | result: fail | client: %v | error: %v", c.config.ID, err)
 			return err
 		}
+		time.Sleep(100 * time.Millisecond)
 
 	}
 

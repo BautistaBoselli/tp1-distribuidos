@@ -1,7 +1,7 @@
 server:
   address: "server:12345"
-  gamesBatchAmount: 2
-  reviewsBatchAmount: 3
+  gamesBatchAmount: 100
+  reviewsBatchAmount: 200
 log:
   level: "DEBUG"
 sharding:
