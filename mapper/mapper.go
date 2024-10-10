@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 type Mapper struct {
 	id         int
 	middleware *middleware.Middleware
+	gamesFiles []*os.File
 	gamesFile  *os.File
 	gamesQueue *middleware.GamesQueue
 	// reviewsListener?
@@ -22,9 +24,18 @@ type Mapper struct {
 const shardingAmount = 5
 
 func NewMapper() (*Mapper, error) {
-	gamesFile, err := os.Create("games.csv")
+	file, err := os.Create("store.csv")
 	if err != nil {
 		return nil, err
+	}
+	gamesFiles := make([]*os.File, 100)
+	for i := range 100 {
+		fileName := fmt.Sprintf("store_%d.csv", i)
+		file, err := os.Create(fileName)
+		if err != nil {
+			return nil, err
+		}
+		gamesFiles[i] = file
 	}
 
 	middleware, err := middleware.NewMiddleware(shardingAmount)
@@ -45,15 +56,18 @@ func NewMapper() (*Mapper, error) {
 	return &Mapper{
 		id:           0,
 		middleware:   middleware,
-		gamesFile:    gamesFile,
+		gamesFiles:   gamesFiles,
+		gamesFile:    file,
 		gamesQueue:   gq,
 		reviewsQueue: rq,
 	}, nil
 }
 
 func (m *Mapper) Close() error {
-	if err := m.gamesFile.Close(); err != nil {
-		return err
+	for _, file := range m.gamesFiles {
+		if err := file.Close(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -69,7 +83,14 @@ func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
 	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameMsg, ack func()) error {
-		writer := csv.NewWriter(m.gamesFile)
+		total := 0
+		for i, char := range strconv.Itoa(gameBatch.Game.AppId) {
+			total += int(char) * i
+		}
+		hash := total % 100
+		file := m.gamesFiles[hash]
+
+		writer := csv.NewWriter(file)
 
 		gameStats := []string{
 			strconv.Itoa(gameBatch.Game.AppId),
@@ -102,17 +123,18 @@ func (m *Mapper) consumeReviewsMessages() {
 	i := 0
 	err := m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsBatch, ack func()) error {
 		go func() error {
-			file, err := os.Open("games.csv")
-			if err != nil {
-				log.Errorf("action: open file | result: fail")
-				return err
-			}
-			defer file.Close()
 			i += len(reviewBatch.Reviews)
-			if i%1000 == 0 {
+			if i%100000 == 0 {
 				log.Infof("Processed %d reviews", i)
 			}
 			for _, review := range reviewBatch.Reviews {
+				file, err := m.getStoreFile(review.AppId)
+				if err != nil {
+					log.Errorf("Failed to get store file: %v", err)
+					return err
+				}
+				defer file.Close()
+
 				if _, err := file.Seek(0, 0); err != nil {
 					log.Errorf("action: reset file reader | result: fail")
 					return err
@@ -155,4 +177,16 @@ func (m *Mapper) consumeReviewsMessages() {
 	log.Info("Review messages consumed")
 
 	select {}
+}
+
+func (m *Mapper) getStoreFile(appId string) (*os.File, error) {
+	total := 0
+	for i, char := range appId {
+		total += int(char) * i
+	}
+	hash := total % 100
+
+	return os.Open(fmt.Sprintf("store_%d.csv", hash))
+	// return os.Open("store.csv")
+	// return m.gamesFiles[hash], nil
 }
