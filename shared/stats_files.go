@@ -2,6 +2,7 @@ package shared
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -14,15 +15,17 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-func UpsertStatsFile(filename string, message *middleware.Stats) *middleware.Stats {
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
+func UpsertStatsFile(queryname string, message *middleware.Stats) *middleware.Stats {
+	// file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
+	// log.Infof("Processing stats: %v", message.AppId)
+	file, err := getStoreFile(queryname, strconv.Itoa(message.AppId))
 	if err != nil {
 		log.Errorf("Error opening file: %s", err)
 		return nil
 	}
 	defer file.Close()
 
-	tempFile, err := os.CreateTemp("", "temp-stats.csv")
+	tempFile, err := os.CreateTemp("", fmt.Sprintf("temp-stats-%d.csv", message.AppId))
 	if err != nil {
 		log.Errorf("Error creating temp file: %s", err)
 		return nil
@@ -71,65 +74,83 @@ func UpsertStatsFile(filename string, message *middleware.Stats) *middleware.Sta
 	}
 
 	writer.Flush()
-
 	tempFile.Close()
-	file.Close()
+	file.Name()
 
-	os.Rename(tempFile.Name(), filename)
+	os.Rename(tempFile.Name(), file.Name())
 
 	if updatedStat != nil {
 		return updatedStat
 	}
 	return message
 }
+func getFilename(queryname string, appId string) string {
+	total := 0
+	for i, char := range appId {
+		total += int(char) * i
+	}
+	hash := total % 100
+	return fmt.Sprintf("%s-%d.csv", queryname, hash)
+}
 
-func GetTopStats(filename string, cant int, compare func(a *middleware.Stats, b *middleware.Stats) bool) []middleware.Stats {
+func GetTopStats(queryname string, cant int, compare func(a *middleware.Stats, b *middleware.Stats) bool) []middleware.Stats {
 	top := make([]middleware.Stats, 0)
 
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Errorf("Error opening file: %s", err)
-		return nil
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
+	for i := range 100 {
+		file, err := os.Open(fmt.Sprintf("%s-%d.csv", queryname, i))
 		if err != nil {
-			log.Errorf("Error reading file: %s", err)
+			log.Errorf("Error opening file: %s", err)
+			return nil
 		}
+		defer file.Close()
 
-		newStat, err := parseStat(record)
-		if err != nil {
-			log.Errorf("Error parsing stat: %s", err)
-			continue
-		}
+		reader := csv.NewReader(file)
 
-		place := -1
-		for i, topStat := range top {
-			if compare(newStat, &topStat) {
-				place = i
+		for {
+			record, err := reader.Read()
+			if err == io.EOF {
 				break
 			}
-		}
+			if err != nil {
+				log.Errorf("Error reading file: %s", err)
+			}
 
-		if len(top) < cant {
-			top = append(top, *newStat)
-		} else if place != -1 {
-			top[cant-1] = *newStat
-		}
+			newStat, err := parseStat(record)
+			if err != nil {
+				log.Errorf("Error parsing stat: %s", err)
+				continue
+			}
 
-		sort.Slice(top, func(i, j int) bool {
-			return compare(&top[i], &top[j])
-		})
+			place := -1
+			for i, topStat := range top {
+				if compare(newStat, &topStat) {
+					place = i
+					break
+				}
+			}
+
+			if len(top) < cant {
+				top = append(top, *newStat)
+			} else if place != -1 {
+				top[cant-1] = *newStat
+			}
+
+			sort.Slice(top, func(i, j int) bool {
+				return compare(&top[i], &top[j])
+			})
+		}
 	}
 
 	return top
+}
+
+func getStoreFile(filename string, appId string) (*os.File, error) {
+
+	filename = getFilename(filename, appId)
+	// log.Infof("Get ting file: %s", filename)
+	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
+	// return os.Open("store.csv")
+	// return m.gamesFiles[hash], nil
 }
 
 func parseStat(record []string) (*middleware.Stats, error) {

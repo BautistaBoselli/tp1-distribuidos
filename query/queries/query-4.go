@@ -11,25 +11,25 @@ import (
 type Query4 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	filename   string
 }
 
 const QUERY4_MIN_NEGATIVES = 2
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
-	filename := fmt.Sprintf("query-4-%d.csv", shardId)
 
-	file, err := os.Create(filename)
-	if err != nil {
-		log.Errorf("Error creating file: %s", err)
-		return nil
+	for i := 0; i < 100; i++ {
+		filename := fmt.Sprintf("query-4-%d-%d.csv", shardId, i)
+		file, err := os.Create(filename)
+		if err != nil {
+			log.Errorf("Error creating file: %s", err)
+			return nil
+		}
+		defer file.Close()
 	}
-	defer file.Close()
 
 	return &Query4{
 		middleware: m,
 		shardId:    shardId,
-		filename:   filename,
 	}
 }
 
@@ -60,7 +60,7 @@ func (q *Query4) processStats(message *middleware.Stats) {
 		return
 	}
 
-	updatedStat := shared.UpsertStatsFile(q.filename, message)
+	updatedStat := shared.UpsertStatsFile("query-4", message)
 
 	if message.Negatives == 1 && updatedStat.Negatives == QUERY4_MIN_NEGATIVES {
 		q.sendResult(updatedStat)

@@ -13,23 +13,25 @@ const QUERY3_TOP_SIZE = 5
 type Query3 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	filename   string
+	files      []*os.File
 }
 
 func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
-	filename := fmt.Sprintf("query-3-%d.csv", shardId)
-
-	file, err := os.Create(filename)
-	if err != nil {
-		log.Errorf("Error creating file: %s", err)
-		return nil
+	files := make([]*os.File, 100)
+	for i := 0; i < 100; i++ {
+		filename := fmt.Sprintf("query-3-%d.csv", i)
+		file, err := os.Create(filename)
+		if err != nil {
+			log.Errorf("Error creating file: %s", err)
+			return nil
+		}
+		files[i] = file
 	}
-	defer file.Close()
 
 	return &Query3{
 		middleware: m,
 		shardId:    shardId,
-		filename:   filename,
+		files:      files,
 	}
 }
 
@@ -58,14 +60,16 @@ func (q *Query3) Run() {
 	})
 
 	q.sendResult()
+
+	select {}
 }
 
 func (q *Query3) processStats(message *middleware.Stats) {
-	shared.UpsertStatsFile(q.filename, message)
+	shared.UpsertStatsFile("query-3", message)
 }
 
 func (q *Query3) sendResult() {
-	top := shared.GetTopStats(q.filename, QUERY3_TOP_SIZE, func(a *middleware.Stats, b *middleware.Stats) bool {
+	top := shared.GetTopStats("query-3", QUERY3_TOP_SIZE, func(a *middleware.Stats, b *middleware.Stats) bool {
 		return a.Positives > b.Positives
 	})
 
