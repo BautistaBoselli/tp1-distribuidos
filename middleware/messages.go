@@ -161,8 +161,3 @@ type Query5Result struct {
 	Stats []Stats
 	// GamesNeeded int
 }
-
-type Response struct {
-	Result *Result
-	Last   bool
-}

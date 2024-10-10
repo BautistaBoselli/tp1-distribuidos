@@ -86,23 +86,22 @@ func (r *ReducerQuery3) processResult(result *middleware.Result) {
 }
 
 func (r *ReducerQuery3) SendResult() {
-	// query3Result := &middleware.Query3Result{
-	// 	TopStats: r.TopStats,
-	// }
-
-	// result := &middleware.Result{
-	// 	QueryId:             3,
-	// 	IsFragmentedMessage: false,
-	// 	IsFinalMessage:      true,
-	// 	Payload:             query3Result,
-	// }
-
-	for i, stat := range r.TopStats {
-		log.Infof("Top %d Stat: %v", i + 1, stat)
+	query3Result := &middleware.Query3Result{
+		TopStats: r.TopStats,
 	}
 
-	// err := r.middleware.SendResult("", result)
-	// if err != nil {
-	// 	log.Errorf("Failed to send result: %v", err)
-	// }
+	result := &middleware.Result{
+		QueryId:        3,
+		IsFinalMessage: true,
+		Payload:        query3Result,
+	}
+
+	for i, stat := range r.TopStats {
+		log.Infof("Top %d Stat: %v", i+1, stat)
+	}
+
+	err := r.middleware.SendResponse(result)
+	if err != nil {
+		log.Errorf("Failed to send result: %v", err)
+	}
 }

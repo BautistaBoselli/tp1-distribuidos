@@ -13,7 +13,7 @@ type Query4 struct {
 	shardId    int
 }
 
-const QUERY4_MIN_NEGATIVES = 5000
+const QUERY4_MIN_NEGATIVES = 5
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 

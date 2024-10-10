@@ -159,3 +159,57 @@ func (c *Client) SendReviews(file *os.File) error {
 func (c *Client) SendAllSent() error {
 	return protocol.Send(c.conn, &protocol.AllSent{})
 }
+
+func (c *Client) ReceiveResponse() error {
+	queriesCompleted := 0
+
+	for {
+
+		if queriesCompleted >= 4 {
+			break
+		}
+
+		response, err := protocol.Receive(c.conn)
+		if err != nil {
+			return err
+		}
+
+		switch response.MessageType {
+		case protocol.MessageTypeClientResponse1:
+			var response1 protocol.ClientResponse1
+			response1.Decode(response.Data)
+			if response1.Last {
+				log.Infof("[QUERY 1 - FINAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux)
+				queriesCompleted++
+			} else {
+				log.Infof("[QUERY 1 - PARCIAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux)
+			}
+		case protocol.MessageTypeClientResponse2:
+			var response2 protocol.ClientResponse2
+			response2.Decode(response.Data)
+			for i, game := range response2.TopGames {
+				log.Infof("[QUERY 2]: Top Game %d: %v (%d)", i+1, game.Name, game.Count)
+			}
+			queriesCompleted++
+		case protocol.MessageTypeClientResponse3:
+			var response3 protocol.ClientResponse3
+			response3.Decode(response.Data)
+			for i, game := range response3.TopStats {
+				log.Infof("[QUERY 3]: Top Game %d: %v (%d)", i+1, game.Name, game.Count)
+			}
+			queriesCompleted++
+		case protocol.MessageTypeClientResponse4:
+			var response4 protocol.ClientResponse4
+			response4.Decode(response.Data)
+			if response4.Last {
+				log.Infof("[QUERY 4 - FINAL]")
+				queriesCompleted++
+			} else {
+				log.Infof("[QUERY 4 - PARCIAL]: Game %v", response4.Game.Name)
+			}
+		}
+
+	}
+
+	return nil
+}

@@ -16,13 +16,7 @@ func (m *Middleware) declare() error {
 	gob.Register(Query4Result{})
 	gob.Register(Query5Result{})
 
-<<<<<<< HEAD
-	gob.Register(Response{})
-
-	if err := m.DeclareGamesExchange(); err != nil {
-=======
 	if err := m.declareGamesExchange(); err != nil {
->>>>>>> main
 		return err
 	}
 
@@ -396,39 +390,24 @@ func (m *Middleware) ListenResponses() (*ResponsesQueue, error) {
 	return &ResponsesQueue{queue: m.responsesQueue, middleware: m}, nil
 }
 
-func (m *Middleware) SendResponse(response *Response) error {
-	return m.PublishQueue(m.responsesQueue, response)
+func (m *Middleware) SendResponse(response *Result) error {
+	return m.publishQueue(m.responsesQueue, response)
 }
 
-func (rq *ResponsesQueue) Consume(callback func(message *Response, ack func()) error) error {
-	msgs, err := rq.middleware.ConsumeQueue(rq.queue)
+func (rq *ResponsesQueue) Consume(callback func(message *Result, ack func()) error) error {
+	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
 	}
 
 	for msg := range msgs {
-		var res Response
+		var res Result
 
 		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
 		err := decoder.Decode(&res)
 		if err != nil {
 			log.Errorf("Failed to decode message: %v", err)
 			continue
-		}
-
-		if res.Last {
-			// quizas tiene que ser mayor a la cantidad de queries (5) y usar el finished
-			log.Infof("Received Last response %v", res)
-			if !rq.finished {
-				rq.middleware.SendResponse(&Response{Last: true})
-				rq.finished = true
-				msg.Ack(false)
-				break
-			} else {
-				log.Infof("Received Last again, ignoring and NACKing...")
-				msg.Nack(false, true)
-				continue
-			}
 		}
 
 		callback(&res, func() {

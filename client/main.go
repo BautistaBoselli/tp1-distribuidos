@@ -100,7 +100,11 @@ func main() {
 
 	log.Info("All games and reviews sent")
 
-	select {}
+	err = client.ReceiveResponse()
+	if err != nil {
+		log.Criticalf("Error receiving response: %s", err)
+		return
+	}
 }
 
 func openFile(path string) (*os.File, error) {

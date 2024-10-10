@@ -19,6 +19,7 @@ type Server struct {
 	reviews         chan protocol.ClientReview
 	reviewsFinished bool
 	config          *config.Config
+	clientSocket    *net.TCPConn
 }
 
 func NewServer(config *config.Config) (*Server, error) {
@@ -74,6 +75,7 @@ func (s *Server) acceptNewConnection() (*Client, error) {
 	log.Info("action: accept_connections | result: in_progress")
 
 	clientSocket, err := s.serverSocket.AcceptTCP()
+	s.clientSocket = clientSocket
 	// Si el error es que el socket ya está cerrado, simplemente terminamos el programa
 	if errors.Is(err, net.ErrClosed) {
 		return nil, err
@@ -207,10 +209,47 @@ func (s *Server) handleResponses() {
 		return
 	}
 
-	err = responseQueue.Consume(func(response *middleware.Response, ack func()) error {
+	err = responseQueue.Consume(func(response *middleware.Result, ack func()) error {
 		log.Infof("Received response: %v", response)
 		ack()
 		// send to client
+		switch response.QueryId {
+		case 1:
+			response1 := protocol.ClientResponse1{
+				Windows: int(response.Payload.(middleware.Query1Result).Windows),
+				Mac:     int(response.Payload.(middleware.Query1Result).Mac),
+				Linux:   int(response.Payload.(middleware.Query1Result).Linux),
+				Last:    response.IsFinalMessage,
+			}
+			protocol.Send(s.clientSocket, &response1)
+		case 2:
+			topGames := []protocol.Game{}
+			for _, game := range response.Payload.(middleware.Query2Result).TopGames {
+				topGames = append(topGames, protocol.Game{Id: strconv.Itoa(game.AppId), Name: game.Name, Count: int(game.AvgPlaytime)})
+			}
+			response2 := protocol.ClientResponse2{
+				TopGames: topGames,
+			}
+			protocol.Send(s.clientSocket, &response2)
+		case 3:
+			topStats := []protocol.Game{}
+			for _, stat := range response.Payload.(middleware.Query3Result).TopStats {
+				topStats = append(topStats, protocol.Game{Id: strconv.Itoa(stat.AppId), Name: stat.Name, Count: int(stat.Positives)})
+			}
+			response3 := protocol.ClientResponse3{
+				TopStats: topStats,
+			}
+			protocol.Send(s.clientSocket, &response3)
+		case 4:
+			response4 := protocol.ClientResponse4{
+				Game: protocol.Game{Id: response.Payload.(middleware.Query4Result).Game, Count: 0},
+				Last: response.IsFinalMessage,
+			}
+			protocol.Send(s.clientSocket, &response4)
+		default:
+			log.Errorf("Unknown query id: %d", response.QueryId)
+		}
+
 		log.Infof("Sending response to client: %v", response)
 		return nil
 	})
