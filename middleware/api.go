@@ -330,6 +330,7 @@ func (m *Middleware) SendResult(queryId string, result *Result) error {
 }
 
 func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error) error {
+	pendingFinalAnswers := rq.middleware.Config.Sharding.Amount;
 	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
@@ -350,6 +351,14 @@ func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error
 
 		if err != nil {
 			log.Errorf("Failed to process result message: %v", err)
+		}
+
+		if res.IsFinalMessage {
+			pendingFinalAnswers--
+		}
+
+		if pendingFinalAnswers == 0 {
+			break
 		}
 	}
 

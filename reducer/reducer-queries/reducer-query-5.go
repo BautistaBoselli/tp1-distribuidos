@@ -127,7 +127,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 		// if q.totalGames >= gamesNeeded {
 		// 	break
 		// }
-		log.Infof("writing stat query after for %v", stat)
+		// log.Infof("writing stat query after for %v", stat)
 		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
 		r.totalGames++
 	}
@@ -143,6 +143,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 
 func (r *ReducerQuery5) sendFinalResult() {
 	gamesNeeded := int(math.Ceil(float64(r.totalGames) / 10.0))
+	log.Infof("total games: %d, games needed %v", r.totalGames, gamesNeeded)
 
 	file, err := os.Open("reducer-query-5.csv")
 	if err != nil {
@@ -186,17 +187,17 @@ func (r *ReducerQuery5) sendFinalResult() {
 		i++
 
 		if len(batch.Stats) == resultsBatchSize {
-			result := middleware.Result{
-				QueryId:        5,
-				IsFinalMessage: true,
-				Payload:        batch,
-			}
+			// result := middleware.Result{
+			// 	QueryId:        5,
+			// 	IsFinalMessage: true,
+			// 	Payload:        batch,
+			// }
 
 			// if err := r.middleware.SendResult("5", &result); err != nil {
 			// 	log.Fatalf("action: send final result | result: error | message: %s", err)
 			// 	break
 			// }
-			log.Infof("sending result %v", result)
+			// log.Infof("sending result %v", result)
 			batch.Stats = make([]middleware.Stats, 0)
 		}
 
@@ -211,7 +212,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	// if err := r.middleware.SendResult("5", &result); err != nil {
 	// 	log.Fatalf("action: send final result | result: error | message: %s", err)
 	// }
-	log.Infof("sending result")
+	// log.Infof("sending result")
 	for _, stat := range result.Payload.(middleware.Query5Result).Stats {
 		log.Infof("sending stat %s: %d", stat.Name, stat.Negatives)
 	}

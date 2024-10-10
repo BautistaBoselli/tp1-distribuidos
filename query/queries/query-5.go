@@ -271,6 +271,7 @@ func (q *Query5) sendResult() {
 				IsFinalMessage: true,
 				Payload:        result,
 			})
+			log.Infof("Sending FINAL Query 5 message")
 			break
 		}
 		if err != nil {

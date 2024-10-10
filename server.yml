@@ -7,6 +7,6 @@ log:
 mappers:
   amount: 5
 sharding:
-  amount: 2
+  amount: 4
 query:
   resultInterval: 200
