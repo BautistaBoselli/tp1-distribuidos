@@ -44,7 +44,7 @@ func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []m
 		i++
 	}
 
-	for j < len(topGames2) && len(merged) < topGamesSize{
+	for j < len(topGames2) && len(merged) < topGamesSize {
 		merged = append(merged, topGames2[j])
 		j++
 	}
@@ -87,24 +87,24 @@ func (r *ReducerQuery2) processResult(result *middleware.Result) {
 }
 
 func (r *ReducerQuery2) SendResult() {
-	// query2Result := &middleware.Query2Result{
-	// 	TopGames: r.TopGames,
-	// }
-
-	// result := &middleware.Result{
-	// 	QueryId:             2,
-	// 	IsFinalMessage:      true,
-	// 	IsFragmentedMessage: false,
-	// 	Payload:             query2Result,
-	// }
-
-	// log.Infof("Sending result: %v", result)
-	for i, game := range r.TopGames {
-		log.Infof("Top %d Game: %v", i + 1, game)
+	query2Result := &middleware.Query2Result{
+		TopGames: r.TopGames,
 	}
-	// log.Infof("Top Games: %v", r.TopGames)
-	// err := r.middleware.SendResult("2", result)
-	// if err != nil {
-	// 	log.Errorf("Failed to send result: %v", err)
-	// }
+
+	result := &middleware.Result{
+		QueryId:        2,
+		IsFinalMessage: true,
+		Payload:        query2Result,
+	}
+
+	log.Infof("Sending result")
+	err := r.middleware.SendResponse(result)
+	if err != nil {
+		log.Errorf("Failed to send response: %v", err)
+	}
+
+	for i, game := range r.TopGames {
+		log.Infof("Top %d Game: %v", i+1, game)
+	}
+
 }

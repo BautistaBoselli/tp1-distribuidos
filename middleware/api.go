@@ -32,6 +32,10 @@ func (m *Middleware) declare() error {
 		return err
 	}
 
+	if err := m.DeclareResponsesQueue(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -107,6 +111,26 @@ func (m *Middleware) declareResultsExchange() error {
 		log.Errorf("Failed to declare results exchange: %v", err)
 		return err
 	}
+	return nil
+}
+
+func (m *Middleware) DeclareResponsesQueue() error {
+	queue, err := m.channel.QueueDeclare(
+		"responses", // name
+		true,        // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
+	)
+	log.Infof("Declared queue: %v", queue.Name)
+	m.responsesQueue = &queue
+
+	if err != nil {
+		log.Errorf("Failed to declare queue: %v", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -360,6 +384,44 @@ func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error
 		if pendingFinalAnswers == 0 {
 			break
 		}
+	}
+
+	return nil
+}
+
+type ResponsesQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+	finished   bool
+}
+
+func (m *Middleware) ListenResponses() (*ResponsesQueue, error) {
+	return &ResponsesQueue{queue: m.responsesQueue, middleware: m}, nil
+}
+
+func (m *Middleware) SendResponse(response *Result) error {
+	return m.publishQueue(m.responsesQueue, response)
+}
+
+func (rq *ResponsesQueue) Consume(callback func(message *Result, ack func()) error) error {
+	msgs, err := rq.middleware.consumeQueue(rq.queue)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		var res Result
+
+		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
+		err := decoder.Decode(&res)
+		if err != nil {
+			log.Errorf("Failed to decode message: %v", err)
+			continue
+		}
+
+		callback(&res, func() {
+			msg.Ack(false)
+		})
 	}
 
 	return nil
