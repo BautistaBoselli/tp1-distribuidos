@@ -205,7 +205,7 @@ func (c *Client) ReceiveResponse() error {
 				log.Infof("[QUERY 4 - FINAL]")
 				queriesCompleted++
 			} else {
-				log.Infof("[QUERY 4 - PARCIAL]: Game %v", response4.Game.Name)
+				log.Infof("[QUERY 4 - PARCIAL]: %v", response4.Game.Name)
 			}
 		}
 

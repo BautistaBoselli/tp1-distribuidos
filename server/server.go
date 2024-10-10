@@ -210,8 +210,6 @@ func (s *Server) handleResponses() {
 	}
 
 	err = responseQueue.Consume(func(response *middleware.Result, ack func()) error {
-		log.Infof("Received response: %v", response)
-		ack()
 		// send to client
 		switch response.QueryId {
 		case 1:
@@ -242,7 +240,7 @@ func (s *Server) handleResponses() {
 			protocol.Send(s.clientSocket, &response3)
 		case 4:
 			response4 := protocol.ClientResponse4{
-				Game: protocol.Game{Id: response.Payload.(middleware.Query4Result).Game, Count: 0},
+				Game: protocol.Game{Name: response.Payload.(middleware.Query4Result).Game, Count: 0},
 				Last: response.IsFinalMessage,
 			}
 			protocol.Send(s.clientSocket, &response4)
@@ -250,12 +248,13 @@ func (s *Server) handleResponses() {
 			log.Errorf("Unknown query id: %d", response.QueryId)
 		}
 
-		log.Infof("Sending response to client: %v", response)
+		ack()
 		return nil
 	})
 	if err != nil {
 		log.Errorf("Failed to consume from responses exchange: %v", err)
 	}
+
 }
 
 func (s *Server) handleDisconnect(client *Client, err error) {
