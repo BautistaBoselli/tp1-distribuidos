@@ -5,6 +5,7 @@ import (
 	// "io"
 	"encoding/csv"
 	"io"
+	"math"
 	"os"
 	"strconv"
 
@@ -17,6 +18,7 @@ const resultsBatchSize = 50
 type ReducerQuery5 struct {
 	middleware          *middleware.Middleware
 	pendingFinalAnswers int
+	totalGames          int
 }
 
 func NewReducerQuery5(middleware *middleware.Middleware) *ReducerQuery5 {
@@ -30,6 +32,7 @@ func NewReducerQuery5(middleware *middleware.Middleware) *ReducerQuery5 {
 	return &ReducerQuery5{
 		middleware:          middleware,
 		pendingFinalAnswers: middleware.Config.Sharding.Amount,
+		totalGames:          0,
 	}
 }
 
@@ -86,13 +89,10 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 	writer := csv.NewWriter(tmpFile)
 
 	queryStats := result.Payload.(middleware.Query5Result).Stats
-	gamesNeeded := result.Payload.(middleware.Query5Result).GamesNeeded
-	writtenStats := 0
+	// gamesNeeded := result.Payload.(middleware.Query5Result).GamesNeeded
+	// writtenStats := 0
 
 	for {
-		if writtenStats >= gamesNeeded {
-			break
-		}
 		storedRecord, err := reader.Read()
 		if err != nil && err != io.EOF {
 			log.Fatalf("action: read file | result: error | message: %s", err)
@@ -109,27 +109,27 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 		}
 
 		for _, stat := range queryStats {
-			if stat.Negatives < negatives || writtenStats >= gamesNeeded {
+			if stat.Negatives < negatives { // || writtenStats >= gamesNeeded
 				break
 			}
 			log.Infof("writing stat query %v", stat)
 			writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-			writtenStats++
+			r.totalGames++
 			queryStats = queryStats[1:]
 		}
 
 		log.Infof("writing stored record %v", storedRecord)
 		writer.Write(storedRecord)
-		writtenStats++
+		r.totalGames++
 	}
 
 	for _, stat := range queryStats {
-		if writtenStats >= gamesNeeded {
-			break
-		}
+		// if q.totalGames >= gamesNeeded {
+		// 	break
+		// }
 		log.Infof("writing stat query after for %v", stat)
 		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-		writtenStats++
+		r.totalGames++
 	}
 
 	writer.Flush()
@@ -142,6 +142,8 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 }
 
 func (r *ReducerQuery5) sendFinalResult() {
+	gamesNeeded := int(math.Ceil(float64(r.totalGames) / 10.0))
+
 	file, err := os.Open("reducer-query-5.csv")
 	if err != nil {
 		log.Fatalf("action: open file | result: error | message: %s", err)
@@ -154,7 +156,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	batch := middleware.Query5Result{
 		Stats: make([]middleware.Stats, 0),
 	}
-	for {
+	for range gamesNeeded {
 		record, err := reader.Read()
 		if err == io.EOF {
 			break
