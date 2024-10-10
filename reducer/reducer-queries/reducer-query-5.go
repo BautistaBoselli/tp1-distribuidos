@@ -89,8 +89,6 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 	writer := csv.NewWriter(tmpFile)
 
 	queryStats := result.Payload.(middleware.Query5Result).Stats
-	// gamesNeeded := result.Payload.(middleware.Query5Result).GamesNeeded
-	// writtenStats := 0
 
 	for {
 		storedRecord, err := reader.Read()
@@ -109,25 +107,20 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 		}
 
 		for _, stat := range queryStats {
-			if stat.Negatives < negatives { // || writtenStats >= gamesNeeded
+			if stat.Negatives < negatives {
 				break
 			}
 			writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-			r.totalGames++
+			r.totalGames++ // new games
 			queryStats = queryStats[1:]
 		}
 
 		writer.Write(storedRecord)
-		r.totalGames++
 	}
 
 	for _, stat := range queryStats {
-		// if q.totalGames >= gamesNeeded {
-		// 	break
-		// }
-		// log.Infof("writing stat query after for %v", stat)
 		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-		r.totalGames++
+		r.totalGames++ // new games
 	}
 
 	writer.Flush()
