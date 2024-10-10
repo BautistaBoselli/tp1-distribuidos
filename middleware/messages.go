@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -99,11 +100,17 @@ func NewStats(game []string, review *Review) *Stats {
 	if err != nil {
 		return nil
 	}
+
+	genres := strings.Split(game[3], ",")
+	if !slices.Contains(genres, "Action") {
+		review.Text = ""
+	}
+
 	if review.Score > 0 {
 		return &Stats{
 			AppId:     appId,
 			Name:      game[1],
-			Genres:    strings.Split(game[3], ","),
+			Genres:    genres,
 			Text:      review.Text,
 			Positives: 1,
 			Negatives: 0,
@@ -113,7 +120,7 @@ func NewStats(game []string, review *Review) *Stats {
 	return &Stats{
 		AppId:     appId,
 		Name:      game[1],
-		Genres:    strings.Split(game[3], ","),
+		Genres:    genres,
 		Text:      review.Text,
 		Positives: 0,
 		Negatives: 1,
