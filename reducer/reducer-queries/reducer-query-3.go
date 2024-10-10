@@ -61,7 +61,6 @@ func (r *ReducerQuery3) Run() {
 	}
 
 	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
-		log.Infof("Result: %v", result)
 		r.processResult(result)
 
 		ack()

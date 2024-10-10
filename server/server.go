@@ -244,6 +244,16 @@ func (s *Server) handleResponses() {
 				Last: response.IsFinalMessage,
 			}
 			protocol.Send(s.clientSocket, &response4)
+		case 5:
+			topStats := []protocol.Game{}
+			for _, stat := range response.Payload.(middleware.Query5Result).Stats {
+				topStats = append(topStats, protocol.Game{Id: strconv.Itoa(stat.AppId), Name: stat.Name, Count: int(stat.Negatives)})
+			}
+			response5 := protocol.ClientResponse5{
+				Last:     response.IsFinalMessage,
+				TopStats: topStats,
+			}
+			protocol.Send(s.clientSocket, &response5)
 		default:
 			log.Errorf("Unknown query id: %d", response.QueryId)
 		}

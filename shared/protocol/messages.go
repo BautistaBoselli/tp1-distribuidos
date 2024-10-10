@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/op/go-logging"
 )
 
 type MessageType int32
@@ -18,6 +16,7 @@ const (
 	MessageTypeClientResponse2
 	MessageTypeClientResponse3
 	MessageTypeClientResponse4
+	MessageTypeClientResponse5
 )
 
 // Protocolo de comunicacion entre cliente y servidor
@@ -39,8 +38,6 @@ func (m *ClientGame) GetMessageType() MessageType {
 func (m *ClientGame) Encode() string {
 	return strings.Join(m.Lines, "\n")
 }
-
-var log = logging.MustGetLogger("DEBUG")
 
 func (m *ClientGame) Decode(data string) error {
 	m.Lines = strings.Split(data, "\n")
@@ -221,5 +218,39 @@ func (m *ClientResponse4) Decode(data string) error {
 	}
 	m.Game.Count = int(count)
 	m.Last = parts[3] == "True"
+	return nil
+}
+
+type ClientResponse5 struct {
+	TopStats []Game
+	Last     bool
+}
+
+func (m *ClientResponse5) GetMessageType() MessageType {
+	return MessageTypeClientResponse5
+}
+func (m *ClientResponse5) Encode() string {
+	games := []string{}
+	for _, game := range m.TopStats {
+		games = append(games, game.Encode())
+	}
+	if m.Last {
+		return strings.Join(games, "\n") + ";True"
+	}
+	return strings.Join(games, "\n") + ";False"
+}
+
+func (m *ClientResponse5) Decode(data string) error {
+	parts := strings.Split(data, ";")
+	m.Last = parts[1] == "True"
+	games := strings.Split(parts[0], "\n")
+	for _, part := range games {
+		game := Game{}
+		err := game.Decode(part)
+		if err != nil {
+			return err
+		}
+		m.TopStats = append(m.TopStats, game)
+	}
 	return nil
 }

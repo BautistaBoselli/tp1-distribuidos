@@ -50,7 +50,6 @@ func (r *ReducerQuery5) Run() {
 	}
 
 	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
-		log.Infof("Result: %v", result)
 		if err := r.processResult(result); err != nil {
 			log.Fatalf("action: process result | result: error | message: %s", err)
 			return err
@@ -178,17 +177,16 @@ func (r *ReducerQuery5) sendFinalResult() {
 		i++
 
 		if len(batch.Stats) == resultsBatchSize {
-			// result := middleware.Result{
-			// 	QueryId:        5,
-			// 	IsFinalMessage: true,
-			// 	Payload:        batch,
-			// }
+			result := middleware.Result{
+				QueryId:        5,
+				IsFinalMessage: false,
+				Payload:        batch,
+			}
 
-			// if err := r.middleware.SendResult("5", &result); err != nil {
-			// 	log.Fatalf("action: send final result | result: error | message: %s", err)
-			// 	break
-			// }
-			// log.Infof("sending result %v", result)
+			if err := r.middleware.SendResponse(&result); err != nil {
+				log.Fatalf("action: send final result | result: error | message: %s", err)
+				break
+			}
 			batch.Stats = make([]middleware.Stats, 0)
 		}
 
@@ -200,10 +198,9 @@ func (r *ReducerQuery5) sendFinalResult() {
 		Payload:        batch,
 	}
 
-	// if err := r.middleware.SendResult("5", &result); err != nil {
-	// 	log.Fatalf("action: send final result | result: error | message: %s", err)
-	// }
-	// log.Infof("sending result")
+	if err := r.middleware.SendResponse(&result); err != nil {
+		log.Fatalf("action: send final result | result: error | message: %s", err)
+	}
 	for _, stat := range result.Payload.(middleware.Query5Result).Stats {
 		log.Infof("sending stat %s: %d", stat.Name, stat.Negatives)
 	}

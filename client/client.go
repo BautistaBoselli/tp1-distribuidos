@@ -165,7 +165,7 @@ func (c *Client) ReceiveResponse() error {
 
 	for {
 
-		if queriesCompleted >= 4 {
+		if queriesCompleted >= 5 {
 			break
 		}
 
@@ -206,6 +206,16 @@ func (c *Client) ReceiveResponse() error {
 				queriesCompleted++
 			} else {
 				log.Infof("[QUERY 4 - PARCIAL]: %v", response4.Game.Name)
+			}
+		case protocol.MessageTypeClientResponse5:
+			var response5 protocol.ClientResponse5
+			response5.Decode(response.Data)
+			for _, game := range response5.TopStats {
+				log.Infof("[QUERY 5 - PARCIAL]: %v (%d)", game.Name, game.Count)
+			}
+			if response5.Last {
+				log.Infof("[QUERY 5 - FINAL]")
+				queriesCompleted++
 			}
 		}
 
