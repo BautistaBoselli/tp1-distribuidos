@@ -1,8 +1,6 @@
 package queries
 
 import (
-	"fmt"
-	"os"
 	"strconv"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
@@ -13,18 +11,18 @@ type Query4 struct {
 	shardId    int
 }
 
-const QUERY4_MIN_NEGATIVES = 2
+const QUERY4_MIN_NEGATIVES = 5000
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 
-	for i := 0; i < 100; i++ {
-		filename := fmt.Sprintf("query-4-%d-%d.csv", shardId, i)
-		file, err := os.Create(filename)
-		if err != nil {
-			log.Errorf("Error creating file: %s", err)
-			return nil
-		}
-		defer file.Close()
+	files, err := shared.InitStoreFiles("query-4", 100)
+	if err != nil {
+		log.Errorf("Error initializing store files: %s", err)
+		return nil
+	}
+
+	for _, file := range files {
+		file.Close()
 	}
 
 	return &Query4{

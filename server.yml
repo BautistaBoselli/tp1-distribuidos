@@ -4,7 +4,9 @@ server:
   reviewsBatchAmount: 200
 log:
   level: "DEBUG"
+mappers:
+  amount: 5
 sharding:
   amount: 2
-query1:
+query:
   resultInterval: 200

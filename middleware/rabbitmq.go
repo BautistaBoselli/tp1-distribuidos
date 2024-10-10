@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"encoding/gob"
+	"tp1-distribuidos/config"
 
 	"github.com/op/go-logging"
 	"github.com/streadway/amqp"
@@ -11,13 +12,13 @@ import (
 var log = logging.MustGetLogger("log")
 
 type Middleware struct {
-	shardingAmount int
-	conn           *amqp.Connection
-	channel        *amqp.Channel
-	reviewsQueue   *amqp.Queue
+	config       *config.Config
+	conn         *amqp.Connection
+	channel      *amqp.Channel
+	reviewsQueue *amqp.Queue
 }
 
-func NewMiddleware(shardingAmount int) (*Middleware, error) {
+func NewMiddleware(config *config.Config) (*Middleware, error) {
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		return nil, err
@@ -33,7 +34,7 @@ func NewMiddleware(shardingAmount int) (*Middleware, error) {
 	// 	false, // global
 	// )
 
-	middleware := &Middleware{conn: conn, channel: channel, shardingAmount: shardingAmount}
+	middleware := &Middleware{conn: conn, channel: channel, config: config}
 
 	err = middleware.Declare()
 	if err != nil {

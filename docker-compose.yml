@@ -62,6 +62,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    volumes:
+    - ./server.yml:/config.yml
 
   mapper-2:
     container_name: mapper-2
@@ -70,6 +72,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    volumes:
+    - ./server.yml:/config.yml
 
   mapper-3:
     container_name: mapper-3
@@ -78,7 +82,9 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy 
-  
+    volumes:
+    - ./server.yml:/config.yml
+
   mapper-4:
     container_name: mapper-4
     image: mapper:latest
@@ -86,6 +92,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    volumes:
+    - ./server.yml:/config.yml
 
   mapper-5:
     container_name: mapper-5
@@ -94,58 +102,60 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    volumes:
+    - ./server.yml:/config.yml
 
 
-  # queries-1-0:
-  #   container_name: queries-1-0
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=1
-  #     - CLI_SHARD_ID=0
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  # queries-1-1:
-  #   container_name: queries-1-1
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=1
-  #     - CLI_SHARD_ID=1
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  queries-1-0:
+    container_name: queries-1-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=1
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  queries-1-1:
+    container_name: queries-1-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=1
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
-  # queries-2-0:
-  #   container_name: queries-2-0
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=2
-  #     - CLI_SHARD_ID=0
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  queries-2-0:
+    container_name: queries-2-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=2
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
         
-  # queries-2-1:
-  #   container_name: queries-2-1
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=2
-  #     - CLI_SHARD_ID=1
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  queries-2-1:
+    container_name: queries-2-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=2
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   queries-3-0:
     container_name: queries-3-0
@@ -173,38 +183,38 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  # queries-4-0:
-  #   container_name: queries-4-0
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=4
-  #     - CLI_SHARD_ID=0
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  queries-4-0:
+    container_name: queries-4-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=4
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
         
-  # queries-4-1:
-  #   container_name: queries-4-1
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=4
-  #     - CLI_SHARD_ID=1
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  queries-4-1:
+    container_name: queries-4-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=4
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
  
   reducer-1:
     container_name: reducer-1
     image: reducer:latest
     entrypoint: /reducer
     environment:
-      - CLI_REDUCER_ID=1
+      - CLI_QUERY_ID=1
     volumes:
       - ./server.yml:/config.yml
     depends_on:
@@ -216,36 +226,36 @@ services:
     image: reducer:latest
     entrypoint: /reducer
     environment:
-      - CLI_REDUCER_ID=2
+      - CLI_QUERY_ID=2
     volumes:
       - ./server.yml:/config.yml
     depends_on:
       rabbitmq:
         condition: service_healthy
 
-  # reducer-3:
-  #   container_name: reducer-3
-  #   image: reducer:latest
-  #   entrypoint: /reducer
-  #   environment:
-  #     - CLI_REDUCER_ID=3
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  reducer-3:
+    container_name: reducer-3
+    image: reducer:latest
+    entrypoint: /reducer
+    environment:
+      - CLI_QUERY_ID=3
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
-  # reducer-4:
-  #   container_name: reducer-4
-  #   image: reducer:latest
-  #   entrypoint: /reducer
-  #   environment:
-  #     - CLI_REDUCER_ID=4
-  #   volumes:
-  #     - ./server.yml:/config.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  reducer-4:
+    container_name: reducer-4
+    image: reducer:latest
+    entrypoint: /reducer
+    environment:
+      - CLI_QUERY_ID=4
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   rabbitmq:
     image: rabbitmq:4-management

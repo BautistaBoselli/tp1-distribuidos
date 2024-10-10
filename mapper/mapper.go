@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
 )
@@ -21,9 +22,7 @@ type Mapper struct {
 	reviewsQueue *middleware.ReviewsQueue
 }
 
-const shardingAmount = 2
-
-func NewMapper() (*Mapper, error) {
+func NewMapper(config *config.Config) (*Mapper, error) {
 	file, err := os.Create("store.csv")
 	if err != nil {
 		return nil, err
@@ -33,7 +32,7 @@ func NewMapper() (*Mapper, error) {
 		return nil, err
 	}
 
-	middleware, err := middleware.NewMiddleware(shardingAmount)
+	middleware, err := middleware.NewMiddleware(config)
 	if err != nil {
 		return nil, err
 	}

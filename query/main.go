@@ -2,104 +2,49 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/query/queries"
 	"tp1-distribuidos/shared"
 
 	"github.com/op/go-logging"
-	"github.com/spf13/viper"
 )
 
 var log = logging.MustGetLogger("log")
 
-type Config struct {
-	ShardId  int            `mapstructure:"shardId"`
-	QueryId  int            `mapstructure:"queryId"`
-	Log      LogConfig      `mapstructure:"log"`
-	Query1   Query1Config   `mapstructure:"query1"`
-	Sharding ShardingConfig `mapstructure:"sharding"`
-}
-
-type LogConfig struct {
-	Level string `mapstructure:"level"`
-}
-
-type Query1Config struct {
-	ResultInterval int `mapstructure:"resultInterval"`
-}
-
-type ShardingConfig struct {
-	Amount int `mapstructure:"amount"`
-}
-
-func InitConfig() (*Config, error) {
-	v := viper.New()
-
-	// Configure viper to read env variables with the CLI_ prefix
-	v.BindEnv("shardId", "CLI_SHARD_ID")
-	v.BindEnv("queryId", "CLI_QUERY_ID")
-	v.BindEnv("server.address", "CLI_SERVER_ADDRESS")
-	v.BindEnv("log.level", "CLI_LOG_LEVEL")
-	v.BindEnv("sharding.amount", "CLI_SHARDING_AMOUNT")
-	v.BindEnv("query1.resultInterval", "CLI_QUERY1_RESULT_INTERVAL")
-
-	v.SetConfigFile("./config.yml")
-	if err := v.ReadInConfig(); err != nil {
-		fmt.Printf("Configuration could not be read from config file. Using env variables instead")
-	}
-
-	config := Config{}
-	if err := v.Unmarshal(&config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
-}
-
-func PrintConfig(config *Config) {
-	log.Infof("action: config | result: success | log_level: %s | shard_id: %d | query_id: %d",
-		config.Log.Level,
-		config.ShardId,
-		config.QueryId,
-	)
-}
-
 func main() {
-	env, err := InitConfig()
+	config, err := config.InitConfig()
 	if err != nil {
 		log.Criticalf("%s", err)
 	}
 
-	if err := shared.InitLogger(env.Log.Level); err != nil {
+	if err := shared.InitLogger(config.Log.Level); err != nil {
 		log.Criticalf("%s", err)
 	}
 
-	PrintConfig(env)
-
-	middleware, err := middleware.NewMiddleware(env.Sharding.Amount)
+	middleware, err := middleware.NewMiddleware(config)
 	if err != nil {
 		log.Criticalf("Error creating middleware: %s", err)
 	}
 
 	var query Query
 
-	switch env.QueryId {
+	switch config.Query.Id {
 	case 1:
 		log.Info("Running query 1")
-		query = queries.NewQuery1(middleware, env.ShardId, env.Query1.ResultInterval)
+		query = queries.NewQuery1(middleware, config.Query.Shard, config.Query.ResultInterval)
 	case 2:
 		log.Info("Running query 2")
-		query = queries.NewQuery2(middleware, env.ShardId)
+		query = queries.NewQuery2(middleware, config.Query.Shard)
 	case 3:
 		log.Info("Running query 3")
-		query = queries.NewQuery3(middleware, env.ShardId)
+		query = queries.NewQuery3(middleware, config.Query.Shard)
 	case 4:
 		log.Info("Running query 4")
-		query = queries.NewQuery4(middleware, env.ShardId)
+		query = queries.NewQuery4(middleware, config.Query.Shard)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)

@@ -6,29 +6,10 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared/protocol"
 )
-
-type ServerConfig struct {
-	Address            string `mapstructure:"address"`
-	GamesBatchAmount   int    `mapstructure:"gamesBatchAmount"`
-	ReviewsBatchAmount int    `mapstructure:"reviewsBatchAmount"`
-}
-
-type LogConfig struct {
-	Level string `mapstructure:"level"`
-}
-
-type ShardingConfig struct {
-	Amount int `mapstructure:"amount"`
-}
-
-type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Log      LogConfig      `mapstructure:"log"`
-	Sharding ShardingConfig `mapstructure:"sharding"`
-}
 
 type Server struct {
 	serverSocket    *net.TCPListener
@@ -37,10 +18,10 @@ type Server struct {
 	gamesFinished   bool
 	reviews         chan protocol.ClientReview
 	reviewsFinished bool
-	config          *Config
+	config          *config.Config
 }
 
-func NewServer(config *Config) (*Server, error) {
+func NewServer(config *config.Config) (*Server, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", config.Server.Address)
 	if err != nil {
 		return nil, err
@@ -51,7 +32,7 @@ func NewServer(config *Config) (*Server, error) {
 		return nil, err
 	}
 
-	middleware, err := middleware.NewMiddleware(config.Sharding.Amount)
+	middleware, err := middleware.NewMiddleware(config)
 	if err != nil {
 		return nil, err
 	}

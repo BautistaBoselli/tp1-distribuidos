@@ -1,7 +1,6 @@
 package queries
 
 import (
-	"os"
 	"strconv"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
@@ -12,7 +11,6 @@ const QUERY3_TOP_SIZE = 5
 type Query3 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	files      []*os.File
 }
 
 func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
@@ -22,17 +20,18 @@ func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
 		return nil
 	}
 
+	for _, file := range files {
+		file.Close()
+	}
+
 	return &Query3{
 		middleware: m,
 		shardId:    shardId,
-		files:      files,
 	}
 }
 
 func (q *Query3) Close() {
-	for _, file := range q.files {
-		file.Close()
-	}
+
 	q.middleware.Close()
 }
 
