@@ -29,12 +29,10 @@ func InitStoreFiles(queryname string, shards int) ([]*os.File, error) {
 	return files, nil
 }
 
-func GetStoreRWriter(filename string, appId string, shards int) (*os.File, error) {
-	filename = GetFilename(filename, appId, shards)
+func GetStoreRWriter(filename string) (*os.File, error) {
 	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
 }
 
-func GetStoreROnly(filename string, appId string, shards int) (*os.File, error) {
-	filename = GetFilename(filename, appId, shards)
+func GetStoreROnly(filename string) (*os.File, error) {
 	return os.Open(filename)
 }

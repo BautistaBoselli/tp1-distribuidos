@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ type Mapper struct {
 	gamesQueue *middleware.GamesQueue
 	// reviewsListener?
 	reviewsQueue *middleware.ReviewsQueue
+	totalGames   int
 }
 
 func NewMapper(config *config.Config) (*Mapper, error) {
@@ -54,6 +56,7 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 		gamesFile:    file,
 		gamesQueue:   gq,
 		reviewsQueue: rq,
+		totalGames:   0,
 	}, nil
 }
 
@@ -98,6 +101,8 @@ func (m *Mapper) consumeGameMessages() {
 		}
 		writer.Flush()
 
+		m.totalGames++
+
 		ack()
 		return nil
 
@@ -122,7 +127,7 @@ func (m *Mapper) consumeReviewsMessages() {
 				log.Infof("Processed %d reviews", i)
 			}
 			for _, review := range reviewBatch.Reviews {
-				file, err := shared.GetStoreRWriter("store", review.AppId, 100)
+				file, err := shared.GetStoreRWriter(shared.GetFilename("store", review.AppId, 100))
 				if err != nil {
 					log.Errorf("Failed to get store file: %v", err)
 					return err
@@ -148,9 +153,11 @@ func (m *Mapper) consumeReviewsMessages() {
 					}
 					if record[0] == review.AppId {
 						stats := middleware.NewStats(record, &review)
-						err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
-						if err != nil {
-							log.Errorf("Failed to publish stats message: %v", err)
+						if slices.Contains(stats.Genres, "Action") || slices.Contains(stats.Genres, "Indie") {
+							err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
+							if err != nil {
+								log.Errorf("Failed to publish stats message: %v", err)
+							}
 						}
 						break
 					}
@@ -162,6 +169,7 @@ func (m *Mapper) consumeReviewsMessages() {
 		}()
 		return nil
 	})
+
 	if err != nil {
 		log.Errorf("Failed to consume from reviews exchange: %v", err)
 		time.Sleep(5 * time.Second)

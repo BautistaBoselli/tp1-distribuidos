@@ -56,12 +56,10 @@ func (q *Query3) Run() {
 	})
 
 	q.sendResult()
-
-	select {}
 }
 
 func (q *Query3) processStats(message *middleware.Stats) {
-	shared.UpsertStatsFile("query-3", message)
+	shared.UpsertStatsFile("query-3", 100, message)
 }
 
 func (q *Query3) sendResult() {

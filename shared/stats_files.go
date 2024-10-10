@@ -15,8 +15,8 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-func UpsertStatsFile(queryname string, message *middleware.Stats) *middleware.Stats {
-	file, err := GetStoreROnly(queryname, strconv.Itoa(message.AppId), 100)
+func UpsertStatsFile(queryname string, shards int, message *middleware.Stats) *middleware.Stats {
+	file, err := GetStoreROnly(GetFilename(queryname, strconv.Itoa(message.AppId), shards))
 	if err != nil {
 		log.Errorf("Error opening file: %s", err)
 		return nil
@@ -45,7 +45,7 @@ func UpsertStatsFile(queryname string, message *middleware.Stats) *middleware.St
 			return nil
 		}
 		if record[0] == strconv.Itoa(message.AppId) {
-			stat, err := parseStat(record)
+			stat, err := ParseStat(record)
 			if err != nil {
 				log.Errorf("Error parsing stat: %s", err)
 				continue
@@ -105,7 +105,7 @@ func GetTopStats(queryname string, cant int, compare func(a *middleware.Stats, b
 				log.Errorf("Error reading file: %s", err)
 			}
 
-			newStat, err := parseStat(record)
+			newStat, err := ParseStat(record)
 			if err != nil {
 				log.Errorf("Error parsing stat: %s", err)
 				continue
@@ -134,7 +134,7 @@ func GetTopStats(queryname string, cant int, compare func(a *middleware.Stats, b
 	return top
 }
 
-func parseStat(record []string) (*middleware.Stats, error) {
+func ParseStat(record []string) (*middleware.Stats, error) {
 	positives, err := strconv.Atoi(record[3])
 	if err != nil {
 		return nil, err

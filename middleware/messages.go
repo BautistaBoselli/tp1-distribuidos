@@ -114,7 +114,8 @@ type Query4Result struct {
 }
 
 type Query5Result struct {
-	Stats []Stats
+	Stats      []Stats
+	TotalGames int
 }
 
 func NewStats(game []string, review *Review) *Stats {

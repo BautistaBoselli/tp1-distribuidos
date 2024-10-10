@@ -45,6 +45,9 @@ func main() {
 	case 4:
 		log.Info("Running query 4")
 		query = queries.NewQuery4(middleware, config.Query.Shard)
+	case 5:
+		log.Info("Running query 5")
+		query = queries.NewQuery5(middleware, config.Query.Shard)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
