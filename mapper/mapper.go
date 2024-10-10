@@ -133,15 +133,15 @@ func (m *Mapper) consumeReviewsMessages() {
 					log.Errorf("Failed to get store file: %v", err)
 					return err
 				}
-				defer file.Close()
-
+				
 				if _, err := file.Seek(0, 0); err != nil {
 					log.Errorf("action: reset file reader | result: fail")
+					file.Close()
 					return err
 				}
-
+				
 				reader := csv.NewReader(file)
-
+				
 				for {
 					record, err := reader.Read()
 					if err == io.EOF {
@@ -150,12 +150,13 @@ func (m *Mapper) consumeReviewsMessages() {
 					}
 					if err != nil {
 						log.Errorf("action: crear_stats | result: fail | error: %v", err)
+						file.Close()
 						return err
 					}
 					if record[0] == review.AppId {
 						stats := middleware.NewStats(record, &review)
 						// log.Debugf("MAP STATS: %d", stats.AppId)
-
+						
 						err := m.middleware.SendStats(&middleware.StatsMsg{Stats: stats})
 						if err != nil {
 							log.Errorf("Failed to publish stats message: %v", err)
@@ -163,6 +164,7 @@ func (m *Mapper) consumeReviewsMessages() {
 						break
 					}
 				}
+				file.Close()
 			}
 			ack()
 			return nil

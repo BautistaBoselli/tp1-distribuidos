@@ -1,10 +1,10 @@
 package reducer
 
 import (
-	"encoding/csv"
-	"io"
+	// "encoding/csv"
+	// "io"
 	"os"
-	"strconv"
+	// "strconv"
 	"tp1-distribuidos/middleware"
 )
 
@@ -66,18 +66,18 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 	switch result.Payload.(type) {
 
 	case middleware.Query5Result:
-		tmpFile, err := os.Create("tmp-reducer-query-5.csv")
-		if err != nil {
-			log.Fatalf("action: create file | result: error | message: %s", err)
-			return
-		}
+		// tmpFile, err := os.Create("tmp-reducer-query-5.csv")
+		// if err != nil {
+		// 	log.Fatalf("action: create file | result: error | message: %s", err)
+		// 	return
+		// }
 
-		defer tmpFile.Close()
+		// defer tmpFile.Close()
 
-		tmpFileWriter := csv.NewWriter(tmpFile)
+		// tmpFileWriter := csv.NewWriter(tmpFile)
 
-		queryStats := result.Payload.(middleware.Query5Result).Stats
-		reducerQuery5Reader 
+		// queryStats := result.Payload.(middleware.Query5Result).Stats
+		// reducerQuery5Reader
 
 		// stats := result.Payload.(middleware.Query5Result)
 
@@ -90,52 +90,52 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 }
 
 func (r *ReducerQuery5) sendFinalResult() {
-	queryFileReader := csv.NewReader(r.query5File)
-	resultsBuffer := make([]string, resultsBatchSize)
-	avgNegativeReviews := r.totalNegativeReviews / r.totalGames
-	upperPercentile := avgNegativeReviews * 90 / 100 // recien me doy cuenta que esto esta mal porque no estoy calculando el cuantil 90, sino que estoy calculando el 90% de la media
+	// queryFileReader := csv.NewReader(r.query5File)
+	// resultsBuffer := make([]string, resultsBatchSize)
+	// avgNegativeReviews := r.totalNegativeReviews / r.totalGames
+	// upperPercentile := avgNegativeReviews * 90 / 100 // recien me doy cuenta que esto esta mal porque no estoy calculando el cuantil 90, sino que estoy calculando el 90% de la media
 
-	for {
-		stat, err := queryFileReader.Read()
-		if err != nil && err == io.EOF {
-			break
-		}
+	// for {
+	// 	stat, err := queryFileReader.Read()
+	// 	if err != nil && err == io.EOF {
+	// 		break
+	// 	}
 
-		if err != nil {
-			log.Errorf("action: read stat of query file | result: error | message: %s", err)
-			continue
-		}
+	// 	if err != nil {
+	// 		log.Errorf("action: read stat of query file | result: error | message: %s", err)
+	// 		continue
+	// 	}
 
-		negReviews, err := strconv.Atoi(stat[2])
-		if err != nil {
-			log.Errorf("action: convert negative reviews to int | result: error | message: %s", err)
-			continue
-		}
+	// 	negReviews, err := strconv.Atoi(stat[2])
+	// 	if err != nil {
+	// 		log.Errorf("action: convert negative reviews to int | result: error | message: %s", err)
+	// 		continue
+	// 	}
 
-		if negReviews > upperPercentile {
-			resultsBuffer = append(resultsBuffer, stat[1]) // stat[1] es el AppName
-		}
+	// 	if negReviews > upperPercentile {
+	// 		resultsBuffer = append(resultsBuffer, stat[1]) // stat[1] es el AppName
+	// 	}
 
-		if len(resultsBuffer) == resultsBatchSize {
-			if err := r.middleware.SendResult("5", &middleware.Result{
-				QueryId:             5,
-				IsFragmentedMessage: false,
-				IsFinalMessage:      false,
-				Payload:             resultsBuffer,
-			}); err != nil {
-				log.Errorf("action: send result | result: error | message: %s", err)
-			}
+	// 	if len(resultsBuffer) == resultsBatchSize {
+	// 		if err := r.middleware.SendResult("5", &middleware.Result{
+	// 			QueryId:             5,
+	// 			IsFragmentedMessage: false,
+	// 			IsFinalMessage:      false,
+	// 			Payload:             resultsBuffer,
+	// 		}); err != nil {
+	// 			log.Errorf("action: send result | result: error | message: %s", err)
+	// 		}
 
-			resultsBuffer = make([]string, resultsBatchSize)
-		}
-	}
+	// 		resultsBuffer = make([]string, resultsBatchSize)
+	// 	}
+	// }
 
-	if len(resultsBuffer) > 0 {
-		r.middleware.SendResult("5", &middleware.Result{
-			QueryId:             5,
-			IsFragmentedMessage: false,
-			IsFinalMessage:      true,
-			Payload:             resultsBuffer,
-		})
-	}
+	// if len(resultsBuffer) > 0 {
+	// 	r.middleware.SendResult("5", &middleware.Result{
+	// 		QueryId:             5,
+	// 		IsFragmentedMessage: false,
+	// 		IsFinalMessage:      true,
+	// 		Payload:             resultsBuffer,
+	// 	})
+	// }
 }

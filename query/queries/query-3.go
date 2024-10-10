@@ -46,7 +46,12 @@ func (q *Query3) Run() {
 		return
 	}
 
+	i := 0
 	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
+		i++
+		if i % 100000 == 0 {
+			log.Infof("Query 3 Processed %d stats", i)
+		}
 		q.processStats(message.Stats)
 		ack()
 		return nil
