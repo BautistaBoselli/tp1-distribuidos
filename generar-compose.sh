@@ -1,0 +1,1 @@
+go run ./scripts/docker-compose-generator.go

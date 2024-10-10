@@ -56,7 +56,7 @@ func InitConfig() (*Config, error) {
 	v.BindEnv("query.id", "CLI_QUERY_ID")
 	v.BindEnv("query.shard", "CLI_SHARD_ID")
 
-	v.SetConfigFile("./config.yml")
+	v.SetConfigFile("./server.yml")
 	if err := v.ReadInConfig(); err != nil {
 		fmt.Printf("Configuration could not be read from config file. Using env variables instead: %s", err)
 	}
