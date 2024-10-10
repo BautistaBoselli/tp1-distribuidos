@@ -85,10 +85,10 @@ func (q *Query2) sendResult() {
 	}
 
 	result := middleware.Result{
-		QueryId:             2,
-		IsFinalMessage:      true,
-		IsFragmentedMessage: false,
-		Payload:             query2Result,
+		QueryId:        2,
+		IsFinalMessage: true,
+		// IsFragmentedMessage: false,
+		Payload: query2Result,
 	}
 
 	if err := q.middleware.SendResult("2", &result); err != nil {

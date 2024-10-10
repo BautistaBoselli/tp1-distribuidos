@@ -125,7 +125,7 @@ func (m *Middleware) SendGameMsg(message *GameMsg) error {
 		int, _ := strconv.Atoi(string(char))
 		totalInt += int
 	}
-	shardId := totalInt % m.config.Sharding.Amount
+	shardId := totalInt % m.Config.Sharding.Amount
 	stringShardId := strconv.Itoa(shardId)
 
 	return m.PublishExchange("games", stringShardId, message)
@@ -133,7 +133,7 @@ func (m *Middleware) SendGameMsg(message *GameMsg) error {
 
 func (m Middleware) SendGameFinished() error {
 
-	for shardId := range m.config.Sharding.Amount {
+	for shardId := range m.Config.Sharding.Amount {
 		stringShardId := strconv.Itoa(shardId)
 		err := m.PublishExchange("games", stringShardId, &GameMsg{Game: &Game{}, Last: true})
 		if err != nil {
@@ -189,7 +189,7 @@ func (m *Middleware) SendReviewBatch(message *ReviewsBatch) error {
 }
 
 func (m Middleware) SendReviewsFinished(last int) error {
-	if last == m.config.Mappers.Amount+1 {
+	if last == m.Config.Mappers.Amount+1 {
 		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED")
 		return m.SendStatsFinished()
 	}
@@ -247,14 +247,14 @@ func (m *Middleware) SendStats(message *StatsMsg) error {
 		int, _ := strconv.Atoi(string(char))
 		totalInt += int
 	}
-	shardId := totalInt % m.config.Sharding.Amount
+	shardId := totalInt % m.Config.Sharding.Amount
 	topic := strconv.Itoa(shardId) + "." + strings.Join(message.Stats.Genres, ".")
 
 	return m.PublishExchange("stats", topic, message)
 }
 
 func (m *Middleware) SendStatsFinished() error {
-	for shardId := range m.config.Sharding.Amount {
+	for shardId := range m.Config.Sharding.Amount {
 		stringShardId := strconv.Itoa(shardId)
 		topic := stringShardId + ".Indie.Action"
 		log.Infof("Sending stats finished to shard %s", topic)

@@ -51,8 +51,8 @@ services:
       - CLI_ID=1
     volumes:
       - ./client.yml:/config.yml
-      - ../datasets/games_s.csv:/games.csv
-      - ../datasets/reviews_s.csv:/reviews.csv
+      - ./datasets/games_s.csv:/games.csv
+      - ./datasets/reviews_s.csv:/reviews.csv
     depends_on:
       server:
         condition: service_started
@@ -279,6 +279,18 @@ services:
     entrypoint: /reducer
     environment:
       - CLI_QUERY_ID=4
+    volumes:
+      - ./server.yml:/config.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  reducer-5:
+    container_name: reducer-5
+    image: reducer:latest
+    entrypoint: /reducer
+    environment:
+      - CLI_QUERY_ID=5
     volumes:
       - ./server.yml:/config.yml
     depends_on:

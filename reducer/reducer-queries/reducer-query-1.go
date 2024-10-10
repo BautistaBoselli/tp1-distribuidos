@@ -63,10 +63,10 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 	}
 
 	result := &middleware.Result{
-		QueryId:             1,
-		Payload:             query1Result,
-		IsFragmentedMessage: false,
-		IsFinalMessage:      isFinalMessage,
+		QueryId: 1,
+		Payload: query1Result,
+		// IsFragmentedMessage: false,
+		IsFinalMessage: isFinalMessage,
 	}
 
 	log.Infof("Reducer Query 1: Windows: %d, Mac: %d, Linux: %d", r.Windows, r.Mac, r.Linux)

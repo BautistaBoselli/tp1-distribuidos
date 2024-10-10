@@ -77,10 +77,10 @@ func (q *Query3) sendResult() {
 	}
 
 	result := &middleware.Result{
-		Payload:             query3Result,
-		IsFinalMessage:      true,
-		QueryId:             3,
-		IsFragmentedMessage: false,
+		Payload:        query3Result,
+		IsFinalMessage: true,
+		QueryId:        3,
+		// IsFragmentedMessage: false,
 	}
 
 	if err := q.middleware.SendResult("3", result); err != nil {

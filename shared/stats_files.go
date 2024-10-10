@@ -28,7 +28,7 @@ func UpsertStatsFile(queryname string, shards int, message *middleware.Stats) *m
 		log.Errorf("Error creating temp file: %s", err)
 		return nil
 	}
-	defer tempFile.Close()
+	defer os.Remove(tempFile.Name())
 
 	reader := csv.NewReader(file)
 	writer := csv.NewWriter(tempFile)

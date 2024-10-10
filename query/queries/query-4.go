@@ -79,10 +79,10 @@ func (q *Query4) sendResult(message *middleware.Stats) {
 	}
 
 	result := &middleware.Result{
-		QueryId:             4,
-		Payload:             query4Result,
-		IsFragmentedMessage: false,
-		IsFinalMessage:      false,
+		QueryId: 4,
+		Payload: query4Result,
+		// IsFragmentedMessage: false,
+		IsFinalMessage: false,
 	}
 
 	if err := q.middleware.SendResult("4", result); err != nil {
@@ -93,9 +93,9 @@ func (q *Query4) sendResult(message *middleware.Stats) {
 func (q *Query4) sendResultFinal() {
 	log.Infof("Query 4 [FINAL]")
 	result := &middleware.Result{
-		QueryId:             4,
-		IsFinalMessage:      true,
-		IsFragmentedMessage: false,
+		QueryId:        4,
+		IsFinalMessage: true,
+		// IsFragmentedMessage: false,
 	}
 
 	if err := q.middleware.SendResult("4", result); err != nil {

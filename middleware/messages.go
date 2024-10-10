@@ -114,8 +114,8 @@ type Query4Result struct {
 }
 
 type Query5Result struct {
-	Stats      []Stats
-	TotalGames int
+	Stats       []Stats
+	GamesNeeded int
 }
 
 func NewStats(game []string, review *Review) *Stats {
@@ -145,10 +145,10 @@ func NewStats(game []string, review *Review) *Stats {
 }
 
 type Result struct {
-	QueryId             int
-	IsFragmentedMessage bool
-	IsFinalMessage      bool
-	Payload             interface{}
+	QueryId int
+	// IsFragmentedMessage bool
+	IsFinalMessage bool
+	Payload        interface{}
 }
 
 type StatsMsg struct {

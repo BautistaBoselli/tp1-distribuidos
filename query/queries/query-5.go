@@ -88,7 +88,7 @@ func (q *Query5) Run() {
 		return nil
 	})
 
-	q.sendResult()
+	q.calculatePercentile()
 
 	select {}
 }
@@ -97,7 +97,7 @@ func (q *Query5) processStats(message *middleware.Stats) {
 	shared.UpsertStatsFile("query-5", 100, message)
 }
 
-func (q *Query5) sendResult() {
+func (q *Query5) calculatePercentile() {
 	q.minNegativeReviews = -1
 
 	q.processedStats = 0
@@ -127,6 +127,9 @@ func (q *Query5) sendResult() {
 
 		}()
 	}
+
+	q.sendResult()
+
 }
 
 func (q *Query5) handleRecord(record []string) {
@@ -209,4 +212,53 @@ func (q *Query5) handleRecord(record []string) {
 	os.Rename(tempFile.Name(), "stored.csv")
 
 	q.processedStats++
+}
+
+func (q *Query5) sendResult() {
+	file, err := os.Open("stored.csv")
+	if err != nil {
+		log.Errorf("Error opening stored.csv: %s", err)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+
+	result := middleware.Query5Result{
+		Stats:       make([]middleware.Stats, 0),
+		GamesNeeded: q.gamesNeeded,
+	}
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			q.middleware.SendResult("5", &middleware.Result{
+				QueryId:        5,
+				IsFinalMessage: true,
+				Payload:        result,
+			})
+			break
+		}
+		if err != nil {
+			log.Errorf("Error reading stored.csv: %s", err)
+			return
+		}
+
+		stats, err := shared.ParseStat(record)
+		if err != nil {
+			log.Errorf("Error parsing stats: %s", err)
+			return
+		}
+
+		result.Stats = append(result.Stats, *stats)
+		if len(result.Stats) == 50 {
+			q.middleware.SendResult("5", &middleware.Result{
+				QueryId:        5,
+				IsFinalMessage: false,
+				Payload:        result,
+			})
+			result.Stats = make([]middleware.Stats, 0)
+		}
+	}
+
 }

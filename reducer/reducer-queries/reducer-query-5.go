@@ -12,26 +12,25 @@ import (
 	"tp1-distribuidos/middleware"
 )
 
-const resultsBatchSize = 10
+const resultsBatchSize = 50
 
 type ReducerQuery5 struct {
-	middleware           *middleware.Middleware
-	pendingFinalAnswers  int
-	totalNegativeReviews int
+	middleware          *middleware.Middleware
+	pendingFinalAnswers int
 }
 
-func NewReducerQuery5(middleware *middleware.Middleware) (*ReducerQuery5, error) {
-	_, err := os.Create("reducer-query-5.csv")
+func NewReducerQuery5(middleware *middleware.Middleware) *ReducerQuery5 {
+	file, err := os.Create("reducer-query-5.csv")
 	if err != nil {
 		log.Fatalf("action: create file | result: error | message: %s", err)
-		return nil, err
+		return nil
 	}
+	defer file.Close()
 
 	return &ReducerQuery5{
-		middleware:           middleware,
-		pendingFinalAnswers:  2, // por ahora hardcodeado indicando que son 2 nodos mandando
-		totalNegativeReviews: 0, // inicializa en 0
-	}, nil
+		middleware:          middleware,
+		pendingFinalAnswers: middleware.Config.Sharding.Amount,
+	}
 }
 
 func (r *ReducerQuery5) Close() {
@@ -69,81 +68,77 @@ func (r *ReducerQuery5) Run() {
 }
 
 func (r *ReducerQuery5) processResult(result *middleware.Result) error {
-
-	switch result.Payload.(type) {
-
-	case middleware.Query5Result:
-		tmpFile, err := os.Create("tmp-reducer-query-5.csv")
-		if err != nil {
-			log.Fatalf("action: create file | result: error | message: %s", err)
-			return err
-		}
-		defer tmpFile.Close()
-		tmpFileWriter := csv.NewWriter(tmpFile)
-
-		queryStats := result.Payload.(middleware.Query5Result).Stats
-
-		file, err := os.Open("reducer-query-5.csv")
-		if err != nil {
-			log.Fatalf("action: open file | result: error | message: %s", err)
-			return err
-		}
-		defer file.Close()
-		fileReader := csv.NewReader(file)
-		record, err := fileReader.Read()
-
-		index := 0
-
-		cutCond := r.totalNegativeReviews / 10
-		for i := 0; i < cutCond; i++ {
-			if err != nil && err != io.EOF {
-				log.Fatalf("action: read file | result: error | message: %s", err)
-				return err
-			}
-			if err == io.EOF {
-				valueToWrite := []string{strconv.Itoa(queryStats[index].AppId), queryStats[index].Name, strconv.Itoa(queryStats[index].Negatives)}
-				writeToFile(valueToWrite, tmpFileWriter)
-				index++
-				continue
-			}
-
-			negatives, err := strconv.Atoi(record[2])
-			if err != nil {
-				log.Fatalf("action: convert negative reviews to int | result: error | message: %s", err)
-				return err
-			}
-
-			if negatives >= queryStats[index].Negatives {
-				valueToWrite := []string{record[0], record[1], record[2]}
-				writeToFile(valueToWrite, tmpFileWriter)
-				record, err = fileReader.Read()
-				if err != nil && err != io.EOF {
-					log.Fatalf("action: read file | result: error | message: %s", err)
-					return err
-				}
-
-			} else {
-				valueToWrite := []string{strconv.Itoa(queryStats[index].AppId), queryStats[index].Name, strconv.Itoa(queryStats[index].Negatives)}
-				writeToFile(valueToWrite, tmpFileWriter)
-				index++
-			}
-
-		}
-		// replace file with tmp file
-		if err := os.Rename("tmp-reducer-query-5.csv", "reducer-query-5.csv"); err != nil {
-			log.Fatalf("action: rename file | result: error | message: %s", err)
-			return err
-		}
+	tmpFile, err := os.CreateTemp("", "tmp-reducer-query-5.csv")
+	if err != nil {
+		log.Fatalf("action: create file | result: error | message: %s", err)
+		return err
 	}
-	// check tmp file is actually deleted
-	return nil
-}
+	defer os.Remove(tmpFile.Name())
 
-func writeToFile(value []string, writer *csv.Writer) {
-	if err := writer.Write(value); err != nil {
-		log.Fatalf("action: write to file | result: error | message: %s", err)
+	file, err := os.Open("reducer-query-5.csv")
+	if err != nil {
+		log.Fatalf("action: open file | result: error | message: %s", err)
+		return err
 	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	writer := csv.NewWriter(tmpFile)
+
+	queryStats := result.Payload.(middleware.Query5Result).Stats
+	gamesNeeded := result.Payload.(middleware.Query5Result).GamesNeeded
+	writtenStats := 0
+
+	for {
+		if writtenStats >= gamesNeeded {
+			break
+		}
+		storedRecord, err := reader.Read()
+		if err != nil && err != io.EOF {
+			log.Fatalf("action: read file | result: error | message: %s", err)
+			return err
+		}
+		if err == io.EOF {
+			break
+		}
+
+		negatives, err := strconv.Atoi(storedRecord[2])
+		if err != nil {
+			log.Fatalf("action: convert negative reviews to int | result: error | message: %s", err)
+			return err
+		}
+
+		for _, stat := range queryStats {
+			if stat.Negatives < negatives || writtenStats >= gamesNeeded {
+				break
+			}
+			log.Infof("writing stat query %v", stat)
+			writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
+			writtenStats++
+			queryStats = queryStats[1:]
+		}
+
+		log.Infof("writing stored record %v", storedRecord)
+		writer.Write(storedRecord)
+		writtenStats++
+	}
+
+	for _, stat := range queryStats {
+		if writtenStats >= gamesNeeded {
+			break
+		}
+		log.Infof("writing stat query after for %v", stat)
+		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
+		writtenStats++
+	}
+
 	writer.Flush()
+	// replace file with tmp file
+	if err := os.Rename(tmpFile.Name(), "reducer-query-5.csv"); err != nil {
+		log.Fatalf("action: rename file | result: error | message: %s", err)
+		return err
+	}
+	return nil
 }
 
 func (r *ReducerQuery5) sendFinalResult() {
@@ -154,36 +149,61 @@ func (r *ReducerQuery5) sendFinalResult() {
 	}
 	defer file.Close()
 
-	fileReader := csv.NewReader(file)
+	reader := csv.NewReader(file)
 
-	for {
-		record, err := fileReader.Read()
-		if err == io.EOF {
-			result := middleware.Result{
-				QueryId:             5,
-				IsFragmentedMessage: false,
-				IsFinalMessage:      true,
-				Payload:             record,
-			}
-			if err := r.middleware.SendResult("5", &result); err != nil {
-				log.Fatalf("action: send final result | result: error | message: %s", err)
-				break
-			}
-			if err != nil {
-				log.Fatalf("action: read file query 5 | result: error | message: %s", err)
-			}
-
-			result = middleware.Result{
-				QueryId:             5,
-				IsFragmentedMessage: false,
-				IsFinalMessage:      false,
-				Payload:             record,
-			}
-
-			if err := r.middleware.SendResult("5", &result); err != nil {
-				log.Fatalf("action: send final result | result: error | message: %s", err)
-			}
-
-		}
+	batch := middleware.Query5Result{
+		Stats: make([]middleware.Stats, 0),
 	}
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+
+		appId, err := strconv.Atoi(record[0])
+		if err != nil {
+			log.Fatalf("action: convert appId to int | result: error | message: %s", err)
+			return
+		}
+		negatives, err := strconv.Atoi(record[2])
+		if err != nil {
+			log.Fatalf("action: convert negatives to int | result: error | message: %s", err)
+			return
+		}
+
+		batch.Stats = append(batch.Stats, middleware.Stats{
+			AppId:     appId,
+			Name:      record[1],
+			Negatives: negatives,
+		})
+
+		if len(batch.Stats) == resultsBatchSize {
+			result := middleware.Result{
+				QueryId: 5,
+				// IsFragmentedMessage: false,
+				IsFinalMessage: true,
+				Payload:        batch,
+			}
+
+			// if err := r.middleware.SendResult("5", &result); err != nil {
+			// 	log.Fatalf("action: send final result | result: error | message: %s", err)
+			// 	break
+			// }
+			log.Infof("sending result %v", result)
+			batch.Stats = make([]middleware.Stats, 0)
+		}
+
+	}
+
+	result := middleware.Result{
+		QueryId: 5,
+		// IsFragmentedMessage: false,
+		IsFinalMessage: true,
+		Payload:        batch,
+	}
+
+	// if err := r.middleware.SendResult("5", &result); err != nil {
+	// 	log.Fatalf("action: send final result | result: error | message: %s", err)
+	// }
+	log.Infof("sending result %v", result)
 }
