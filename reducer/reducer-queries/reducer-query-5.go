@@ -3,7 +3,11 @@ package reducer
 import (
 	// "encoding/csv"
 	// "io"
+	"encoding/csv"
+	"io"
 	"os"
+	"strconv"
+
 	// "strconv"
 	"tp1-distribuidos/middleware"
 )
@@ -45,7 +49,10 @@ func (r *ReducerQuery5) Run() {
 
 	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
 		log.Infof("Result: %v", result)
-		r.processResult(result)
+		if err := r.processResult(result); err != nil {
+			log.Fatalf("action: process result | result: error | message: %s", err)
+			return err
+		}
 
 		ack()
 
@@ -61,81 +68,122 @@ func (r *ReducerQuery5) Run() {
 	})
 }
 
-func (r *ReducerQuery5) processResult(result *middleware.Result) {
+func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 
 	switch result.Payload.(type) {
 
 	case middleware.Query5Result:
-		// tmpFile, err := os.Create("tmp-reducer-query-5.csv")
-		// if err != nil {
-		// 	log.Fatalf("action: create file | result: error | message: %s", err)
-		// 	return
-		// }
+		tmpFile, err := os.Create("tmp-reducer-query-5.csv")
+		if err != nil {
+			log.Fatalf("action: create file | result: error | message: %s", err)
+			return err
+		}
+		defer tmpFile.Close()
+		tmpFileWriter := csv.NewWriter(tmpFile)
 
-		// defer tmpFile.Close()
+		queryStats := result.Payload.(middleware.Query5Result).Stats
 
-		// tmpFileWriter := csv.NewWriter(tmpFile)
+		file, err := os.Open("reducer-query-5.csv")
+		if err != nil {
+			log.Fatalf("action: open file | result: error | message: %s", err)
+			return err
+		}
+		defer file.Close()
+		fileReader := csv.NewReader(file)
+		record, err := fileReader.Read()
 
-		// queryStats := result.Payload.(middleware.Query5Result).Stats
-		// reducerQuery5Reader
+		index := 0
 
-		// stats := result.Payload.(middleware.Query5Result)
+		cutCond := r.totalNegativeReviews / 10
+		for i := 0; i < cutCond; i++ {
+			if err != nil && err != io.EOF {
+				log.Fatalf("action: read file | result: error | message: %s", err)
+				return err
+			}
+			if err == io.EOF {
+				valueToWrite := []string{strconv.Itoa(queryStats[index].AppId), queryStats[index].Name, strconv.Itoa(queryStats[index].Negatives)}
+				writeToFile(valueToWrite, tmpFileWriter)
+				index++
+				continue
+			}
 
-		// for _, stat := range stats {
-		// 	r.totalGames += 1
-		// 	r.totalNegativeReviews += stat.Negatives
-		// 	r.query5FileWriter.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-		// 	r.query5FileWriter.Flush()
+			negatives, err := strconv.Atoi(record[2])
+			if err != nil {
+				log.Fatalf("action: convert negative reviews to int | result: error | message: %s", err)
+				return err
+			}
+
+			if negatives >= queryStats[index].Negatives {
+				valueToWrite := []string{record[0], record[1], record[2]}
+				writeToFile(valueToWrite, tmpFileWriter)
+				record, err = fileReader.Read()
+				if err != nil && err != io.EOF {
+					log.Fatalf("action: read file | result: error | message: %s", err)
+					return err
+				}
+
+			} else {
+				valueToWrite := []string{strconv.Itoa(queryStats[index].AppId), queryStats[index].Name, strconv.Itoa(queryStats[index].Negatives)}
+				writeToFile(valueToWrite, tmpFileWriter)
+				index++
+			}
+
+		}
+		// replace file with tmp file
+		if err := os.Rename("tmp-reducer-query-5.csv", "reducer-query-5.csv"); err != nil {
+			log.Fatalf("action: rename file | result: error | message: %s", err)
+			return err
+		}
 	}
+	// check tmp file is actually deleted
+	return nil
+}
+
+func writeToFile(value []string, writer *csv.Writer) {
+	if err := writer.Write(value); err != nil {
+		log.Fatalf("action: write to file | result: error | message: %s", err)
+	}
+	writer.Flush()
 }
 
 func (r *ReducerQuery5) sendFinalResult() {
-	// queryFileReader := csv.NewReader(r.query5File)
-	// resultsBuffer := make([]string, resultsBatchSize)
-	// avgNegativeReviews := r.totalNegativeReviews / r.totalGames
-	// upperPercentile := avgNegativeReviews * 90 / 100 // recien me doy cuenta que esto esta mal porque no estoy calculando el cuantil 90, sino que estoy calculando el 90% de la media
+	file, err := os.Open("reducer-query-5.csv")
+	if err != nil {
+		log.Fatalf("action: open file | result: error | message: %s", err)
+		return
+	}
+	defer file.Close()
 
-	// for {
-	// 	stat, err := queryFileReader.Read()
-	// 	if err != nil && err == io.EOF {
-	// 		break
-	// 	}
+	fileReader := csv.NewReader(file)
 
-	// 	if err != nil {
-	// 		log.Errorf("action: read stat of query file | result: error | message: %s", err)
-	// 		continue
-	// 	}
+	for {
+		record, err := fileReader.Read()
+		if err == io.EOF {
+			result := middleware.Result{
+				QueryId:             5,
+				IsFragmentedMessage: false,
+				IsFinalMessage:      true,
+				Payload:             record,
+			}
+			if err := r.middleware.SendResult("5", &result); err != nil {
+				log.Fatalf("action: send final result | result: error | message: %s", err)
+				break
+			}
+			if err != nil {
+				log.Fatalf("action: read file query 5 | result: error | message: %s", err)
+			}
 
-	// 	negReviews, err := strconv.Atoi(stat[2])
-	// 	if err != nil {
-	// 		log.Errorf("action: convert negative reviews to int | result: error | message: %s", err)
-	// 		continue
-	// 	}
+			result = middleware.Result{
+				QueryId:             5,
+				IsFragmentedMessage: false,
+				IsFinalMessage:      false,
+				Payload:             record,
+			}
 
-	// 	if negReviews > upperPercentile {
-	// 		resultsBuffer = append(resultsBuffer, stat[1]) // stat[1] es el AppName
-	// 	}
+			if err := r.middleware.SendResult("5", &result); err != nil {
+				log.Fatalf("action: send final result | result: error | message: %s", err)
+			}
 
-	// 	if len(resultsBuffer) == resultsBatchSize {
-	// 		if err := r.middleware.SendResult("5", &middleware.Result{
-	// 			QueryId:             5,
-	// 			IsFragmentedMessage: false,
-	// 			IsFinalMessage:      false,
-	// 			Payload:             resultsBuffer,
-	// 		}); err != nil {
-	// 			log.Errorf("action: send result | result: error | message: %s", err)
-	// 		}
-
-	// 		resultsBuffer = make([]string, resultsBatchSize)
-	// 	}
-	// }
-
-	// if len(resultsBuffer) > 0 {
-	// 	r.middleware.SendResult("5", &middleware.Result{
-	// 		QueryId:             5,
-	// 		IsFragmentedMessage: false,
-	// 		IsFinalMessage:      true,
-	// 		Payload:             resultsBuffer,
-	// 	})
-	// }
+		}
+	}
 }
