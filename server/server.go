@@ -50,6 +50,7 @@ func NewServer(config *config.Config) (*Server, error) {
 }
 
 func (s *Server) Close() {
+	s.middleware.Close()
 	s.serverSocket.Close()
 }
 
@@ -65,10 +66,7 @@ func (s *Server) Run() {
 	go s.handleConnection(client)
 	go s.handleGames()
 	go s.handleReviews()
-	go s.handleResponses()
-
-	select {}
-
+	s.handleResponses()
 }
 
 func (s *Server) acceptNewConnection() (*Client, error) {

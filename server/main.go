@@ -34,6 +34,7 @@ func main() {
 
 	go func() {
 		<-ctx.Done()
+		log.Info("action: cerrar_servidor | result: in_progress")
 		server.Close()
 	}()
 

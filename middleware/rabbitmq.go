@@ -46,6 +46,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 }
 
 func (m *Middleware) Close() error {
+	m.channel.Close()
 	return m.conn.Close()
 }
 
