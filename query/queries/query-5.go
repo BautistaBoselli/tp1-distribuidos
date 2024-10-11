@@ -66,70 +66,13 @@ func (q *Query5) Run() {
 		return nil
 	})
 
-	// q.calculateGamesNeeded()
 	q.calculatePercentile()
 
-	select {}
 }
 
 func (q *Query5) processStats(message *middleware.Stats) {
 	shared.UpsertStatsFile("query-5", 100, message)
 }
-
-// func (q *Query5) calculateGamesNeeded() {
-// 	totalGamesWithReviews := 0
-// 	for i := range 100 {
-// 		func() {
-// 			file, err := shared.GetStoreROnly(fmt.Sprintf("query-5-%d.csv", i))
-// 			if err != nil {
-// 				log.Errorf("Error opening file: %s", err)
-// 				return
-// 			}
-// 			defer file.Close()
-
-// 			count, err := LineCounter(file)
-// 			if err != nil {
-// 				log.Errorf("Error counting lines: %s", err)
-// 				return
-// 			}
-
-// 			totalGamesWithReviews += count
-// 		}()
-// 	}
-
-// 	q.gamesNeeded = int(math.Ceil(float64(totalGamesWithReviews) * 0.1))
-// 	log.Infof("Total Games: %d - Games needed: %d", totalGamesWithReviews, q.gamesNeeded)
-// }
-
-// func lineCounter(r io.Reader) (int, error) {
-
-// 	var count int
-// 	const lineBreak = '\n'
-
-// 	buf := make([]byte, bufio.MaxScanTokenSize)
-
-// 	for {
-// 		bufferSize, err := r.Read(buf)
-// 		if err != nil && err != io.EOF {
-// 			return 0, err
-// 		}
-
-// 		var buffPosition int
-// 		for {
-// 			i := bytes.IndexByte(buf[buffPosition:], lineBreak)
-// 			if i == -1 || bufferSize == buffPosition {
-// 				break
-// 			}
-// 			buffPosition += i + 1
-// 			count++
-// 		}
-// 		if err == io.EOF {
-// 			break
-// 		}
-// 	}
-
-// 	return count, nil
-// }
 
 func (q *Query5) calculatePercentile() {
 	q.minNegativeReviews = -1
@@ -260,7 +203,6 @@ func (q *Query5) sendResult() {
 
 	result := middleware.Query5Result{
 		Stats: make([]middleware.Stats, 0),
-		// GamesNeeded: q.gamesNeeded,
 	}
 
 	for {

@@ -253,7 +253,8 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func())
 			} else {
 				log.Infof("Received Last again, ignoring and NACKing...")
 				msg.Nack(false, true)
-				continue
+				// continue
+				break
 			}
 		}
 

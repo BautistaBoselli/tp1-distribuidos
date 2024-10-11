@@ -177,5 +177,5 @@ func (m *Mapper) consumeReviewsMessages() {
 
 	log.Info("Review messages consumed")
 
-	select {}
+	// select {}
 }

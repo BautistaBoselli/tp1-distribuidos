@@ -33,7 +33,7 @@ docker-compose-up: docker-image
 .PHONY: docker-compose-up
 
 docker-compose-down:
-	docker compose stop -t 5
+	docker compose stop -t 20
 	docker compose down
 .PHONY: docker-compose-down
 
