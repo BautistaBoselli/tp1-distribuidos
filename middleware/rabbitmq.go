@@ -17,6 +17,7 @@ type Middleware struct {
 	channel        *amqp.Channel
 	reviewsQueue   *amqp.Queue
 	responsesQueue *amqp.Queue
+	cancelled      bool
 }
 
 func NewMiddleware(config *config.Config) (*Middleware, error) {
@@ -46,6 +47,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 }
 
 func (m *Middleware) Close() error {
+	m.cancelled = true
 	m.channel.Close()
 	return m.conn.Close()
 }
@@ -71,7 +73,7 @@ func (m *Middleware) publishExchange(exchange string, key string, body interface
 		},
 	)
 
-	if err != nil {
+	if err != nil && !m.cancelled {
 		log.Errorf("Failed to publish message: %v", err)
 		return err
 	}

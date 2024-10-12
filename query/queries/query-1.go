@@ -15,6 +15,7 @@ type Query1 struct {
 	resultInterval int
 	processedGames int64
 	result         middleware.Query1Result
+	cancelled      bool
 }
 
 func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query1 {
@@ -33,7 +34,7 @@ func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query
 }
 
 func (q *Query1) Close() {
-	q.middleware.Close()
+	q.cancelled = true
 }
 
 func (q *Query1) Run() {
@@ -50,6 +51,10 @@ func (q *Query1) Run() {
 		ack()
 		return nil
 	})
+
+	if q.cancelled {
+		return
+	}
 
 	q.sendResult(true)
 }

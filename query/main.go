@@ -55,7 +55,9 @@ func main() {
 
 	go func() {
 		<-ctx.Done()
+		log.Info("action: cancelar_query | result: in_progress")
 		query.Close()
+		middleware.Close()
 	}()
 
 	log.Info("Running query")

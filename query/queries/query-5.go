@@ -11,11 +11,11 @@ import (
 )
 
 type Query5 struct {
-	middleware     *middleware.Middleware
-	shardId        int
-	processedStats int
-	// gamesNeeded        int
+	middleware         *middleware.Middleware
+	shardId            int
+	processedStats     int
 	minNegativeReviews int
+	cancelled          bool
 }
 
 func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
@@ -43,7 +43,7 @@ func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
 }
 
 func (q *Query5) Close() {
-	q.middleware.Close()
+	q.cancelled = true
 }
 
 func (q *Query5) Run() {
@@ -66,8 +66,11 @@ func (q *Query5) Run() {
 		return nil
 	})
 
-	q.calculatePercentile()
+	if q.cancelled {
+		return
+	}
 
+	q.calculatePercentile()
 }
 
 func (q *Query5) processStats(message *middleware.Stats) {
@@ -115,12 +118,6 @@ func (q *Query5) handleRecord(record []string) {
 		log.Errorf("Error parsing stats: %s", err)
 		return
 	}
-
-	// Si ya tenemos suficientes juegos y la cantidad de reviews negativas es menor a la mínima, no procesamos más
-	// if q.processedStats >= q.gamesNeeded && stats.Negatives <= q.minNegativeReviews {
-	// 	log.Infof("Not processing game, not enougth reviews: %d", stats.AppId)
-	// 	return
-	// }
 
 	// si ya sabemos que va a ser el ultimo, lo agregamos directamente y actualizamos el minimo
 	if stats.Negatives < q.minNegativeReviews {

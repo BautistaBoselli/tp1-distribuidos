@@ -21,6 +21,7 @@ type Mapper struct {
 	gamesQueue *middleware.GamesQueue
 	// reviewsListener?
 	reviewsQueue *middleware.ReviewsQueue
+	cancelled    bool
 	totalGames   int
 }
 
@@ -61,6 +62,8 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 }
 
 func (m *Mapper) Close() error {
+	m.cancelled = true
+	m.middleware.Close()
 	for _, file := range m.gamesFiles {
 		if err := file.Close(); err != nil {
 			return err
@@ -110,6 +113,10 @@ func (m *Mapper) consumeGameMessages() {
 	if err != nil {
 		log.Errorf("Failed to consume from games exchange: %v", err)
 		time.Sleep(5 * time.Second)
+	}
+
+	if m.cancelled {
+		return
 	}
 
 	log.Info("Game messages consumed")
@@ -175,7 +182,9 @@ func (m *Mapper) consumeReviewsMessages() {
 		time.Sleep(5 * time.Second)
 	}
 
-	log.Info("Review messages consumed")
+	if m.cancelled {
+		return
+	}
 
-	// select {}
+	log.Info("Review messages consumed")
 }

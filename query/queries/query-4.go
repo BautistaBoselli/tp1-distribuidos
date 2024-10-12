@@ -11,6 +11,7 @@ import (
 type Query4 struct {
 	middleware *middleware.Middleware
 	shardId    int
+	cancelled  bool
 }
 
 const QUERY4_MIN_NEGATIVES = 10
@@ -34,7 +35,7 @@ func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 }
 
 func (q *Query4) Close() {
-	q.middleware.Close()
+	q.cancelled = true
 }
 
 func (q *Query4) Run() {
@@ -56,6 +57,10 @@ func (q *Query4) Run() {
 		ack()
 		return nil
 	})
+
+	if q.cancelled {
+		return
+	}
 
 	q.sendResultFinal()
 }
