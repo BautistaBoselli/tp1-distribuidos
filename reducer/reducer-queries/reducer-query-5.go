@@ -132,7 +132,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 }
 
 func (r *ReducerQuery5) sendFinalResult() {
-	gamesNeeded := int(math.Ceil(float64(r.totalGames) / 10.0))
+	gamesNeeded := int(math.Floor(float64(r.totalGames) / 10.0))
 	log.Infof("total games: %d, games needed %v", r.totalGames, gamesNeeded)
 
 	file, err := os.Open("reducer-query-5.csv")

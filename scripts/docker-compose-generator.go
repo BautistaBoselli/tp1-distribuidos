@@ -64,6 +64,7 @@ services:
       - CLI_ID=1
     volumes:
       - ./client.yml:/config.yml
+      - ./results:/results
       - ./datasets/games.csv:/games.csv
       - ./datasets/reviews.csv:/reviews.csv
     depends_on:

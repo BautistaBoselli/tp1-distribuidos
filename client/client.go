@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -161,6 +162,14 @@ func (c *Client) SendAllSent() error {
 }
 
 func (c *Client) ReceiveResponse() error {
+	resultsFile, err := os.Create("./results/results.txt")
+	if err != nil {
+		return err
+	}
+	defer resultsFile.Close()
+
+	writer := bufio.NewWriter(resultsFile)
+
 	queriesCompleted := 0
 
 	for {
@@ -179,42 +188,42 @@ func (c *Client) ReceiveResponse() error {
 			var response1 protocol.ClientResponse1
 			response1.Decode(response.Data)
 			if response1.Last {
-				log.Infof("[QUERY 1 - FINAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux)
+				logResults(writer, fmt.Sprintf("[QUERY 1 - FINAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux))
 				queriesCompleted++
 			} else {
-				log.Infof("[QUERY 1 - PARCIAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux)
+				logResults(writer, fmt.Sprintf("[QUERY 1 - PARCIAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux))
 			}
 		case protocol.MessageTypeClientResponse2:
 			var response2 protocol.ClientResponse2
 			response2.Decode(response.Data)
 			for i, game := range response2.TopGames {
-				log.Infof("[QUERY 2]: Top Game %d: %v (%d)", i+1, game.Name, game.Count)
+				logResults(writer, fmt.Sprintf("[QUERY 2]: Top Game %d: %v (%d)", i+1, game.Name, game.Count))
 			}
 			queriesCompleted++
 		case protocol.MessageTypeClientResponse3:
 			var response3 protocol.ClientResponse3
 			response3.Decode(response.Data)
 			for i, game := range response3.TopStats {
-				log.Infof("[QUERY 3]: Top Game %d: %v (%d)", i+1, game.Name, game.Count)
+				logResults(writer, fmt.Sprintf("[QUERY 3]: Top Game %d: %v (%d)", i+1, game.Name, game.Count))
 			}
 			queriesCompleted++
 		case protocol.MessageTypeClientResponse4:
 			var response4 protocol.ClientResponse4
 			response4.Decode(response.Data)
 			if response4.Last {
-				log.Infof("[QUERY 4 - FINAL]")
+				logResults(writer, "[QUERY 4 - FINAL]")
 				queriesCompleted++
 			} else {
-				log.Infof("[QUERY 4 - PARCIAL]: %v", response4.Game.Name)
+				logResults(writer, fmt.Sprintf("[QUERY 4 - PARCIAL]: %v", response4.Game.Name))
 			}
 		case protocol.MessageTypeClientResponse5:
 			var response5 protocol.ClientResponse5
 			response5.Decode(response.Data)
 			for _, game := range response5.TopStats {
-				log.Infof("[QUERY 5 - PARCIAL]: %v (%d)", game.Name, game.Count)
+				logResults(writer, fmt.Sprintf("[QUERY 5 - PARCIAL]: %v (%d)", game.Name, game.Count))
 			}
 			if response5.Last {
-				log.Infof("[QUERY 5 - FINAL]")
+				logResults(writer, "[QUERY 5 - FINAL]")
 				queriesCompleted++
 			}
 		}
@@ -222,4 +231,10 @@ func (c *Client) ReceiveResponse() error {
 	}
 
 	return nil
+}
+
+func logResults(writer *bufio.Writer, string string) {
+	log.Infof(string)
+	writer.WriteString(string + "\n")
+	writer.Flush()
 }
