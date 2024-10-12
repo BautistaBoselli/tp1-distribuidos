@@ -15,7 +15,7 @@ type ReducerQuery2 struct {
 func NewReducerQuery2(middleware *middleware.Middleware) *ReducerQuery2 {
 	return &ReducerQuery2{
 		middleware:     middleware,
-		pendingAnswers: 2, // despues cambiar por middleware.ShardingAmount o algo que indique los nodos
+		pendingAnswers: middleware.Config.Sharding.Amount,
 	}
 }
 

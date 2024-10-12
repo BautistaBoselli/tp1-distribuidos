@@ -209,6 +209,7 @@ func (s *Server) handleResponses() {
 
 	err = responseQueue.Consume(func(response *middleware.Result, ack func()) error {
 		// send to client
+		log.Debugf("Received response from query %d", response.QueryId)
 		switch response.QueryId {
 		case 1:
 			response1 := protocol.ClientResponse1{
