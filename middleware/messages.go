@@ -81,6 +81,11 @@ func NewReview(record []string) *Review {
 	if err != nil {
 		return nil
 	}
+
+	if len(record[textIndexReview]) == 0 {
+		return nil
+	}
+
 	return &Review{
 		AppId: record[appIdIndexReview],
 		Text:  record[textIndexReview],

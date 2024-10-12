@@ -170,12 +170,13 @@ func (s *Server) handleReviews() {
 				log.Errorf("Failed to read review error: %v", err)
 				continue
 			}
-			reviewBatch = append(reviewBatch, *middleware.NewReview(record))
-
-			// log.Debugf("REVIEW BATCH SIZE: %d, REVIEW: %s", len(reviewBatch), record[1])
+			review := middleware.NewReview(record)
+			if review == nil {
+				continue
+			}
+			reviewBatch = append(reviewBatch, *review)
 
 			if len(reviewBatch) == s.config.Server.ReviewsBatchAmount {
-				// log.Debugf("SENDING REVIEW BATCH: %d", len(reviewBatch))
 				err := s.middleware.SendReviewBatch(&middleware.ReviewsBatch{Reviews: reviewBatch})
 				if err != nil {
 					log.Errorf("Failed to publish review message: %v", err)

@@ -14,8 +14,6 @@ type Query4 struct {
 	cancelled  bool
 }
 
-const QUERY4_MIN_NEGATIVES = 10
-
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 
 	files, err := shared.InitStoreFiles("query-4", 100)
@@ -72,7 +70,7 @@ func (q *Query4) processStats(message *middleware.Stats) {
 
 	updatedStat := shared.UpsertStatsFile("query-4", 100, message)
 
-	if message.Negatives == 1 && updatedStat.Negatives == QUERY4_MIN_NEGATIVES {
+	if message.Negatives == 1 && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
 		q.sendResult(updatedStat)
 	}
 }

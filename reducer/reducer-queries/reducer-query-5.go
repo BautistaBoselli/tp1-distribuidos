@@ -118,6 +118,9 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 	}
 
 	for _, stat := range queryStats {
+		if stat.Negatives == 0 {
+			break
+		}
 		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
 		r.totalGames++ // new games
 	}
@@ -132,7 +135,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 }
 
 func (r *ReducerQuery5) sendFinalResult() {
-	gamesNeeded := int(math.Floor(float64(r.totalGames) / 10.0))
+	gamesNeeded := int(math.Ceil(float64(r.totalGames) / 10.0))
 	log.Infof("total games: %d, games needed %v", r.totalGames, gamesNeeded)
 
 	file, err := os.Open("reducer-query-5.csv")
@@ -150,7 +153,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 
 	i := 0
 	for {
-		if i >= gamesNeeded {
+		if i > gamesNeeded {
 			break
 		}
 		record, err := reader.Read()

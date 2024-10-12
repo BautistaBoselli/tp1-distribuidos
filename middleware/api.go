@@ -253,8 +253,7 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func())
 			} else {
 				log.Infof("Received Last again, ignoring and NACKing...")
 				msg.Nack(false, true)
-				// continue
-				break
+				continue
 			}
 		}
 
@@ -355,7 +354,7 @@ func (m *Middleware) SendResult(queryId string, result *Result) error {
 }
 
 func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error) error {
-	pendingFinalAnswers := rq.middleware.Config.Sharding.Amount;
+	pendingFinalAnswers := rq.middleware.Config.Sharding.Amount
 	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
