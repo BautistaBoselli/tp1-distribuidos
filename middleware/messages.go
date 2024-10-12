@@ -41,11 +41,18 @@ func NewGame(record []string) *Game {
 	if err != nil {
 		return nil
 	}
+
+	if len(record[genreIndex]) == 0 {
+		return nil
+	}
+
+	genres := strings.Split(record[genreIndex], ",")
+
 	game := &Game{
 		AppId:       appId,
 		Name:        record[nameIndex],
 		Year:        year,
-		Genres:      strings.Split(record[genreIndex], ","),
+		Genres:      genres,
 		Windows:     record[windowsIndex] == "True",
 		Mac:         record[macIndex] == "True",
 		Linux:       record[linuxIndex] == "True",

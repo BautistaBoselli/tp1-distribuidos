@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"tp1-distribuidos/config"
+
+	"github.com/spf13/viper"
 )
 
-func generateDockerCompose(sharding int, mappers int) {
+func generateDockerCompose(sharding int, mappers int, games string, reviews string) {
 	// Base structure of the docker-compose file
 	composeStr := `
 name: tp1
@@ -55,7 +57,7 @@ services:
         condition: service_started`, query)
 	}
 
-	composeStr += `
+	composeStr += fmt.Sprintf(`
   client1:
     container_name: client1
     image: client:latest
@@ -65,13 +67,13 @@ services:
     volumes:
       - ./client.yml:/config.yml
       - ./results:/results
-      - ./datasets/games.csv:/games.csv
-      - ./datasets/reviews.csv:/reviews.csv
+      - %s:/games.csv
+      - %s:/reviews.csv
     depends_on:
       server:
         condition: service_started
       rabbitmq:
-        condition: service_healthy`
+        condition: service_healthy`, games, reviews)
 
 	// Generate client services
 	for i := 1; i <= mappers; i++ {
@@ -136,5 +138,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	generateDockerCompose(config.Sharding.Amount, config.Mappers.Amount)
+	viper.SetConfigFile("client.yml")
+	viper.ReadInConfig()
+
+	games := viper.Get("datasets.games").(string)
+	reviews := viper.Get("datasets.reviews").(string)
+
+	generateDockerCompose(config.Sharding.Amount, config.Mappers.Amount, games, reviews)
 }

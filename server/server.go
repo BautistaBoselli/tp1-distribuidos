@@ -139,7 +139,9 @@ func (s *Server) handleGames() {
 				continue
 			}
 			gameMsg := middleware.GameMsg{Game: middleware.NewGame(record), Last: false}
-
+			if gameMsg.Game == nil {
+				continue
+			}
 			err = s.middleware.SendGameMsg(&gameMsg)
 			if err != nil {
 				log.Errorf("Failed to publish game message: %v", err)

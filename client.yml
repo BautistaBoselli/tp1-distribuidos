@@ -5,3 +5,6 @@ log:
   level: "DEBUG"
 batch:
   amount: 500
+datasets:
+  games: "../datasets/games_s.csv"
+  reviews: "../datasets/reviews_s.csv"
