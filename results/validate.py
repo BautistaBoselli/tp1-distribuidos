@@ -72,10 +72,21 @@ for i, top_game in enumerate(data['q4']):
         print("Expected: ", top_game['Name'])
         ok = False
 
+total_games = 0
+for line in tp_results:
+    if line.startswith("[QUERY 4 - PARCIAL]:"):
+        total_games += 1
+
+if total_games != len(data['q4']):
+    print("Expected total games: ", len(data['q4']))
+    print("Found total games: ", total_games)
+    ok = False
+
 if ok:
     print("q4 is correct")
 else:
     print("q4 is incorrect")
+
 
 print("\nChecking q5...")
 
