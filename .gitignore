@@ -1,5 +1,5 @@
 .DS_Store
 out.txt
 *.csv
-results
 datasets
+results/results.txt

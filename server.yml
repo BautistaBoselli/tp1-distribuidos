@@ -10,4 +10,4 @@ sharding:
   amount: 2
 query:
   query1-result-interval: 1000
-  query5-min-negatives: 500
+  query4-min-negatives: 500

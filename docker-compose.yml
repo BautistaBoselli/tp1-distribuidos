@@ -249,17 +249,17 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-  # reducer-4:
-  #   container_name: reducer-4
-  #   image: reducer:latest
-  #   entrypoint: /reducer
-  #   environment:
-  #     - CLI_QUERY_ID=4
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  reducer-4:
+    container_name: reducer-4
+    image: reducer:latest
+    entrypoint: /reducer
+    environment:
+      - CLI_QUERY_ID=4
+    volumes:
+      - ./server.yml:/server.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
   reducer-5:
     container_name: reducer-5
     image: reducer:latest

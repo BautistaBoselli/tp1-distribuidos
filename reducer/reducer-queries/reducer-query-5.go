@@ -153,7 +153,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 
 	i := 0
 	for {
-		if i > gamesNeeded {
+		if i >= gamesNeeded {
 			break
 		}
 		record, err := reader.Read()

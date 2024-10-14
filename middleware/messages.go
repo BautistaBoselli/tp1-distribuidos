@@ -32,6 +32,10 @@ func NewGame(record []string) *Game {
 		return nil
 	}
 
+	if len(record[nameIndex]) == 0 {
+		return nil
+	}
+
 	year, err := strconv.Atoi(record[yearIndex][len(record[yearIndex])-4:])
 	if err != nil {
 		return nil
@@ -110,6 +114,10 @@ type Stats struct {
 func NewStats(game []string, review *Review) *Stats {
 	appId, err := strconv.Atoi(game[appIdIndex])
 	if err != nil {
+		return nil
+	}
+
+	if len(game[1]) == 0 {
 		return nil
 	}
 

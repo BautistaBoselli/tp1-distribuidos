@@ -31,7 +31,7 @@ type QueryConfig struct {
 	Id             int `mapstructure:"id"`
 	Shard          int `mapstructure:"shard"`
 	ResultInterval int `mapstructure:"query1-result-interval"`
-	MinNegatives   int `mapstructure:"query5-min-negatives"`
+	MinNegatives   int `mapstructure:"query4-min-negatives"`
 }
 
 type Config struct {
@@ -54,7 +54,7 @@ func InitConfig() (*Config, error) {
 	v.BindEnv("mappers.amount", "CLI_MAPPER_AMOUNT")
 	v.BindEnv("sharding.amount", "CLI_SHARDING_AMOUNT")
 	v.BindEnv("query.query1-result-interval", "CLI_QUERY1_RESULT_INTERVAL")
-	v.BindEnv("query.query5-min-negatives", "CLI_QUERY5_MIN_NEGATIVES")
+	v.BindEnv("query.query4-min-negatives", "CLI_QUERY4_MIN_NEGATIVES")
 	v.BindEnv("query.id", "CLI_QUERY_ID")
 	v.BindEnv("query.shard", "CLI_SHARD_ID")
 

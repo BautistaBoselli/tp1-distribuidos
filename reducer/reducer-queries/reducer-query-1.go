@@ -81,7 +81,6 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 	}
 
 	log.Infof("Reducer Query 1: Windows: %d, Mac: %d, Linux: %d, IsFinalMessage: %t", r.Windows, r.Mac, r.Linux, isFinalMessage)
-	log.Debug(result)
 
 	err := r.middleware.SendResponse(result)
 	if err != nil {
