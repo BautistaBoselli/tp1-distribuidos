@@ -3,3 +3,5 @@ out.txt
 *.csv
 datasets
 results/results.txt
+results/results.json
+*.ogv
