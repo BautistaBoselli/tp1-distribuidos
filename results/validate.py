@@ -1,11 +1,10 @@
 import json
 
-with open('./results_m.json', 'r') as file:
+with open('./results.json', 'r') as file:
     data = json.load(file)
 
 with open('./results.txt', 'r') as file:
     tp_results = file.readlines()
-
 
 print("Checking q1...")
 
@@ -98,7 +97,7 @@ for i, top_game in enumerate(data['q5']):
             found = True
             break
     if not found:
-        print("Expected: ", top_game['Name'])
+        print(f"Expected: {top_game['Name']} with {top_game["count"]} negative reviews")
         ok = False
 
 total_games = 0

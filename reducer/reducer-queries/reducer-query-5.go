@@ -204,7 +204,4 @@ func (r *ReducerQuery5) sendFinalResult() {
 	if err := r.middleware.SendResponse(&result); err != nil {
 		log.Fatalf("action: send final result | result: error | message: %s", err)
 	}
-	for _, stat := range result.Payload.(middleware.Query5Result).Stats {
-		log.Infof("sending stat %s: %d", stat.Name, stat.Negatives)
-	}
 }

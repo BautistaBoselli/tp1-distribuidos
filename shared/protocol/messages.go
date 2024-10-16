@@ -126,7 +126,16 @@ func (m *Game) Encode() string {
 }
 
 func (m *Game) Decode(data string) error {
-	parts := strings.Split(data, ",")
+	// Handle games with commas in its names
+	firstComma := strings.Index(data, ",")
+    lastComma := strings.LastIndex(data, ",")
+
+	if firstComma == -1 || lastComma == -1  || firstComma == lastComma {
+		return fmt.Errorf("invalid game data: %s", data)
+	}
+
+	parts := []string{data[:firstComma], data[firstComma+1:lastComma], data[lastComma+1:]}
+
 	m.Id = parts[0]
 	m.Name = parts[1]
 	count, err := strconv.ParseInt(parts[2], 10, 64)
