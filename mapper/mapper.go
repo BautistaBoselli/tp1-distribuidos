@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"io"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,8 +15,8 @@ import (
 type Mapper struct {
 	id         int
 	middleware *middleware.Middleware
-	gamesFiles []*os.File
-	gamesFile  *os.File
+	// gamesFiles []*os.File
+	gamesDirs  map[int]shared.Directory
 	gamesQueue *middleware.GamesQueue
 	// reviewsListener?
 	reviewsQueue *middleware.ReviewsQueue
@@ -26,14 +25,10 @@ type Mapper struct {
 }
 
 func NewMapper(config *config.Config) (*Mapper, error) {
-	file, err := os.Create("store.csv")
-	if err != nil {
-		return nil, err
-	}
-	gamesFiles, err := shared.InitStoreFiles("store", 100)
-	if err != nil {
-		return nil, err
-	}
+	// gamesFiles, err := shared.InitStoreFiles("store", 100)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	middleware, err := middleware.NewMiddleware(config)
 	if err != nil {
@@ -51,10 +46,10 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 	}
 
 	return &Mapper{
-		id:           0,
-		middleware:   middleware,
-		gamesFiles:   gamesFiles,
-		gamesFile:    file,
+		id:         0,
+		middleware: middleware,
+		gamesDirs:  make(map[int]shared.Directory),
+		// gamesFiles:   gamesFiles,
 		gamesQueue:   gq,
 		reviewsQueue: rq,
 		totalGames:   0,
@@ -64,10 +59,14 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 func (m *Mapper) Close() error {
 	m.cancelled = true
 	m.middleware.Close()
-	for _, file := range m.gamesFiles {
-		if err := file.Close(); err != nil {
-			return err
-		}
+	for _, dir := range m.gamesDirs {
+		dir.Delete()
+
+		// for _, file := range dir {
+		// 	if err := file.Close(); err != nil {
+		// 		return err
+		// 	}
+		// }
 	}
 	return nil
 }
@@ -83,12 +82,29 @@ func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
 	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameMsg, ack func()) error {
+		if gameBatch.Last {
+			log.Infof("Received last game message")
+			log.Infof("Total games processed: %d", m.totalGames)
+
+			return nil
+		}
+
+		if _, exists := m.gamesDirs[gameBatch.ClientId]; !exists {
+			id := strconv.Itoa(gameBatch.ClientId)
+			dir, err := shared.InitStoreFiles(id, "store", 100)
+			if err != nil {
+				log.Errorf("Failed to init store files: %v", err)
+				return err
+			}
+			m.gamesDirs[gameBatch.ClientId] = dir
+		}
+
 		total := 0
 		for i, char := range strconv.Itoa(gameBatch.Game.AppId) {
 			total += int(char) * i
 		}
 		hash := total % 100
-		file := m.gamesFiles[hash]
+		file := m.gamesDirs[gameBatch.ClientId].Files[hash]
 
 		writer := csv.NewWriter(file)
 
@@ -127,14 +143,16 @@ func (m *Mapper) consumeReviewsMessages() {
 	log.Info("Starting to consume reviews messages")
 
 	i := 0
-	err := m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsBatch, ack func()) error {
+	err := m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsMsg, ack func()) error {
 		go func() error {
+			clientId := strconv.Itoa(reviewBatch.ClientId)
 			i += len(reviewBatch.Reviews)
 			if i%100000 == 0 {
 				log.Infof("Processed %d reviews", i)
 			}
 			for _, review := range reviewBatch.Reviews {
-				file, err := shared.GetStoreRWriter(shared.GetFilename("store", review.AppId, 100))
+
+				file, err := shared.GetStoreRWriter(shared.GetFilename(clientId, "store", review.AppId, 100))
 				if err != nil {
 					log.Errorf("Failed to get store file: %v", err)
 					return err

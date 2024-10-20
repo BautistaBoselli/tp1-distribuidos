@@ -6,5 +6,5 @@ log:
 batch:
   amount: 500
 datasets:
-  games: "../datasets/games_m.csv"
-  reviews: "../datasets/reviews_m.csv"
+  games: "../datasets/games.csv"
+  reviews: "../datasets/reviews.csv"

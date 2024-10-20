@@ -109,8 +109,8 @@ services:
     volumes:
       - ./client.yml:/config.yml
       - ./results:/results
-      - ./datasets/games.csv:/games.csv
-      - ./datasets/reviews.csv:/reviews.csv
+      - ../datasets/games_m.csv:/games.csv
+      - ../datasets/reviews_m.csv:/reviews.csv
     depends_on:
       server:
         condition: service_started

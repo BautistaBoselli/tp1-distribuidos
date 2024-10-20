@@ -138,7 +138,7 @@ func (s *Server) handleGames() {
 				log.Errorf("Failed to read game error: %v", err)
 				continue
 			}
-			gameMsg := middleware.GameMsg{Game: middleware.NewGame(record), Last: false}
+			gameMsg := middleware.GameMsg{ClientId: 1, Game: middleware.NewGame(record), Last: false}
 			if gameMsg.Game == nil {
 				continue
 			}
@@ -177,7 +177,7 @@ func (s *Server) handleReviews() {
 			reviewBatch = append(reviewBatch, *review)
 
 			if len(reviewBatch) == s.config.Server.ReviewsBatchAmount {
-				err := s.middleware.SendReviewBatch(&middleware.ReviewsBatch{Reviews: reviewBatch})
+				err := s.middleware.SendReviewBatch(&middleware.ReviewsMsg{ClientId: 1, Reviews: reviewBatch})
 				if err != nil {
 					log.Errorf("Failed to publish review message: %v", err)
 				}
@@ -187,13 +187,13 @@ func (s *Server) handleReviews() {
 	}
 
 	if len(reviewBatch) > 0 {
-		err := s.middleware.SendReviewBatch(&middleware.ReviewsBatch{Reviews: reviewBatch})
+		err := s.middleware.SendReviewBatch(&middleware.ReviewsMsg{ClientId: 1, Reviews: reviewBatch})
 		if err != nil {
 			log.Errorf("Failed to publish review message: %v", err)
 		}
 	}
 
-	err := s.middleware.SendReviewsFinished(1)
+	err := s.middleware.SendReviewsFinished(1, 1)
 	if err != nil {
 		log.Errorf("Failed to publish review message: %v", err)
 

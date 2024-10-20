@@ -15,8 +15,8 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-func UpsertStatsFile(queryname string, shards int, message *middleware.Stats) *middleware.Stats {
-	file, err := GetStoreROnly(GetFilename(queryname, strconv.Itoa(message.AppId), shards))
+func UpsertStatsFile(clientId string, queryname string, shards int, message *middleware.Stats) *middleware.Stats {
+	file, err := GetStoreRWriter(GetFilename(clientId, queryname, strconv.Itoa(message.AppId), shards))
 	if err != nil {
 		log.Errorf("Error opening file: %s", err)
 		return nil

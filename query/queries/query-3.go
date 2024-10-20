@@ -12,22 +12,14 @@ type Query3 struct {
 	middleware *middleware.Middleware
 	shardId    int
 	cancelled  bool
+	directory  shared.Directory
 }
 
 func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
-	files, err := shared.InitStoreFiles("query-3", 100)
-	if err != nil {
-		log.Errorf("Error initializing store files: %s", err)
-		return nil
-	}
-
-	for _, file := range files {
-		file.Close()
-	}
-
 	return &Query3{
 		middleware: m,
 		shardId:    shardId,
+		directory:  shared.Directory{},
 	}
 }
 
@@ -50,7 +42,7 @@ func (q *Query3) Run() {
 		if i%25000 == 0 {
 			log.Infof("Query 3 Processed %d stats", i)
 		}
-		q.processStats(message.Stats)
+		q.processStats(message)
 		ack()
 		return nil
 	})
@@ -62,8 +54,9 @@ func (q *Query3) Run() {
 	q.sendResult()
 }
 
-func (q *Query3) processStats(message *middleware.Stats) {
-	shared.UpsertStatsFile("query-3", 100, message)
+func (q *Query3) processStats(message *middleware.StatsMsg) {
+	clientId := strconv.Itoa(message.ClientId)
+	shared.UpsertStatsFile(clientId, "query-3", 100, message.Stats)
 }
 
 func (q *Query3) sendResult() {

@@ -190,12 +190,6 @@ func (gq *GamesQueue) Consume(callback func(message *GameMsg, ack func()) error)
 			continue
 		}
 
-		if res.Last {
-			msg.Ack(false)
-			log.Debugf("LAST GAME")
-			break
-		}
-
 		callback(&res, func() {
 			msg.Ack(false)
 		})
@@ -208,17 +202,18 @@ func (m *Middleware) ListenReviews() (*ReviewsQueue, error) {
 	return &ReviewsQueue{queue: m.reviewsQueue, middleware: m}, nil
 }
 
-func (m *Middleware) SendReviewBatch(message *ReviewsBatch) error {
+func (m *Middleware) SendReviewBatch(message *ReviewsMsg) error {
 	return m.publishQueue(m.reviewsQueue, message)
 }
 
-func (m Middleware) SendReviewsFinished(last int) error {
-	if last == m.Config.Mappers.Amount+1 {
+func (m Middleware) SendReviewsFinished(clientId int, last int) error {
+	m.clientsLastsDict[clientId] += last
+	if m.clientsLastsDict[clientId] == m.Config.Mappers.Amount+1 {
 		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED")
 		return m.SendStatsFinished()
 	}
 	log.Infof("Another mapper finished %d", last)
-	return m.publishQueue(m.reviewsQueue, &ReviewsBatch{Last: last})
+	return m.publishQueue(m.reviewsQueue, &ReviewsMsg{Last: last})
 }
 
 type ReviewsQueue struct {
@@ -227,14 +222,14 @@ type ReviewsQueue struct {
 	finished   bool
 }
 
-func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func()) error) error {
+func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg, ack func()) error) error {
 	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
 	}
 
 	for msg := range msgs {
-		var res ReviewsBatch
+		var res ReviewsMsg
 
 		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
 		err := decoder.Decode(&res)
@@ -246,7 +241,7 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsBatch, ack func())
 		if res.Last > 0 {
 			log.Infof("Received Last message: %v", res.Last)
 			if !rq.finished {
-				rq.middleware.SendReviewsFinished(res.Last + 1)
+				rq.middleware.SendReviewsFinished(1, res.Last+1)
 				rq.finished = true
 				msg.Ack(false)
 				continue

@@ -66,8 +66,9 @@ func NewGame(record []string) *Game {
 }
 
 type GameMsg struct {
-	Game *Game
-	Last bool
+	ClientId int
+	Game     *Game
+	Last     bool
 }
 
 type Review struct {
@@ -97,9 +98,10 @@ func NewReview(record []string) *Review {
 	}
 }
 
-type ReviewsBatch struct {
-	Reviews []Review
-	Last    int
+type ReviewsMsg struct {
+	ClientId int
+	Reviews  []Review
+	Last     int
 }
 
 type Stats struct {
@@ -148,8 +150,9 @@ func NewStats(game []string, review *Review) *Stats {
 }
 
 type StatsMsg struct {
-	Stats *Stats
-	Last  bool
+	ClientId int
+	Stats    *Stats
+	Last     bool
 }
 
 type Result struct {

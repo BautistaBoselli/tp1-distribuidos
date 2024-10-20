@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strconv"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
@@ -19,15 +20,15 @@ type Query5 struct {
 }
 
 func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
-	files, err := shared.InitStoreFiles("query-5", 100)
-	if err != nil {
-		log.Errorf("Error initializing store files: %s", err)
-		return nil
-	}
+	// files, err := shared.InitStoreFiles("query-5", 100)
+	// if err != nil {
+	// 	log.Errorf("Error initializing store files: %s", err)
+	// 	return nil
+	// }
 
-	for _, file := range files {
-		file.Close()
-	}
+	// for _, file := range files {
+	// 	file.Close()
+	// }
 
 	file, err := os.Create("stored.csv")
 	if err != nil {
@@ -55,14 +56,16 @@ func (q *Query5) Run() {
 		return
 	}
 
+	clientId := 0
 	i := 0
 	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
 		i++
 		if i%25000 == 0 {
 			log.Infof("Query 5 Processed %d stats", i)
 		}
-		q.processStats(message.Stats)
+		q.processStats(message)
 		ack()
+		clientId = message.ClientId
 		return nil
 	})
 
@@ -70,20 +73,21 @@ func (q *Query5) Run() {
 		return
 	}
 
-	q.calculatePercentile()
+	q.calculatePercentile(clientId)
 }
 
-func (q *Query5) processStats(message *middleware.Stats) {
-	shared.UpsertStatsFile("query-5", 100, message)
+func (q *Query5) processStats(message *middleware.StatsMsg) {
+	clientId := strconv.Itoa(message.ClientId)
+	shared.UpsertStatsFile(clientId, "query-5", 100, message.Stats)
 }
 
-func (q *Query5) calculatePercentile() {
+func (q *Query5) calculatePercentile(clientId int) {
 	q.minNegativeReviews = -1
 
 	q.processedStats = 0
 	for i := range 100 {
 		func() {
-			file, err := shared.GetStoreROnly(fmt.Sprintf("query-5-%d.csv", i))
+			file, err := shared.GetStoreRWriter(fmt.Sprintf("client-%d/query-5-%d.csv", clientId, i))
 			if err != nil {
 				log.Errorf("Error opening file: %s", err)
 				return
@@ -102,17 +106,19 @@ func (q *Query5) calculatePercentile() {
 					return
 				}
 
-				q.handleRecord(record)
+				q.handleRecord(clientId, record)
 			}
 
 		}()
 	}
 
-	q.sendResult()
+	q.sendResult(clientId)
 
 }
 
-func (q *Query5) handleRecord(record []string) {
+func (q *Query5) handleRecord(clientId int, record []string) {
+	id := strconv.Itoa(clientId)
+	path := path.Join("client-"+id, "stored.csv")
 	stats, err := shared.ParseStat(record)
 	if err != nil {
 		log.Errorf("Error parsing stats: %s", err)
@@ -121,7 +127,7 @@ func (q *Query5) handleRecord(record []string) {
 
 	// si ya sabemos que va a ser el ultimo, lo agregamos directamente y actualizamos el minimo
 	if stats.Negatives < q.minNegativeReviews {
-		sortedFile, err := os.OpenFile("stored.csv", os.O_APPEND|os.O_CREATE, 0666)
+		sortedFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE, 0666)
 		if err != nil {
 			log.Errorf("Error creating sorted file: %s", err)
 			return
@@ -139,7 +145,7 @@ func (q *Query5) handleRecord(record []string) {
 	}
 
 	// si no, lo agregamos a la lista ordenada
-	sortedFile, err := shared.GetStoreROnly("stored.csv")
+	sortedFile, err := shared.GetStoreRWriter(path)
 	if err != nil {
 		log.Errorf("Error creating sorted file: %s", err)
 		return
@@ -183,13 +189,14 @@ func (q *Query5) handleRecord(record []string) {
 
 	writer.Flush()
 
-	os.Rename(tempFile.Name(), "stored.csv")
+	os.Rename(tempFile.Name(), path)
 
 	q.processedStats++
 }
 
-func (q *Query5) sendResult() {
-	file, err := os.Open("stored.csv")
+func (q *Query5) sendResult(clientId int) {
+	path := path.Join("client-"+strconv.Itoa(clientId), "stored.csv")
+	file, err := os.Open(path)
 	if err != nil {
 		log.Errorf("Error opening stored.csv: %s", err)
 		return

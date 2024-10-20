@@ -15,17 +15,6 @@ type Query4 struct {
 }
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
-
-	files, err := shared.InitStoreFiles("query-4", 100)
-	if err != nil {
-		log.Errorf("Error initializing store files: %s", err)
-		return nil
-	}
-
-	for _, file := range files {
-		file.Close()
-	}
-
 	return &Query4{
 		middleware: m,
 		shardId:    shardId,
@@ -51,7 +40,7 @@ func (q *Query4) Run() {
 		if i%25000 == 0 {
 			log.Infof("Query 4 Processed %d stats", i)
 		}
-		q.processStats(message.Stats)
+		q.processStats(message)
 		ack()
 		return nil
 	})
@@ -63,14 +52,15 @@ func (q *Query4) Run() {
 	q.sendResultFinal()
 }
 
-func (q *Query4) processStats(message *middleware.Stats) {
-	if !isEnglish(message) {
+func (q *Query4) processStats(message *middleware.StatsMsg) {
+	if !isEnglish(message.Stats) {
 		return
 	}
 
-	updatedStat := shared.UpsertStatsFile("query-4", 100, message)
+	clientId := strconv.Itoa(message.ClientId)
+	updatedStat := shared.UpsertStatsFile(clientId, "query-4", 100, message.Stats)
 
-	if message.Negatives == 1 && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
+	if message.Stats.Negatives == 1 && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
 		q.sendResult(updatedStat)
 	}
 }
