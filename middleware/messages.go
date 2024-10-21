@@ -109,6 +109,11 @@ type ReviewsMsg struct {
 	ClientId string
 	Reviews  []Review
 	Last     int
+	msg      amqp.Delivery
+}
+
+func (r *ReviewsMsg) Ack() {
+	r.msg.Ack(false)
 }
 
 type Stats struct {

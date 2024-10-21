@@ -206,11 +206,11 @@ func (m *Middleware) SendReviewBatch(message *ReviewsMsg) error {
 	return m.publishQueue(m.reviewsQueue, message)
 }
 
-func (m Middleware) SendReviewsFinished(clientId int, last int) error {
+func (m Middleware) SendReviewsFinished(clientId string, last int) error {
 	m.clientsLastsDict[clientId] += last
 	if m.clientsLastsDict[clientId] == m.Config.Mappers.Amount+1 {
 		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED")
-		return m.SendStatsFinished()
+		return m.SendStatsFinished(clientId)
 	}
 	log.Infof("Another mapper finished %d", last)
 	return m.publishQueue(m.reviewsQueue, &ReviewsMsg{Last: last})
@@ -222,7 +222,7 @@ type ReviewsQueue struct {
 	finished   bool
 }
 
-func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg, ack func()) error) error {
+func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg) error) error {
 	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
@@ -241,7 +241,7 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg, ack func()) e
 		if res.Last > 0 {
 			log.Infof("Received Last message: %v", res.Last)
 			if !rq.finished {
-				rq.middleware.SendReviewsFinished(1, res.Last+1)
+				rq.middleware.SendReviewsFinished(res.ClientId, res.Last+1)
 				rq.finished = true
 				msg.Ack(false)
 				continue
@@ -252,9 +252,9 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg, ack func()) e
 			}
 		}
 
-		callback(&res, func() {
-			msg.Ack(false)
-		})
+		res.msg = msg
+
+		callback(&res)
 	}
 
 	return nil
@@ -272,12 +272,12 @@ func (m *Middleware) SendStats(message *StatsMsg) error {
 	return m.publishExchange("stats", topic, message)
 }
 
-func (m *Middleware) SendStatsFinished() error {
+func (m *Middleware) SendStatsFinished(clientId string) error {
 	for shardId := range m.Config.Sharding.Amount {
 		stringShardId := strconv.Itoa(shardId)
 		topic := stringShardId + ".Indie.Action"
 		log.Infof("Sending stats finished to shard %s", topic)
-		err := m.publishExchange("stats", topic, &StatsMsg{Stats: &Stats{}, Last: true})
+		err := m.publishExchange("stats", topic, &StatsMsg{ClientId: clientId, Stats: &Stats{}, Last: true})
 		if err != nil {
 			log.Errorf("Failed to send stats finished to shard %s: %v", topic, err)
 			return err

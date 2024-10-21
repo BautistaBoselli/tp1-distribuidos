@@ -193,7 +193,7 @@ func (s *Server) handleReviews() {
 		}
 	}
 
-	err := s.middleware.SendReviewsFinished(1, 1)
+	err := s.middleware.SendReviewsFinished("1", 1)
 	if err != nil {
 		log.Errorf("Failed to publish review message: %v", err)
 

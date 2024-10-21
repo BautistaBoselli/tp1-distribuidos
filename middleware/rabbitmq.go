@@ -18,7 +18,7 @@ type Middleware struct {
 	reviewsQueue     *amqp.Queue
 	responsesQueue   *amqp.Queue
 	cancelled        bool
-	clientsLastsDict map[int]int
+	clientsLastsDict map[string]int
 }
 
 func NewMiddleware(config *config.Config) (*Middleware, error) {
@@ -37,7 +37,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 	// 	false, // global
 	// )
 
-	middleware := &Middleware{conn: conn, channel: channel, Config: config, clientsLastsDict: make(map[int]int)}
+	middleware := &Middleware{conn: conn, channel: channel, Config: config, clientsLastsDict: make(map[string]int)}
 
 	err = middleware.declare()
 	if err != nil {
