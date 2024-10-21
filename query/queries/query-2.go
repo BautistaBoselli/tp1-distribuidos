@@ -37,15 +37,17 @@ func (q *Query2) Run() {
 		return
 	}
 
-	gamesQueue.Consume(func(message *middleware.GameMsg, ack func()) error {
+	gamesQueue.Consume(func(message *middleware.GameMsg) error {
 		if message.Last {
 			q.sendResult()
-			ack()
+			message.Ack()
+
 			return nil
 		}
 
 		q.processGame(message.Game)
-		ack()
+		message.Ack()
+
 		return nil
 	})
 

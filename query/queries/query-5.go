@@ -65,7 +65,6 @@ func (q *Query5) Run() {
 		}
 		q.processStats(message)
 		ack()
-		clientId = message.ClientId
 		return nil
 	})
 
@@ -77,8 +76,7 @@ func (q *Query5) Run() {
 }
 
 func (q *Query5) processStats(message *middleware.StatsMsg) {
-	clientId := strconv.Itoa(message.ClientId)
-	shared.UpsertStatsFile(clientId, "query-5", 100, message.Stats)
+	shared.UpsertStatsFile(message.ClientId, "query-5", 100, message.Stats)
 }
 
 func (q *Query5) calculatePercentile(clientId int) {

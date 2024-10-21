@@ -12,24 +12,86 @@ import (
 	"tp1-distribuidos/shared"
 )
 
+type Client struct {
+	id         string
+	games      chan middleware.GameMsg
+	gamesDir   shared.Directory
+	reviews    chan middleware.ReviewsMsg
+	totalGames int
+}
+
+func NewClient(id string) *Client {
+	dir, err := shared.InitStoreFiles(id, "store", 100)
+	if err != nil {
+		log.Errorf("Failed to init store files: %v", err)
+	}
+
+	client := &Client{
+		id:       id,
+		games:    make(chan middleware.GameMsg),
+		gamesDir: dir,
+		reviews:  make(chan middleware.ReviewsMsg),
+	}
+
+	go client.consumeGames()
+	return client
+}
+
+func (c *Client) Close() {
+	close(c.games)
+	close(c.reviews)
+	c.gamesDir.Delete()
+}
+
+func (c *Client) consumeGames() {
+	for game := range c.games {
+		if game.Last {
+			// c.consumeReviews()
+			log.Infof("last game for client %s", c.id)
+			log.Infof("total games for client %s: %d", c.id, c.totalGames)
+			return
+		}
+
+		log.Infof("game %d for client %s", game.Game.AppId, c.id)
+
+		total := 0
+		for i, char := range strconv.Itoa(game.Game.AppId) {
+			total += int(char) * i
+		}
+		hash := total % 100
+		file := c.gamesDir.Files[hash]
+
+		writer := csv.NewWriter(file)
+
+		gameStats := []string{
+			strconv.Itoa(game.Game.AppId),
+			game.Game.Name,
+			strconv.Itoa(game.Game.Year),
+			strings.Join(game.Game.Genres, ","),
+		}
+
+		if err := writer.Write(gameStats); err != nil {
+			log.Errorf("Failed to write to games.csv: %v", err)
+		}
+		writer.Flush()
+
+		c.totalGames++
+
+		game.Ack()
+	}
+}
+
 type Mapper struct {
-	id         int
-	middleware *middleware.Middleware
-	// gamesFiles []*os.File
-	gamesDirs  map[int]shared.Directory
-	gamesQueue *middleware.GamesQueue
-	// reviewsListener?
+	id           int
+	middleware   *middleware.Middleware
+	clients      map[string]*Client
+	gamesQueue   *middleware.GamesQueue
 	reviewsQueue *middleware.ReviewsQueue
 	cancelled    bool
-	totalGames   int
+	// totalGames   int
 }
 
 func NewMapper(config *config.Config) (*Mapper, error) {
-	// gamesFiles, err := shared.InitStoreFiles("store", 100)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	middleware, err := middleware.NewMiddleware(config)
 	if err != nil {
 		return nil, err
@@ -46,27 +108,19 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 	}
 
 	return &Mapper{
-		id:         0,
-		middleware: middleware,
-		gamesDirs:  make(map[int]shared.Directory),
-		// gamesFiles:   gamesFiles,
+		id:           0,
+		middleware:   middleware,
+		clients:      make(map[string]*Client),
 		gamesQueue:   gq,
 		reviewsQueue: rq,
-		totalGames:   0,
 	}, nil
 }
 
 func (m *Mapper) Close() error {
 	m.cancelled = true
 	m.middleware.Close()
-	for _, dir := range m.gamesDirs {
-		dir.Delete()
-
-		// for _, file := range dir {
-		// 	if err := file.Close(); err != nil {
-		// 		return err
-		// 	}
-		// }
+	for _, client := range m.clients {
+		client.Close()
 	}
 	return nil
 }
@@ -81,54 +135,18 @@ func (m *Mapper) Run() {
 func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
-	err := m.gamesQueue.Consume(func(gameBatch *middleware.GameMsg, ack func()) error {
-		if gameBatch.Last {
-			log.Infof("Received last game message")
-			log.Infof("Total games processed: %d", m.totalGames)
-
-			return nil
+	err := m.gamesQueue.Consume(func(msg *middleware.GameMsg) error {
+		if _, exists := m.clients[msg.ClientId]; !exists {
+			log.Infof("New client %s", msg.ClientId)
+			m.clients[msg.ClientId] = NewClient(msg.ClientId)
 		}
 
-		if _, exists := m.gamesDirs[gameBatch.ClientId]; !exists {
-			id := strconv.Itoa(gameBatch.ClientId)
-			dir, err := shared.InitStoreFiles(id, "store", 100)
-			if err != nil {
-				log.Errorf("Failed to init store files: %v", err)
-				return err
-			}
-			m.gamesDirs[gameBatch.ClientId] = dir
-		}
-
-		total := 0
-		for i, char := range strconv.Itoa(gameBatch.Game.AppId) {
-			total += int(char) * i
-		}
-		hash := total % 100
-		file := m.gamesDirs[gameBatch.ClientId].Files[hash]
-
-		writer := csv.NewWriter(file)
-
-		gameStats := []string{
-			strconv.Itoa(gameBatch.Game.AppId),
-			gameBatch.Game.Name,
-			strconv.Itoa(gameBatch.Game.Year),
-			strings.Join(gameBatch.Game.Genres, ","),
-		}
-
-		if err := writer.Write(gameStats); err != nil {
-			log.Errorf("Failed to write to games.csv: %v", err)
-		}
-		writer.Flush()
-
-		m.totalGames++
-
-		ack()
+		client := m.clients[msg.ClientId]
+		client.games <- *msg
 		return nil
-
 	})
 	if err != nil {
 		log.Errorf("Failed to consume from games exchange: %v", err)
-		time.Sleep(5 * time.Second)
 	}
 
 	if m.cancelled {
@@ -145,14 +163,13 @@ func (m *Mapper) consumeReviewsMessages() {
 	i := 0
 	err := m.reviewsQueue.Consume(func(reviewBatch *middleware.ReviewsMsg, ack func()) error {
 		go func() error {
-			clientId := strconv.Itoa(reviewBatch.ClientId)
 			i += len(reviewBatch.Reviews)
 			if i%100000 == 0 {
 				log.Infof("Processed %d reviews", i)
 			}
 			for _, review := range reviewBatch.Reviews {
 
-				file, err := shared.GetStoreRWriter(shared.GetFilename(clientId, "store", review.AppId, 100))
+				file, err := shared.GetStoreRWriter(shared.GetFilename(reviewBatch.ClientId, "store", review.AppId, 100))
 				if err != nil {
 					log.Errorf("Failed to get store file: %v", err)
 					return err

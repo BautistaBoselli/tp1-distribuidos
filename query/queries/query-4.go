@@ -57,8 +57,7 @@ func (q *Query4) processStats(message *middleware.StatsMsg) {
 		return
 	}
 
-	clientId := strconv.Itoa(message.ClientId)
-	updatedStat := shared.UpsertStatsFile(clientId, "query-4", 100, message.Stats)
+	updatedStat := shared.UpsertStatsFile(message.ClientId, "query-4", 100, message.Stats)
 
 	if message.Stats.Negatives == 1 && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
 		q.sendResult(updatedStat)

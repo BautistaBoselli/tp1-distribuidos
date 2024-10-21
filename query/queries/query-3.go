@@ -55,8 +55,7 @@ func (q *Query3) Run() {
 }
 
 func (q *Query3) processStats(message *middleware.StatsMsg) {
-	clientId := strconv.Itoa(message.ClientId)
-	shared.UpsertStatsFile(clientId, "query-3", 100, message.Stats)
+	shared.UpsertStatsFile(message.ClientId, "query-3", 100, message.Stats)
 }
 
 func (q *Query3) sendResult() {

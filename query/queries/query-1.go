@@ -46,9 +46,9 @@ func (q *Query1) Run() {
 		return
 	}
 
-	gamesQueue.Consume(func(message *middleware.GameMsg, ack func()) error {
+	gamesQueue.Consume(func(message *middleware.GameMsg) error {
 		q.processGame(message.Game)
-		ack()
+		message.Ack()
 		return nil
 	})
 

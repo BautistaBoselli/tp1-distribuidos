@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/streadway/amqp"
 )
 
 type Game struct {
@@ -66,9 +68,14 @@ func NewGame(record []string) *Game {
 }
 
 type GameMsg struct {
-	ClientId int
+	ClientId string
 	Game     *Game
 	Last     bool
+	msg      amqp.Delivery
+}
+
+func (g *GameMsg) Ack() {
+	g.msg.Ack(false)
 }
 
 type Review struct {
@@ -99,7 +106,7 @@ func NewReview(record []string) *Review {
 }
 
 type ReviewsMsg struct {
-	ClientId int
+	ClientId string
 	Reviews  []Review
 	Last     int
 }
@@ -150,7 +157,7 @@ func NewStats(game []string, review *Review) *Stats {
 }
 
 type StatsMsg struct {
-	ClientId int
+	ClientId string
 	Stats    *Stats
 	Last     bool
 }
