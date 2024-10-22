@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func (m *Middleware) declare() error {

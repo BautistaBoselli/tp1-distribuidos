@@ -32,12 +32,12 @@ services:
         condition: service_started
       mapper-2:
         condition: service_started
-      # mapper-3:
-      #   condition: service_started
-      # mapper-4:
-      #   condition: service_started
-      # mapper-5:
-      #   condition: service_started
+      mapper-3:
+        condition: service_started
+      mapper-4:
+        condition: service_started
+      mapper-5:
+        condition: service_started
       # queries-1-0:
       #   condition: service_started
       # queries-1-1:
@@ -77,8 +77,8 @@ services:
     volumes:
       - ./client.yml:/config.yml
       - ./results:/results
-      - ../datasets/games.csv:/games.csv
-      - ../datasets/reviews.csv:/reviews.csv
+      - ./datasets/games.csv:/games.csv
+      - ./datasets/reviews.csv:/reviews.csv
     depends_on:
       server:
         condition: service_started
@@ -88,6 +88,8 @@ services:
     container_name: mapper-1
     image: mapper:latest
     entrypoint: /mapper
+    ports: 
+      - "6060:6060"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -102,33 +104,33 @@ services:
         condition: service_healthy
     volumes:
       - ./server.yml:/server.yml
-  # mapper-3:
-  #   container_name: mapper-3
-  #   image: mapper:latest
-  #   entrypoint: /mapper
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  # mapper-4:
-  #   container_name: mapper-4
-  #   image: mapper:latest
-  #   entrypoint: /mapper
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  # mapper-5:
-  #   container_name: mapper-5
-  #   image: mapper:latest
-  #   entrypoint: /mapper
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./server.yml:/server.yml
+  mapper-3:
+    container_name: mapper-3
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./server.yml:/server.yml
+  mapper-4:
+    container_name: mapper-4
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./server.yml:/server.yml
+  mapper-5:
+    container_name: mapper-5
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./server.yml:/server.yml
   # queries-1-0:
   #   container_name: queries-1-0
   #   image: query:latest

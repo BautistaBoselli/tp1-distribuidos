@@ -6,7 +6,7 @@ import (
 	"tp1-distribuidos/config"
 
 	"github.com/op/go-logging"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var log = logging.MustGetLogger("log")
