@@ -150,8 +150,7 @@ func (c *Client) SendReviews(file *os.File) error {
 			log.Errorf("action: enviar_reviews | result: fail | client: %v | error: %v", c.config.ID, err)
 			return err
 		}
-		time.Sleep(80 * time.Millisecond)
-
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	return nil
