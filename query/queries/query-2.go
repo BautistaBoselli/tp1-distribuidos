@@ -26,10 +26,6 @@ func NewQuery2(m *middleware.Middleware, shardId int) *Query2 {
 	}
 }
 
-func (q *Query2) Close() {
-	q.cancelled = true
-}
-
 func (q *Query2) Run() {
 	log.Info("Query 1 running")
 

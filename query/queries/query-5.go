@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
 )
@@ -16,20 +17,9 @@ type Query5 struct {
 	shardId            int
 	processedStats     int
 	minNegativeReviews int
-	cancelled          bool
 }
 
 func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
-	// files, err := shared.InitStoreFiles("query-5", 100)
-	// if err != nil {
-	// 	log.Errorf("Error initializing store files: %s", err)
-	// 	return nil
-	// }
-
-	// for _, file := range files {
-	// 	file.Close()
-	// }
-
 	file, err := os.Create("stored.csv")
 	if err != nil {
 		log.Errorf("Error creating stored file: %s", err)
@@ -43,10 +33,6 @@ func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
 	}
 }
 
-func (q *Query5) Close() {
-	q.cancelled = true
-}
-
 func (q *Query5) Run() {
 	log.Info("Query 5 running")
 
@@ -56,12 +42,11 @@ func (q *Query5) Run() {
 		return
 	}
 
-	i := 0
+	metric := shared.NewMetric(25000, func(total int, elapsed time.Duration, rate float64) string {
+		return fmt.Sprintf("[Query 5-%d] Processed %d stats in %s (%.2f stats/s)", q.shardId, total, elapsed, rate)
+	})
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
-		i++
-		if i%25000 == 0 {
-			log.Infof("Query 5 Processed %d stats", i)
-		}
+		metric.Update(1)
 
 		if message.Last {
 			q.calculatePercentile(message.ClientId)
@@ -73,28 +58,28 @@ func (q *Query5) Run() {
 		message.Ack()
 		return nil
 	})
-
-	if q.cancelled {
-		return
-	}
-
 }
 
 func (q *Query5) processStats(message *middleware.StatsMsg) {
-	// shared.UpsertStatsFile(message.ClientId, "query-5", 100, message.Stats)
+	shared.UpsertStats(message.ClientId, message.Stats)
 }
 
 func (q *Query5) calculatePercentile(clientId string) {
 	q.minNegativeReviews = -1
 
 	q.processedStats = 0
-	for i := range 100 {
+	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s", clientId))
+	if err != nil {
+		log.Fatalf("failed to read directory: %v", err)
+	}
+
+	for _, dentry := range dentries {
 		func() {
-			file, err := shared.GetStoreRWriter(fmt.Sprintf("client-%d/query-5-%d.csv", clientId, i))
+			file, err := os.Open(fmt.Sprintf("./database/%s/%s", clientId, dentry.Name()))
 			if err != nil {
-				log.Errorf("Error opening file: %s", err)
-				return
+				log.Fatalf("failed to open file: %v", err)
 			}
+
 			defer file.Close()
 
 			reader := csv.NewReader(file)
@@ -111,8 +96,8 @@ func (q *Query5) calculatePercentile(clientId string) {
 
 				q.handleRecord(clientId, record)
 			}
-
 		}()
+
 	}
 
 	q.sendResult(clientId)

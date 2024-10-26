@@ -56,12 +56,12 @@ services:
         condition: service_started
       reducer-4:
         condition: service_started
-      # queries-5-0:
-      #   condition: service_started
-      # queries-5-1:
-      #   condition: service_started
-      # reducer-5:
-      #   condition: service_started
+      queries-5-0:
+        condition: service_started
+      queries-5-1:
+        condition: service_started
+      reducer-5:
+        condition: service_started
   client1:
     container_name: client1
     image: client:latest
@@ -192,30 +192,30 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-  # queries-5-0:
-  #   container_name: queries-5-0
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=5
-  #     - CLI_SHARD_ID=0
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  # queries-5-1:
-  #   container_name: queries-5-1
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=5
-  #     - CLI_SHARD_ID=1
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  queries-5-0:
+    container_name: queries-5-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=5
+      - CLI_SHARD_ID=0
+    volumes:
+      - ./server.yml:/server.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  queries-5-1:
+    container_name: queries-5-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=5
+      - CLI_SHARD_ID=1
+    volumes:
+      - ./server.yml:/server.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
   reducer-1:
     container_name: reducer-1
     image: reducer:latest
@@ -260,14 +260,14 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-  # reducer-5:
-  #   container_name: reducer-5
-  #   image: reducer:latest
-  #   entrypoint: /reducer
-  #   environment:
-  #     - CLI_QUERY_ID=5
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  reducer-5:
+    container_name: reducer-5
+    image: reducer:latest
+    entrypoint: /reducer
+    environment:
+      - CLI_QUERY_ID=5
+    volumes:
+      - ./server.yml:/server.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

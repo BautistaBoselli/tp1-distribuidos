@@ -72,41 +72,45 @@ func GetTopStatsFS(clientId string, cant int, compare func(a *middleware.Stats, 
 	}
 
 	for _, dentry := range dentries {
-		file, err := os.Open(fmt.Sprintf("./database/%s/%s", clientId, dentry.Name()))
-		if err != nil {
-			log.Fatalf("failed to open file: %v", err)
-		}
-
-		reader := csv.NewReader(file)
-
-		record, err := reader.Read()
-		if err != nil && err != io.EOF {
-			log.Fatalf("failed to read line: %v", err)
-		}
-
-		newStat, err := ParseStat(record)
-		if err != nil {
-			log.Errorf("Error parsing stat: %s", err)
-			continue
-		}
-
-		place := -1
-		for i, topStat := range top {
-			if compare(newStat, &topStat) {
-				place = i
-				break
+		func() {
+			file, err := os.Open(fmt.Sprintf("./database/%s/%s", clientId, dentry.Name()))
+			if err != nil {
+				log.Fatalf("failed to open file: %v", err)
 			}
-		}
 
-		if len(top) < cant {
-			top = append(top, *newStat)
-		} else if place != -1 {
-			top[cant-1] = *newStat
-		}
+			defer file.Close()
 
-		sort.Slice(top, func(i, j int) bool {
-			return compare(&top[i], &top[j])
-		})
+			reader := csv.NewReader(file)
+
+			record, err := reader.Read()
+			if err != nil && err != io.EOF {
+				log.Fatalf("failed to read line: %v", err)
+			}
+
+			newStat, err := ParseStat(record)
+			if err != nil {
+				log.Errorf("Error parsing stat: %s", err)
+				return
+			}
+
+			place := -1
+			for i, topStat := range top {
+				if compare(newStat, &topStat) {
+					place = i
+					break
+				}
+			}
+
+			if len(top) < cant {
+				top = append(top, *newStat)
+			} else if place != -1 {
+				top[cant-1] = *newStat
+			}
+
+			sort.Slice(top, func(i, j int) bool {
+				return compare(&top[i], &top[j])
+			})
+		}()
 	}
 
 	return top

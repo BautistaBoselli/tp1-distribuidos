@@ -17,7 +17,6 @@ type Query1 struct {
 	resultInterval int
 	processedGames int64
 	results        map[string]*middleware.Query1Result
-	cancelled      bool
 }
 
 func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query1 {
@@ -28,10 +27,6 @@ func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query
 		resultInterval: resultInterval,
 		results:        make(map[string]*middleware.Query1Result),
 	}
-}
-
-func (q *Query1) Close() {
-	q.cancelled = true
 }
 
 func (q *Query1) Run() {

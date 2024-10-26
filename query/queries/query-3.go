@@ -13,7 +13,6 @@ const QUERY3_TOP_SIZE = 5
 type Query3 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	cancelled  bool
 	directory  shared.Directory
 }
 
@@ -23,10 +22,6 @@ func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
 		shardId:    shardId,
 		directory:  shared.Directory{},
 	}
-}
-
-func (q *Query3) Close() {
-	q.cancelled = true
 }
 
 func (q *Query3) Run() {
@@ -55,10 +50,6 @@ func (q *Query3) Run() {
 		message.Ack()
 		return nil
 	})
-
-	if q.cancelled {
-		return
-	}
 
 }
 

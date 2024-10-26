@@ -56,7 +56,6 @@ func main() {
 	go func() {
 		<-ctx.Done()
 		log.Info("action: cancelar_query | result: in_progress")
-		query.Close()
 		middleware.Close()
 	}()
 
@@ -68,5 +67,4 @@ func main() {
 
 type Query interface {
 	Run()
-	Close()
 }

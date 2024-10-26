@@ -22,11 +22,6 @@ type MapperClient struct {
 }
 
 func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
-	// dir, err := shared.InitStoreFiles(id, "store", 100)
-	// if err != nil {
-	// 	log.Errorf("Failed to init store files: %v", err)
-	// }
-
 	os.MkdirAll(fmt.Sprintf("database/%s", id), 0644)
 
 	client := &MapperClient{

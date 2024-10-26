@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"net/http"
-	_"net/http/pprof"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -36,13 +35,6 @@ func main() {
 	go func() {
 		<-ctx.Done()
 		mapper.Close()
-	}()
-
-	go func() {
-		http.ListenAndServe(":6060", nil)
-		// if err != nil {
-		// 	panic(err) // Handle error if ListenAndServe fails
-		// }
 	}()
 
 	mapper.Run()

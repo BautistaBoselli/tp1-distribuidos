@@ -62,7 +62,7 @@ func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
 	metric := shared.NewMetric(10000, func(total int, elapsed time.Duration, rate float64) string {
-		return fmt.Sprintf("[Mapper %d] Processed %d games in %s (%.2f games/s)", m.id, total, elapsed, rate)
+		return fmt.Sprintf("Processed %d games in %s (%.2f games/s)", total, elapsed, rate)
 	})
 
 	err := m.gamesQueue.Consume(func(msg *middleware.GameMsg) error {
@@ -80,13 +80,6 @@ func (m *Mapper) consumeGameMessages() {
 	if err != nil {
 		log.Errorf("Failed to consume from games exchange: %v", err)
 	}
-
-	if m.cancelled {
-		return
-	}
-
-	log.Info("Game messages consumed")
-
 }
 
 func (m *Mapper) consumeReviewsMessages() {

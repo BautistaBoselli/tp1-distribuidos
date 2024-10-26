@@ -13,7 +13,6 @@ import (
 type Query4 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	cancelled  bool
 }
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
@@ -21,10 +20,6 @@ func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 		middleware: m,
 		shardId:    shardId,
 	}
-}
-
-func (q *Query4) Close() {
-	q.cancelled = true
 }
 
 func (q *Query4) Run() {
@@ -52,10 +47,6 @@ func (q *Query4) Run() {
 		message.Ack()
 		return nil
 	})
-
-	if q.cancelled {
-		return
-	}
 
 	q.sendResultFinal()
 }
