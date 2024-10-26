@@ -34,6 +34,9 @@ func (q *Query4) Run() {
 	metric := shared.NewMetric(25000, func(total int, elapsed time.Duration, rate float64) string {
 		return fmt.Sprintf("[Query 4-%d] Processed %d stats in %s (%.2f stats/s)", q.shardId, total, elapsed, rate)
 	})
+	messagesChan := make(chan *middleware.StatsMsg)
+	go q.updateStats(messagesChan)
+
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		metric.Update(1)
 
@@ -43,15 +46,25 @@ func (q *Query4) Run() {
 			return nil
 		}
 
-		q.processStats(message)
+		go q.processStats(message, messagesChan)
 		message.Ack()
 		return nil
 	})
 
-	q.sendResultFinal()
 }
 
-func (q *Query4) processStats(message *middleware.StatsMsg) {
+func (q *Query4) updateStats(messages chan *middleware.StatsMsg) {
+	for message := range messages {
+		isNegative := message.Stats.Negatives == 1
+		updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
+
+		if isNegative && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
+			q.sendResult(message.ClientId, updatedStat)
+		}
+	}
+}
+
+func (q *Query4) processStats(message *middleware.StatsMsg, messagesChan chan *middleware.StatsMsg) {
 	if message.Stats.Negatives == 0 {
 		return
 	}
@@ -60,12 +73,7 @@ func (q *Query4) processStats(message *middleware.StatsMsg) {
 		return
 	}
 
-	isNegative := message.Stats.Negatives == 1
-	updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
-
-	if isNegative && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
-		q.sendResult(message.ClientId, updatedStat)
-	}
+	messagesChan <- message
 }
 
 func (q *Query4) sendResult(clientId string, message *middleware.Stats) {
