@@ -1,6 +1,8 @@
 import json
 
-with open('./results.json', 'r') as file:
+results_file = "./results_m.json"
+
+with open(results_file, 'r') as file:
     data = json.load(file)
 
 with open('./results.txt', 'r') as file:

@@ -1,0 +1,72 @@
+{
+  "q1": { "windows": 4873, "linux": 737, "mac": 1105 },
+  "q2": [
+    { "Name": "Clicker Heroes 2", "Average playtime forever": 31708 },
+    { "Name": "Midas Gold Plus", "Average playtime forever": 19196 },
+    { "Name": "Beasts of Bermuda", "Average playtime forever": 17147 },
+    { "Name": "Dragon Cliff", "Average playtime forever": 8285 },
+    { "Name": "Workers & Resources: Soviet Republic", "Average playtime forever": 6536 },
+    {
+      "Name": "\u4e0a\u5e1d\u4e4b\u57ce I\uff1a\u76d1\u72f1\u5e1d\u56fd [City of God I - Prison Empire]",
+      "Average playtime forever": 5326
+    },
+    { "Name": "Notes of Soul", "Average playtime forever": 4938 },
+    { "Name": "SCUM", "Average playtime forever": 4646 },
+    { "Name": "Spellweaver", "Average playtime forever": 4570 },
+    { "Name": "Geometry Dash", "Average playtime forever": 4536 }
+  ],
+  "q3": [
+    { "AppID": 111660000, "Name": "Garry's Mod", "positive_score": 22866 },
+    { "AppID": 4094817750, "Name": "Hotline Miami", "positive_score": 18201 },
+    { "AppID": 3630076580, "Name": "BattleBlock Theater\u00ae", "positive_score": 14903 },
+    { "AppID": 4237824180, "Name": "Geometry Dash", "positive_score": 12685 },
+    { "AppID": 5569185960, "Name": "Firewatch", "positive_score": 12406 }
+  ],
+  "q4": [
+    { "AppID": 9200, "Name": "RAGE" },
+    { "AppID": 22380, "Name": "Fallout: New Vegas" },
+    { "AppID": 204300, "Name": "Awesomenauts - the 2D moba" },
+    { "AppID": 227160, "Name": "Kinetic Void" },
+    { "AppID": 250400, "Name": "How to Survive" },
+    { "AppID": 278970, "Name": "Digger Online" },
+    { "AppID": 298110, "Name": "Far Cry\u00ae 4" },
+    { "AppID": 298630, "Name": "The Escapists" },
+    { "AppID": 302830, "Name": "BLOCKADE 3D" },
+    { "AppID": 386070, "Name": "Planetary Annihilation: TITANS" },
+    { "AppID": 409710, "Name": "BioShock\u2122 Remastered" },
+    { "AppID": 437220, "Name": "The Culling" }
+  ],
+  "q5": [
+    { "AppID": 302830, "Name": "BLOCKADE 3D", "count": 3214 },
+    { "AppID": 437220, "Name": "The Culling", "count": 2705 },
+    { "AppID": 409710, "Name": "BioShock\u2122 Remastered", "count": 1925 },
+    { "AppID": 22380, "Name": "Fallout: New Vegas", "count": 1438 },
+    { "AppID": 204300, "Name": "Awesomenauts - the 2D moba", "count": 1416 },
+    { "AppID": 250400, "Name": "How to Survive", "count": 1001 },
+    { "AppID": 9200, "Name": "RAGE", "count": 984 },
+    { "AppID": 298110, "Name": "Far Cry\u00ae 4", "count": 818 },
+    { "AppID": 227160, "Name": "Kinetic Void", "count": 726 },
+    { "AppID": 298630, "Name": "The Escapists", "count": 615 },
+    { "AppID": 278970, "Name": "Digger Online", "count": 615 },
+    { "AppID": 386070, "Name": "Planetary Annihilation: TITANS", "count": 510 },
+    { "AppID": 219150, "Name": "Hotline Miami", "count": 484 },
+    { "AppID": 28000, "Name": "Kane & Lynch 2: Dog Days", "count": 475 },
+    { "AppID": 322170, "Name": "Geometry Dash", "count": 469 },
+    { "AppID": 17470, "Name": "Dead Space", "count": 449 },
+    { "AppID": 238370, "Name": "Magicka 2", "count": 434 },
+    { "AppID": 234190, "Name": "Receiver", "count": 391 },
+    { "AppID": 262150, "Name": "Vanguard Princess", "count": 379 },
+    { "AppID": 67370, "Name": "The Darkness II", "count": 364 },
+    { "AppID": 227480, "Name": "God Mode", "count": 354 },
+    { "AppID": 219830, "Name": "King Arthur's Gold", "count": 337 },
+    { "AppID": 356670, "Name": "Spooky's Jump Scare Mansion", "count": 328 },
+    { "AppID": 48190, "Name": "Assassin\u2019s Creed\u00ae Brotherhood", "count": 327 },
+    { "AppID": 338540, "Name": "Navy Field 2 : Conqueror of the Ocean", "count": 324 },
+    { "AppID": 238460, "Name": "BattleBlock Theater\u00ae", "count": 320 },
+    { "AppID": 7940, "Name": "Call of Duty\u00ae 4: Modern Warfare\u00ae", "count": 308 },
+    { "AppID": 261110, "Name": "Killer is Dead - Nightmare Edition", "count": 301 },
+    { "AppID": 209100, "Name": "Resident Evil: Operation Raccoon City", "count": 301 },
+    { "AppID": 300, "Name": "Day of Defeat: Source", "count": 301 },
+    { "AppID": 245280, "Name": "ENSLAVED\u2122: Odyssey to the West\u2122 Premium Edition", "count": 291 }
+  ]
+}
