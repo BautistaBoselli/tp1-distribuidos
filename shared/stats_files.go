@@ -15,20 +15,20 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-func UpsertStats(clientId string, game *middleware.Stats) error {
+func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 	os.MkdirAll(fmt.Sprintf("./database/%s", clientId), 0644)
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/%d.csv", clientId, game.AppId), os.O_RDWR|os.O_CREATE, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/%d.csv", clientId, stats.AppId), os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("failed to open file: %v", err)
 	}
 	defer file.Close()
 
-	stat, err := file.Stat()
+	fileStat, err := file.Stat()
 	if err != nil {
 		log.Fatalf("failed to get file stat: %v", err)
 	}
 
-	if stat.Size() > 0 {
+	if fileStat.Size() > 0 {
 		reader := csv.NewReader(file)
 
 		record, err := reader.Read()
@@ -39,11 +39,11 @@ func UpsertStats(clientId string, game *middleware.Stats) error {
 		prevStat, err := ParseStat(record)
 		if err != nil {
 			log.Errorf("Error parsing stat: %s", err)
-			return err
+			return nil
 		}
 
-		game.Positives += prevStat.Positives
-		game.Negatives += prevStat.Negatives
+		stats.Positives += prevStat.Positives
+		stats.Negatives += prevStat.Negatives
 
 		_, err = file.Seek(0, 0)
 		if err != nil {
@@ -53,14 +53,14 @@ func UpsertStats(clientId string, game *middleware.Stats) error {
 
 	writer := csv.NewWriter(file)
 
-	err = writer.Write([]string{strconv.Itoa(game.AppId), game.Name, strings.Join(game.Genres, ","), strconv.Itoa(game.Positives), strconv.Itoa(game.Negatives)})
+	err = writer.Write([]string{strconv.Itoa(stats.AppId), stats.Name, strings.Join(stats.Genres, ","), strconv.Itoa(stats.Positives), strconv.Itoa(stats.Negatives)})
 	if err != nil {
 		log.Fatalf("failed to write to file: %v", err)
 	}
 
 	writer.Flush()
 
-	return nil
+	return stats
 }
 
 func GetTopStatsFS(clientId string, cant int, compare func(a *middleware.Stats, b *middleware.Stats) bool) []middleware.Stats {

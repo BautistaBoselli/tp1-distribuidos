@@ -1,8 +1,11 @@
 package queries
 
 import (
+	"fmt"
 	"strconv"
+	"time"
 	"tp1-distribuidos/middleware"
+	"tp1-distribuidos/shared"
 
 	"github.com/rylans/getlang"
 )
@@ -33,12 +36,11 @@ func (q *Query4) Run() {
 		return
 	}
 
-	i := 0
+	metric := shared.NewMetric(25000, func(total int, elapsed time.Duration, rate float64) string {
+		return fmt.Sprintf("[Query 4-%d] Processed %d stats in %s (%.2f stats/s)", q.shardId, total, elapsed, rate)
+	})
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
-		i++
-		if i%25000 == 0 {
-			log.Infof("Query 4 Processed %d stats", i)
-		}
+		metric.Update(1)
 
 		if message.Last {
 			q.sendResultFinal()
@@ -59,24 +61,30 @@ func (q *Query4) Run() {
 }
 
 func (q *Query4) processStats(message *middleware.StatsMsg) {
+	if message.Stats.Negatives == 0 {
+		return
+	}
+
 	if !isEnglish(message.Stats) {
 		return
 	}
 
-	// updatedStat := shared.UpsertStatsFile(message.ClientId, "query-4", 100, message.Stats)
+	isNegative := message.Stats.Negatives == 1
+	updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
 
-	// if message.Stats.Negatives == 1 && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
-	// 	q.sendResult(updatedStat)
-	// }
+	if isNegative && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
+		q.sendResult(message.ClientId, updatedStat)
+	}
 }
 
-func (q *Query4) sendResult(message *middleware.Stats) {
+func (q *Query4) sendResult(clientId string, message *middleware.Stats) {
 	log.Infof("Query 4 [PARTIAL]: %s", message.Name)
 	query4Result := middleware.Query4Result{
 		Game: message.Name,
 	}
 
 	result := &middleware.Result{
+		ClientId:       clientId,
 		QueryId:        4,
 		Payload:        query4Result,
 		IsFinalMessage: false,
