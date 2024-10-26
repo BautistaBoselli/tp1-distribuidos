@@ -35,13 +35,20 @@ func (q *Query4) Run() {
 	}
 
 	i := 0
-	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
+	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		i++
 		if i%25000 == 0 {
 			log.Infof("Query 4 Processed %d stats", i)
 		}
+
+		if message.Last {
+			q.sendResultFinal()
+			message.Ack()
+			return nil
+		}
+
 		q.processStats(message)
-		ack()
+		message.Ack()
 		return nil
 	})
 

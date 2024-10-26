@@ -56,15 +56,21 @@ func (q *Query5) Run() {
 		return
 	}
 
-	clientId := 0
 	i := 0
-	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
+	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		i++
 		if i%25000 == 0 {
 			log.Infof("Query 5 Processed %d stats", i)
 		}
+
+		if message.Last {
+			q.calculatePercentile(message.ClientId)
+			message.Ack()
+			return nil
+		}
+
 		q.processStats(message)
-		ack()
+		message.Ack()
 		return nil
 	})
 
@@ -72,14 +78,13 @@ func (q *Query5) Run() {
 		return
 	}
 
-	q.calculatePercentile(clientId)
 }
 
 func (q *Query5) processStats(message *middleware.StatsMsg) {
 	shared.UpsertStatsFile(message.ClientId, "query-5", 100, message.Stats)
 }
 
-func (q *Query5) calculatePercentile(clientId int) {
+func (q *Query5) calculatePercentile(clientId string) {
 	q.minNegativeReviews = -1
 
 	q.processedStats = 0
@@ -114,9 +119,8 @@ func (q *Query5) calculatePercentile(clientId int) {
 
 }
 
-func (q *Query5) handleRecord(clientId int, record []string) {
-	id := strconv.Itoa(clientId)
-	path := path.Join("client-"+id, "stored.csv")
+func (q *Query5) handleRecord(clientId string, record []string) {
+	path := path.Join("client-"+clientId, "stored.csv")
 	stats, err := shared.ParseStat(record)
 	if err != nil {
 		log.Errorf("Error parsing stats: %s", err)
@@ -192,8 +196,8 @@ func (q *Query5) handleRecord(clientId int, record []string) {
 	q.processedStats++
 }
 
-func (q *Query5) sendResult(clientId int) {
-	path := path.Join("client-"+strconv.Itoa(clientId), "stored.csv")
+func (q *Query5) sendResult(clientId string) {
+	path := path.Join("client-"+clientId, "stored.csv")
 	file, err := os.Open(path)
 	if err != nil {
 		log.Errorf("Error opening stored.csv: %s", err)

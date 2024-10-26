@@ -13,7 +13,7 @@ import (
 	"tp1-distribuidos/shared"
 )
 
-type Client struct {
+type MapperClient struct {
 	id         string
 	middleware *middleware.Middleware
 	games      chan middleware.GameMsg
@@ -22,7 +22,7 @@ type Client struct {
 	totalGames int
 }
 
-func NewClient(id string, m *middleware.Middleware) *Client {
+func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 	// dir, err := shared.InitStoreFiles(id, "store", 100)
 	// if err != nil {
 	// 	log.Errorf("Failed to init store files: %v", err)
@@ -30,7 +30,7 @@ func NewClient(id string, m *middleware.Middleware) *Client {
 
 	os.MkdirAll(fmt.Sprintf("database/%s", id), 0644)
 
-	client := &Client{
+	client := &MapperClient{
 		id:         id,
 		middleware: m,
 		games:      make(chan middleware.GameMsg),
@@ -42,13 +42,13 @@ func NewClient(id string, m *middleware.Middleware) *Client {
 	return client
 }
 
-func (c *Client) Close() {
+func (c *MapperClient) Close() {
 	close(c.games)
 	close(c.reviews)
 	c.gamesDir.Delete()
 }
 
-func (c *Client) consumeGames() {
+func (c *MapperClient) consumeGames() {
 	i := 0
 	lastTimestamp := time.Now()
 	lastI := 0
@@ -96,7 +96,7 @@ func (c *Client) consumeGames() {
 	}
 }
 
-func (c *Client) consumeReviews() {
+func (c *MapperClient) consumeReviews() {
 	log.Infof("Starting to consume reviews")
 	i := 0
 	lastTimestamp := time.Now()

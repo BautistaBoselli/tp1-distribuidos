@@ -37,13 +37,20 @@ func (q *Query3) Run() {
 	}
 
 	i := 0
-	statsQueue.Consume(func(message *middleware.StatsMsg, ack func()) error {
+	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		i++
 		if i%25000 == 0 {
 			log.Infof("Query 3 Processed %d stats", i)
 		}
+
+		if message.Last {
+			q.sendResult(message.ClientId)
+			message.Ack()
+			return nil
+		}
+
 		q.processStats(message)
-		ack()
+		message.Ack()
 		return nil
 	})
 
@@ -51,15 +58,15 @@ func (q *Query3) Run() {
 		return
 	}
 
-	q.sendResult()
 }
 
 func (q *Query3) processStats(message *middleware.StatsMsg) {
-	shared.UpsertStatsFile(message.ClientId, "query-3", 100, message.Stats)
+	shared.UpsertStats(message.ClientId, message.Stats)
 }
 
-func (q *Query3) sendResult() {
-	top := shared.GetTopStats("query-3", QUERY3_TOP_SIZE, func(a *middleware.Stats, b *middleware.Stats) bool {
+func (q *Query3) sendResult(clientId string) {
+	log.Infof("Sending result for client %s", clientId)
+	top := shared.GetTopStatsFS(clientId, QUERY3_TOP_SIZE, func(a *middleware.Stats, b *middleware.Stats) bool {
 		return a.Positives > b.Positives
 	})
 

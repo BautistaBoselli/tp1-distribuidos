@@ -11,7 +11,7 @@ const QUERY2_TOP_SIZE = 10
 type Query2 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	topPlayed  []middleware.Game
+	topPlayed  map[string][]middleware.Game
 	cancelled  bool
 }
 
@@ -20,7 +20,7 @@ func NewQuery2(m *middleware.Middleware, shardId int) *Query2 {
 	return &Query2{
 		middleware: m,
 		shardId:    shardId,
-		topPlayed:  make([]middleware.Game, 0, QUERY2_TOP_SIZE),
+		topPlayed:  make(map[string][]middleware.Game),
 	}
 }
 
@@ -39,33 +39,28 @@ func (q *Query2) Run() {
 
 	gamesQueue.Consume(func(message *middleware.GameMsg) error {
 		if message.Last {
-			q.sendResult()
+			q.sendResult(message.ClientId)
 			message.Ack()
 
 			return nil
 		}
 
-		q.processGame(message.Game)
+		q.processGame(message.ClientId, message.Game)
 		message.Ack()
 
 		return nil
 	})
 
-	if q.cancelled {
-		return
-	}
-
-	q.sendResult()
 }
 
-func (q *Query2) processGame(game *middleware.Game) {
+func (q *Query2) processGame(clientId string, game *middleware.Game) {
 	if game.Year < 2010 || game.Year > 2019 || !slices.Contains(game.Genres, "Indie") {
 		return
 	}
 
 	// Find the position where the new game should be inserted
-	insertIndex := len(q.topPlayed)
-	for i, topGame := range q.topPlayed {
+	insertIndex := len(q.topPlayed[clientId])
+	for i, topGame := range q.topPlayed[clientId] {
 		if game.AvgPlaytime > topGame.AvgPlaytime {
 			insertIndex = i
 			break
@@ -74,24 +69,25 @@ func (q *Query2) processGame(game *middleware.Game) {
 
 	// If the game should be in the top TOP_SIZE
 	if insertIndex < QUERY2_TOP_SIZE {
-		q.topPlayed = append(q.topPlayed, middleware.Game{})
-		copy(q.topPlayed[insertIndex+1:], q.topPlayed[insertIndex:])
-		q.topPlayed[insertIndex] = *game
+		q.topPlayed[clientId] = append(q.topPlayed[clientId], middleware.Game{})
+		copy(q.topPlayed[clientId][insertIndex+1:], q.topPlayed[clientId][insertIndex:])
+		q.topPlayed[clientId][insertIndex] = *game
 	}
 
-	if len(q.topPlayed) > QUERY2_TOP_SIZE {
-		q.topPlayed = q.topPlayed[:QUERY2_TOP_SIZE]
+	if len(q.topPlayed[clientId]) > QUERY2_TOP_SIZE {
+		q.topPlayed[clientId] = q.topPlayed[clientId][:QUERY2_TOP_SIZE]
 	}
 
 }
 
-func (q *Query2) sendResult() {
+func (q *Query2) sendResult(clientId string) {
 	log.Infof("Query 2 [FINAL]")
 	query2Result := middleware.Query2Result{
-		TopGames: q.topPlayed,
+		TopGames: q.topPlayed[clientId],
 	}
 
 	result := middleware.Result{
+		ClientId:       clientId,
 		QueryId:        2,
 		IsFinalMessage: true,
 		Payload:        query2Result,
@@ -100,7 +96,7 @@ func (q *Query2) sendResult() {
 	if err := q.middleware.SendResult("2", &result); err != nil {
 		log.Errorf("Failed to send result: %v", err)
 	}
-	for i, game := range q.topPlayed {
+	for i, game := range q.topPlayed[clientId] {
 		log.Debugf("Top %d game: %s (%d)", i+1, game.Name, game.AvgPlaytime)
 	}
 }

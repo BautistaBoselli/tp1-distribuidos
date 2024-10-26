@@ -9,7 +9,7 @@ import (
 type Mapper struct {
 	id           int
 	middleware   *middleware.Middleware
-	clients      map[string]*Client
+	clients      map[string]*MapperClient
 	gamesQueue   *middleware.GamesQueue
 	reviewsQueue *middleware.ReviewsQueue
 	cancelled    bool
@@ -34,7 +34,7 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 	return &Mapper{
 		id:           0,
 		middleware:   middleware,
-		clients:      make(map[string]*Client),
+		clients:      make(map[string]*MapperClient),
 		gamesQueue:   gq,
 		reviewsQueue: rq,
 	}, nil
@@ -62,7 +62,7 @@ func (m *Mapper) consumeGameMessages() {
 	err := m.gamesQueue.Consume(func(msg *middleware.GameMsg) error {
 		if _, exists := m.clients[msg.ClientId]; !exists {
 			log.Infof("New client %s", msg.ClientId)
-			m.clients[msg.ClientId] = NewClient(msg.ClientId, m.middleware)
+			m.clients[msg.ClientId] = NewMapperClient(msg.ClientId, m.middleware)
 		}
 
 		client := m.clients[msg.ClientId]

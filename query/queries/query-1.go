@@ -47,19 +47,20 @@ func (q *Query1) Run() {
 	}
 
 	gamesQueue.Consume(func(message *middleware.GameMsg) error {
-		q.processGame(message.Game)
+		if message.Last {
+			q.sendResult(message.ClientId, true)
+			message.Ack()
+			return nil
+		}
+
+		q.processGame(message.ClientId, message.Game)
 		message.Ack()
 		return nil
 	})
 
-	if q.cancelled {
-		return
-	}
-
-	q.sendResult(true)
 }
 
-func (q *Query1) processGame(game *middleware.Game) {
+func (q *Query1) processGame(clientId string, game *middleware.Game) {
 	q.processedGames++
 	if game.Windows {
 		q.result.Windows++
@@ -72,14 +73,15 @@ func (q *Query1) processGame(game *middleware.Game) {
 	}
 
 	if q.processedGames%int64(q.resultInterval) == 0 {
-		q.sendResult(false)
+		q.sendResult(clientId, false)
 	}
 }
 
-func (q *Query1) sendResult(final bool) {
+func (q *Query1) sendResult(clientId string, final bool) {
 	q.result.Final = final
 
 	result := &middleware.Result{
+		ClientId:       clientId,
 		QueryId:        1,
 		IsFinalMessage: final,
 		Payload:        q.result,

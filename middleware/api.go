@@ -207,13 +207,14 @@ func (m *Middleware) SendReviewBatch(message *ReviewsMsg) error {
 }
 
 func (m Middleware) SendReviewsFinished(clientId string, last int) error {
+	// TODO: save on file
 	m.clientsLastsDict[clientId] += last
 	if m.clientsLastsDict[clientId] == m.Config.Mappers.Amount+1 {
-		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED")
+		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED FOR CLIENT %s", clientId)
 		return m.SendStatsFinished(clientId)
 	}
 	log.Infof("Another mapper finished %d", last)
-	return m.publishQueue(m.reviewsQueue, &ReviewsMsg{Last: last})
+	return m.publishQueue(m.reviewsQueue, &ReviewsMsg{ClientId: clientId, Last: last})
 }
 
 type ReviewsQueue struct {
@@ -239,7 +240,7 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg) error) error 
 		}
 
 		if res.Last > 0 {
-			log.Infof("Received Last message: %v", res.Last)
+			log.Infof("Received Last message for client %s: %v", res.ClientId, res.Last)
 			if !rq.finished {
 				rq.middleware.SendReviewsFinished(res.ClientId, res.Last+1)
 				rq.finished = true
@@ -276,7 +277,7 @@ func (m *Middleware) SendStatsFinished(clientId string) error {
 	for shardId := range m.Config.Sharding.Amount {
 		stringShardId := strconv.Itoa(shardId)
 		topic := stringShardId + ".Indie.Action"
-		log.Infof("Sending stats finished to shard %s", topic)
+		log.Infof("Sending stats finished to shard %s for client %s", topic, clientId)
 		err := m.publishExchange("stats", topic, &StatsMsg{ClientId: clientId, Stats: &Stats{}, Last: true})
 		if err != nil {
 			log.Errorf("Failed to send stats finished to shard %s: %v", topic, err)
@@ -300,7 +301,7 @@ func (m *Middleware) ListenStats(shardId string, genre string) (*StatsQueue, err
 	return &StatsQueue{queue: queue, middleware: m}, nil
 }
 
-func (sq *StatsQueue) Consume(callback func(message *StatsMsg, ack func()) error) error {
+func (sq *StatsQueue) Consume(callback func(message *StatsMsg) error) error {
 	msgs, err := sq.middleware.consumeQueue(sq.queue)
 	if err != nil {
 		return err
@@ -316,15 +317,9 @@ func (sq *StatsQueue) Consume(callback func(message *StatsMsg, ack func()) error
 			continue
 		}
 
-		if res.Last {
-			log.Infof("Last stats received, sending to reducer")
-			msg.Ack(false)
-			break
-		}
+		res.msg = msg
 
-		callback(&res, func() {
-			msg.Ack(false)
-		})
+		callback(&res)
 	}
 
 	return nil

@@ -165,9 +165,15 @@ type StatsMsg struct {
 	ClientId string
 	Stats    *Stats
 	Last     bool
+	msg      amqp.Delivery
+}
+
+func (s *StatsMsg) Ack() {
+	s.msg.Ack(false)
 }
 
 type Result struct {
+	ClientId       string
 	QueryId        int
 	IsFinalMessage bool
 	Payload        interface{}
