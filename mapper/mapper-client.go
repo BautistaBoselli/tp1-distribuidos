@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
 )
@@ -49,22 +48,11 @@ func (c *MapperClient) Close() {
 }
 
 func (c *MapperClient) consumeGames() {
-	i := 0
-	lastTimestamp := time.Now()
-	lastI := 0
 
 	for game := range c.games {
-		i++
-		if i%10000 == 0 {
-			elapsed := time.Since(lastTimestamp)
-			log.Infof("Processed %d games for client %s in %s (%.2f games/s)", i, c.id, elapsed, float64(i-lastI)/elapsed.Seconds())
-			lastTimestamp = time.Now()
-			lastI = i
-		}
+
 		if game.Last {
 			go c.consumeReviews()
-			log.Infof("last game for client %s", c.id)
-			log.Infof("total games for client %s: %d", c.id, c.totalGames)
 			return
 		}
 
@@ -98,32 +86,15 @@ func (c *MapperClient) consumeGames() {
 
 func (c *MapperClient) consumeReviews() {
 	log.Infof("Starting to consume reviews")
-	i := 0
-	lastTimestamp := time.Now()
-	lastI := 0
+
 	for reviewBatch := range c.reviews {
-		// go func() {
-		i += len(reviewBatch.Reviews)
-		if i%10000 == 0 {
-			elapsed := time.Since(lastTimestamp)
-			log.Infof("Processed %d reviews for client %s in %s (%.2f reviews/s)", i, c.id, elapsed, float64(i-lastI)/elapsed.Seconds())
-			lastTimestamp = time.Now()
-			lastI = i
-		}
+
 		for _, review := range reviewBatch.Reviews {
 
-			// file, err := shared.GetStoreRWriter(shared.GetFilename(reviewBatch.ClientId, "store", review.AppId, 100))
 			file, err := os.Open(fmt.Sprintf("database/%s/%s.csv", c.id, review.AppId))
 			if err != nil {
-				// log.Errorf("Failed to open reviews file: %v", err)
-				continue
+				continue // no existe el juego
 			}
-
-			// if _, err := file.Seek(0, 0); err != nil {
-			// 	log.Errorf("action: reset file reader | result: fail")
-			// 	file.Close()
-			// 	continue
-			// }
 
 			reader := csv.NewReader(file)
 
@@ -152,6 +123,5 @@ func (c *MapperClient) consumeReviews() {
 		}
 
 		reviewBatch.Ack()
-		// }()
 	}
 }

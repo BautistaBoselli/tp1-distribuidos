@@ -81,7 +81,7 @@ func (q *Query5) Run() {
 }
 
 func (q *Query5) processStats(message *middleware.StatsMsg) {
-	shared.UpsertStatsFile(message.ClientId, "query-5", 100, message.Stats)
+	// shared.UpsertStatsFile(message.ClientId, "query-5", 100, message.Stats)
 }
 
 func (q *Query5) calculatePercentile(clientId string) {

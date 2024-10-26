@@ -3,7 +3,6 @@ package queries
 import (
 	"strconv"
 	"tp1-distribuidos/middleware"
-	"tp1-distribuidos/shared"
 
 	"github.com/rylans/getlang"
 )
@@ -64,11 +63,11 @@ func (q *Query4) processStats(message *middleware.StatsMsg) {
 		return
 	}
 
-	updatedStat := shared.UpsertStatsFile(message.ClientId, "query-4", 100, message.Stats)
+	// updatedStat := shared.UpsertStatsFile(message.ClientId, "query-4", 100, message.Stats)
 
-	if message.Stats.Negatives == 1 && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
-		q.sendResult(updatedStat)
-	}
+	// if message.Stats.Negatives == 1 && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
+	// 	q.sendResult(updatedStat)
+	// }
 }
 
 func (q *Query4) sendResult(message *middleware.Stats) {

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"time"
 	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
+	"tp1-distribuidos/shared"
 )
 
 type Mapper struct {
@@ -59,7 +61,13 @@ func (m *Mapper) Run() {
 func (m *Mapper) consumeGameMessages() {
 	log.Info("Starting to consume messages")
 
+	metric := shared.NewMetric(10000, func(total int, elapsed time.Duration, rate float64) string {
+		return fmt.Sprintf("[Mapper %d] Processed %d games in %s (%.2f games/s)", m.id, total, elapsed, rate)
+	})
+
 	err := m.gamesQueue.Consume(func(msg *middleware.GameMsg) error {
+		metric.Update(1)
+
 		if _, exists := m.clients[msg.ClientId]; !exists {
 			log.Infof("New client %s", msg.ClientId)
 			m.clients[msg.ClientId] = NewMapperClient(msg.ClientId, m.middleware)
@@ -84,7 +92,12 @@ func (m *Mapper) consumeGameMessages() {
 func (m *Mapper) consumeReviewsMessages() {
 	log.Info("Starting to consume reviews messages")
 
+	metric := shared.NewMetric(10000, func(total int, elapsed time.Duration, rate float64) string {
+		return fmt.Sprintf("[Mapper %d] Processed %d reviews in %s (%.2f reviews/s)", m.id, total, elapsed, rate)
+	})
+
 	err := m.reviewsQueue.Consume(func(msg *middleware.ReviewsMsg) error {
+		metric.Update(len(msg.Reviews))
 
 		client := m.clients[msg.ClientId]
 		client.reviews <- *msg

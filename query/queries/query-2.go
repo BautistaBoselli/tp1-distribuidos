@@ -3,7 +3,9 @@ package queries
 import (
 	"fmt"
 	"slices"
+	"time"
 	"tp1-distribuidos/middleware"
+	"tp1-distribuidos/shared"
 )
 
 const QUERY2_TOP_SIZE = 10
@@ -37,7 +39,13 @@ func (q *Query2) Run() {
 		return
 	}
 
+	metric := shared.NewMetric(10000, func(total int, elapsed time.Duration, rate float64) string {
+		return fmt.Sprintf("[Query 2-%d] Processed %d games in %s (%.2f games/s)", q.shardId, total, elapsed, rate)
+	})
+
 	gamesQueue.Consume(func(message *middleware.GameMsg) error {
+		metric.Update(1)
+
 		if message.Last {
 			q.sendResult(message.ClientId)
 			message.Ack()

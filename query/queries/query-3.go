@@ -1,7 +1,9 @@
 package queries
 
 import (
+	"fmt"
 	"strconv"
+	"time"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
 )
@@ -36,12 +38,12 @@ func (q *Query3) Run() {
 		return
 	}
 
-	i := 0
+	metric := shared.NewMetric(10000, func(total int, elapsed time.Duration, rate float64) string {
+		return fmt.Sprintf("[Query 3-%d] Processed %d stats in %s (%.2f stats/s)", q.shardId, total, elapsed, rate)
+	})
+
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
-		i++
-		if i%25000 == 0 {
-			log.Infof("Query 3 Processed %d stats", i)
-		}
+		metric.Update(1)
 
 		if message.Last {
 			q.sendResult(message.ClientId)
