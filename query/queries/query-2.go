@@ -14,7 +14,6 @@ type Query2 struct {
 	middleware *middleware.Middleware
 	shardId    int
 	topPlayed  map[string][]middleware.Game
-	cancelled  bool
 }
 
 func NewQuery2(m *middleware.Middleware, shardId int) *Query2 {
