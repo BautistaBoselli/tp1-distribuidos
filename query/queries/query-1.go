@@ -16,7 +16,7 @@ type Query1 struct {
 	shardId        int
 	resultInterval int
 	processedGames int64
-	result         middleware.Query1Result
+	results        map[string]*middleware.Query1Result
 	cancelled      bool
 }
 
@@ -26,12 +26,7 @@ func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query
 		middleware:     m,
 		shardId:        shardId,
 		resultInterval: resultInterval,
-		result: middleware.Query1Result{
-			Windows: 0,
-			Mac:     0,
-			Linux:   0,
-			Final:   false,
-		},
+		results:        make(map[string]*middleware.Query1Result),
 	}
 }
 
@@ -70,14 +65,23 @@ func (q *Query1) Run() {
 
 func (q *Query1) processGame(clientId string, game *middleware.Game) {
 	q.processedGames++
+	result, exists := q.results[clientId]
+	if !exists {
+		result = &middleware.Query1Result{
+			Windows: 0,
+			Mac:     0,
+			Linux:   0,
+		}
+		q.results[clientId] = result
+	}
 	if game.Windows {
-		q.result.Windows++
+		result.Windows++
 	}
 	if game.Linux {
-		q.result.Linux++
+		result.Linux++
 	}
 	if game.Mac {
-		q.result.Mac++
+		result.Mac++
 	}
 
 	if q.processedGames%int64(q.resultInterval) == 0 {
@@ -86,31 +90,36 @@ func (q *Query1) processGame(clientId string, game *middleware.Game) {
 }
 
 func (q *Query1) sendResult(clientId string, final bool) {
-	q.result.Final = final
+	result, exists := q.results[clientId]
+	if !exists {
+		log.Errorf("Query 1 - Client %s not found", clientId)
+		return
+	}
+	result.Final = final
 
-	result := &middleware.Result{
+	resultMsg := &middleware.Result{
 		ClientId:       clientId,
 		QueryId:        1,
 		IsFinalMessage: final,
-		Payload:        q.result,
+		Payload:        result,
 	}
 
-	if q.result.Final {
-		log.Infof("Query 1 [FINAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", q.shardId, q.result.Windows, q.result.Linux, q.result.Mac)
+	if resultMsg.IsFinalMessage {
+		log.Infof("Query 1 [FINAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", q.shardId, result.Windows, result.Linux, result.Mac)
 
-		if err := q.middleware.SendResult("1", result); err != nil {
+		if err := q.middleware.SendResult("1", resultMsg); err != nil {
 			log.Errorf("Failed to send result: %v", err)
 		}
 
 	} else {
-		log.Infof("Query 1 [PARTIAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", q.shardId, q.result.Windows, q.result.Linux, q.result.Mac)
+		log.Infof("Query 1 [PARTIAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", q.shardId, result.Windows, result.Linux, result.Mac)
 
-		if err := q.middleware.SendResult("1", result); err != nil {
+		if err := q.middleware.SendResult("1", resultMsg); err != nil {
 			log.Errorf("Failed to send result: %v", err)
 		}
 	}
 
-	q.result = middleware.Query1Result{
+	q.results[clientId] = &middleware.Query1Result{
 		Windows: 0,
 		Mac:     0,
 		Linux:   0,
