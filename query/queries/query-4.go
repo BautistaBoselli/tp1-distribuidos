@@ -41,7 +41,7 @@ func (q *Query4) Run() {
 		metric.Update(1)
 
 		if message.Last {
-			q.sendResultFinal()
+			q.sendResultFinal(message.ClientId)
 			message.Ack()
 			return nil
 		}
@@ -94,9 +94,10 @@ func (q *Query4) sendResult(clientId string, message *middleware.Stats) {
 	}
 }
 
-func (q *Query4) sendResultFinal() {
+func (q *Query4) sendResultFinal(clientId string) {
 	log.Infof("Query 4 [FINAL]")
 	result := &middleware.Result{
+		ClientId:       clientId,
 		QueryId:        4,
 		IsFinalMessage: true,
 	}

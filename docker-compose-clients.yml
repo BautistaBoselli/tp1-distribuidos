@@ -1,0 +1,20 @@
+name: tp1-clients
+services:
+  client1:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    entrypoint: /client
+    networks:
+      - tp1_network
+    environment:
+      - CLI_ID=1
+    volumes:
+      - ./client.yml:/config.yml
+      - ./results:/results
+      - ../datasets/games_m.csv:/games.csv
+      - ../datasets/reviews_m.csv:/reviews.csv
+networks:
+  tp1_network:
+    external: true      
+      

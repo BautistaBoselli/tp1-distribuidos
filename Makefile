@@ -18,7 +18,6 @@ all:
 docker-image:
 	docker build -f ./server/Dockerfile -t "server:latest" .
 	docker build -f ./mapper/Dockerfile -t "mapper:latest" .
-	docker build -f ./client/Dockerfile -t "client:latest" .
 	docker build -f ./query/Dockerfile -t "query:latest" .
 	docker build -f ./reducer/Dockerfile -t "reducer:latest" .
 	# Execute this command from time to time to clean up intermediate stages generated 

@@ -38,6 +38,7 @@ func (r *ReducerQuery4) Run() {
 
 		if r.pendingAnswers <= 0 {
 			r.sendResult(&middleware.Result{
+				ClientId:       result.ClientId,
 				QueryId:        4,
 				IsFinalMessage: true,
 				Payload: middleware.Query4Result{

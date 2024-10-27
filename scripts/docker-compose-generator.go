@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"os"
 	"tp1-distribuidos/config"
-
-	"github.com/spf13/viper"
 )
 
-func generateDockerCompose(sharding int, mappers int, games string, reviews string) {
+func generateDockerCompose(sharding int, mappers int) {
 	// Base structure of the docker-compose file
 	composeStr := `
 name: tp1
@@ -26,6 +24,8 @@ services:
       timeout: 1s
       retries: 5
       start_period: 3s
+    networks:
+      - network
     environment:
       RABBITMQ_DEFAULT_LOG_LEVEL: error
       RABBITMQ_LOG_LEVELS: "connection=error"`
@@ -36,6 +36,8 @@ services:
     entrypoint: /server
     environment:
       - CANT_AGENCIES=5
+    networks:
+      - network
     volumes:
       - ./server.yml:/server.yml
     depends_on:
@@ -57,24 +59,6 @@ services:
         condition: service_started`, query)
 	}
 
-	composeStr += fmt.Sprintf(`
-  client1:
-    container_name: client1
-    image: client:latest
-    entrypoint: /client
-    environment:
-      - CLI_ID=1
-    volumes:
-      - ./client.yml:/config.yml
-      - ./results:/results
-      - %s:/games.csv
-      - %s:/reviews.csv
-    depends_on:
-      server:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy`, games, reviews)
-
 	// Generate client services
 	for i := 1; i <= mappers; i++ {
 		clientStr := fmt.Sprintf(`
@@ -85,6 +69,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - network
     volumes:
       - ./server.yml:/server.yml`, i, i)
 		composeStr += clientStr
@@ -100,15 +86,14 @@ services:
     environment:
       - CLI_QUERY_ID=%d
       - CLI_SHARD_ID=%d
+    networks:
+      - network
     volumes:
       - ./server.yml:/server.yml
     depends_on:
       rabbitmq:
         condition: service_healthy`, query, i, query, i, query, i)
 		}
-	}
-
-	for i := 1; i <= 5; i++ {
 		composeStr += fmt.Sprintf(`
   reducer-%d:
     container_name: reducer-%d
@@ -118,10 +103,18 @@ services:
       - CLI_QUERY_ID=%d
     volumes:
       - ./server.yml:/server.yml
+    networks:
+      - network
     depends_on:
       rabbitmq:
-        condition: service_healthy`, i, i, i)
+        condition: service_healthy`, query, query, query)
 	}
+
+	composeStr += `
+networks:
+  network:
+    driver: bridge
+  `
 
 	// Write the docker-compose file
 	err := os.WriteFile("docker-compose.yml", []byte(composeStr), 0644)
@@ -129,6 +122,7 @@ services:
 		fmt.Printf("Error writing file: %v\n", err)
 		os.Exit(1)
 	}
+
 }
 
 func main() {
@@ -138,11 +132,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	viper.SetConfigFile("client.yml")
-	viper.ReadInConfig()
-
-	games := viper.Get("datasets.games").(string)
-	reviews := viper.Get("datasets.reviews").(string)
-
-	generateDockerCompose(config.Sharding.Amount, config.Mappers.Amount, games, reviews)
+	generateDockerCompose(config.Sharding.Amount, config.Mappers.Amount)
 }

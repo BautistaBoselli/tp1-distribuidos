@@ -98,9 +98,8 @@ func (s *Server) handleResponses() {
 		return
 	}
 
-	log.Infof("Response received")
-
 	err = responseQueue.Consume(func(response *middleware.Result) error {
+		log.Infof("Response received from query %d and client %s", response.QueryId, response.ClientId)
 		for _, client := range s.clients {
 			if client.id == response.ClientId {
 				client.handleResponse(response)
