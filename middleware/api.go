@@ -155,11 +155,11 @@ func (m *Middleware) SendGameMsg(message *GameMsg) error {
 	return m.publishExchange("games", stringShardId, message)
 }
 
-func (m Middleware) SendGameFinished() error {
+func (m Middleware) SendGameFinished(clientId string) error {
 
 	for shardId := range m.Config.Sharding.Amount {
 		stringShardId := strconv.Itoa(shardId)
-		err := m.publishExchange("games", stringShardId, &GameMsg{ClientId: "1", Game: &Game{}, Last: true})
+		err := m.publishExchange("games", stringShardId, &GameMsg{ClientId: clientId, Game: &Game{}, Last: true})
 		if err != nil {
 			log.Errorf("Failed to send game finished to shard %s: %v", stringShardId, err)
 			return err
@@ -393,7 +393,7 @@ func (m *Middleware) SendResponse(response *Result) error {
 	return m.publishQueue(m.responsesQueue, response)
 }
 
-func (rq *ResponsesQueue) Consume(callback func(message *Result, ack func()) error) error {
+func (rq *ResponsesQueue) Consume(callback func(message *Result) error) error {
 	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
@@ -409,9 +409,9 @@ func (rq *ResponsesQueue) Consume(callback func(message *Result, ack func()) err
 			continue
 		}
 
-		callback(&res, func() {
-			msg.Ack(false)
-		})
+		res.msg = msg
+
+		callback(&res)
 	}
 
 	return nil

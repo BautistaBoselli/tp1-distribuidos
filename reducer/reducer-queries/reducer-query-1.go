@@ -75,6 +75,7 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 	}
 
 	result := &middleware.Result{
+		ClientId:       "1",
 		QueryId:        1,
 		Payload:        query1Result,
 		IsFinalMessage: isFinalMessage,

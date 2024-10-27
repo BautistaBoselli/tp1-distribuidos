@@ -177,6 +177,11 @@ type Result struct {
 	QueryId        int
 	IsFinalMessage bool
 	Payload        interface{}
+	msg            amqp.Delivery
+}
+
+func (r *Result) Ack() {
+	r.msg.Ack(false)
 }
 
 type Query1Result struct {

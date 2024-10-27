@@ -181,6 +181,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 
 		if len(batch.Stats) == resultsBatchSize {
 			result := middleware.Result{
+				ClientId:       "1",
 				QueryId:        5,
 				IsFinalMessage: false,
 				Payload:        batch,
@@ -196,6 +197,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	}
 
 	result := middleware.Result{
+		ClientId:       "1",
 		QueryId:        5,
 		IsFinalMessage: true,
 		Payload:        batch,
