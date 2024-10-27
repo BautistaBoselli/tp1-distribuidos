@@ -17,11 +17,12 @@ const resultsBatchSize = 50
 
 type ReducerQuery5 struct {
 	middleware          *middleware.Middleware
+	results             chan *middleware.Result
 	pendingFinalAnswers int
 	totalGames          int
 }
 
-func NewReducerQuery5(middleware *middleware.Middleware) *ReducerQuery5 {
+func NewReducerQuery5(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery5 {
 	file, err := os.Create("reducer-query-5.csv")
 	if err != nil {
 		log.Fatalf("action: create file | result: error | message: %s", err)
@@ -31,6 +32,7 @@ func NewReducerQuery5(middleware *middleware.Middleware) *ReducerQuery5 {
 
 	return &ReducerQuery5{
 		middleware:          middleware,
+		results:             results,
 		pendingFinalAnswers: middleware.Config.Sharding.Amount,
 		totalGames:          0,
 	}
@@ -43,19 +45,13 @@ func (r *ReducerQuery5) Close() {
 func (r *ReducerQuery5) Run() {
 	defer r.Close()
 
-	resultsQueue, err := r.middleware.ListenResults("5")
-	if err != nil {
-		log.Fatalf("action: listen reviews| result: error | message: %s", err)
-		return
-	}
-
-	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
+	for result := range r.results {
 		if err := r.processResult(result); err != nil {
 			log.Fatalf("action: process result | result: error | message: %s", err)
-			return err
+			break
 		}
 
-		ack()
+		result.Ack()
 
 		if result.IsFinalMessage {
 			r.pendingFinalAnswers--
@@ -65,8 +61,7 @@ func (r *ReducerQuery5) Run() {
 			r.sendFinalResult()
 		}
 
-		return nil
-	})
+	}
 }
 
 func (r *ReducerQuery5) processResult(result *middleware.Result) error {

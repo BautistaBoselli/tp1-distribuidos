@@ -10,15 +10,17 @@ var log = logging.MustGetLogger("log")
 
 type ReducerQuery1 struct {
 	middleware     *middleware.Middleware
+	results        chan *middleware.Result
 	Windows        int64
 	Mac            int64
 	Linux          int64
 	pendingAnswers int
 }
 
-func NewReducerQuery1(middleware *middleware.Middleware) *ReducerQuery1 {
+func NewReducerQuery1(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery1 {
 	return &ReducerQuery1{
 		middleware:     middleware,
+		results:        results,
 		pendingAnswers: middleware.Config.Sharding.Amount,
 	}
 }
@@ -30,24 +32,17 @@ func (r *ReducerQuery1) Close() {
 func (r *ReducerQuery1) Run() {
 	log.Infof("Reducer Query 1 running")
 
-	resultsQueue, err := r.middleware.ListenResults("1")
-	if err != nil {
-		log.Fatalf("action: listen reviews| result: error | message: %s", err)
-		return
-	}
-
-	resultsQueue.Consume(func(msg *middleware.Result, ack func()) error {
+	for msg := range r.results {
 		r.processResult(msg)
 
-		ack()
+		msg.Ack()
 
 		if r.pendingAnswers == 0 {
 			r.SendResult(true)
 		} else {
 			r.SendResult(false)
 		}
-		return nil
-	})
+	}
 }
 
 func (r *ReducerQuery1) processResult(result *middleware.Result) {

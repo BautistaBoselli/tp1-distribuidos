@@ -8,13 +8,15 @@ const topStatsSize = 5
 
 type ReducerQuery3 struct {
 	middleware     *middleware.Middleware
+	results        chan *middleware.Result
 	pendingAnswers int
 	TopStats       []middleware.Stats
 }
 
-func NewReducerQuery3(middleware *middleware.Middleware) *ReducerQuery3 {
+func NewReducerQuery3(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery3 {
 	return &ReducerQuery3{
 		middleware:     middleware,
+		results:        results,
 		pendingAnswers: middleware.Config.Sharding.Amount,
 	}
 }
@@ -54,16 +56,8 @@ func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []
 func (r *ReducerQuery3) Run() {
 	defer r.Close()
 
-	resultsQueue, err := r.middleware.ListenResults("3")
-	if err != nil {
-		log.Fatalf("action: listen stats | result: error | message: %s", err)
-		return
-	}
-
-	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
+	for result := range r.results {
 		r.processResult(result)
-
-		ack()
 
 		if result.IsFinalMessage { // como no hay resultados parciales esto en teoria pasa siempre pero por las dudas
 			r.pendingAnswers--
@@ -73,8 +67,9 @@ func (r *ReducerQuery3) Run() {
 			r.SendResult()
 		}
 
-		return nil
-	})
+		result.Ack()
+
+	}
 }
 
 func (r *ReducerQuery3) processResult(result *middleware.Result) {

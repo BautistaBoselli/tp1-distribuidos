@@ -6,12 +6,14 @@ import (
 
 type ReducerQuery4 struct {
 	middleware     *middleware.Middleware
+	results        chan *middleware.Result
 	pendingAnswers int
 }
 
-func NewReducerQuery4(middleware *middleware.Middleware) *ReducerQuery4 {
+func NewReducerQuery4(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery4 {
 	return &ReducerQuery4{
 		middleware:     middleware,
+		results:        results,
 		pendingAnswers: middleware.Config.Sharding.Amount,
 	}
 }
@@ -23,13 +25,7 @@ func (r *ReducerQuery4) Close() {
 func (r *ReducerQuery4) Run() {
 	defer r.Close()
 
-	resultsQueue, err := r.middleware.ListenResults("4")
-	if err != nil {
-		log.Fatalf("action: listen reviews| result: error | message: %s", err)
-		return
-	}
-
-	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
+	for result := range r.results {
 		r.processResult(result)
 
 		if result.IsFinalMessage {
@@ -47,11 +43,9 @@ func (r *ReducerQuery4) Run() {
 			})
 		}
 
-		ack()
+		result.Ack()
 
-		return nil
-	})
-
+	}
 }
 
 func (r *ReducerQuery4) processResult(result *middleware.Result) {

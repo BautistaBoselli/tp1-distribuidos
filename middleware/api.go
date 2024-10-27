@@ -343,7 +343,7 @@ func (m *Middleware) SendResult(queryId string, result *Result) error {
 	return m.publishExchange("results", queryId, result)
 }
 
-func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error) error {
+func (rq *ResultsQueue) Consume(callback func(message *Result) error) error {
 	pendingFinalAnswers := rq.middleware.Config.Sharding.Amount
 	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
@@ -359,9 +359,9 @@ func (rq *ResultsQueue) Consume(callback func(message *Result, ack func()) error
 			continue
 		}
 
-		err = callback(&res, func() {
-			msg.Ack(false)
-		})
+		res.msg = msg
+
+		err = callback(&res)
 
 		if err != nil {
 			log.Errorf("Failed to process result message: %v", err)

@@ -6,7 +6,6 @@ Importantes:
 
 - [ ] Mapper: archivo de reviews (aka lo de franco)
 - [ ] Reducer: crear un ReducerClient que maneje los resultados por client (mismo concepto que el mapper, moviendo la logica del reducer actual al client, practicamente sin cambios) (salvo 4)
-- [ ] Server: Multiplexado de responses
 
 Opcionales:
 

@@ -8,13 +8,15 @@ const topGamesSize = 10
 
 type ReducerQuery2 struct {
 	middleware     *middleware.Middleware
+	results        chan *middleware.Result
 	pendingAnswers int
 	TopGames       []middleware.Game
 }
 
-func NewReducerQuery2(middleware *middleware.Middleware) *ReducerQuery2 {
+func NewReducerQuery2(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery2 {
 	return &ReducerQuery2{
 		middleware:     middleware,
+		results:        results,
 		pendingAnswers: middleware.Config.Sharding.Amount,
 	}
 }
@@ -55,19 +57,13 @@ func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []m
 func (r *ReducerQuery2) Run() {
 	log.Infof("Reducer Query 2 running")
 
-	resultsQueue, err := r.middleware.ListenResults("2")
-	if err != nil {
-		log.Fatalf("action: listen reviews| result: error | message: %s", err)
-		return
-	}
+	for msg := range r.results {
+		log.Infof("Top games: %v", msg.Payload.(middleware.Query2Result))
+		r.processResult(msg)
 
-	resultsQueue.Consume(func(result *middleware.Result, ack func()) error {
-		log.Infof("Top games: %v", result.Payload.(middleware.Query2Result))
-		r.processResult(result)
+		msg.Ack()
 
-		ack()
-
-		if result.IsFinalMessage { // en teoria todos van a ser finales pero por las dudasssss
+		if msg.IsFinalMessage { // en teoria todos van a ser finales pero por las dudasssss
 			r.pendingAnswers--
 		}
 
@@ -75,8 +71,7 @@ func (r *ReducerQuery2) Run() {
 			r.SendResult()
 		}
 
-		return nil
-	})
+	}
 }
 
 func (r *ReducerQuery2) processResult(result *middleware.Result) {
