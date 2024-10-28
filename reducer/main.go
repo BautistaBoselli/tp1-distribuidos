@@ -64,6 +64,7 @@ func main() {
 	
 	go func() {
 		<-ctx.Done()
+		log.Info("action: reducer finishing | result: in progress")
 		for _, reducer := range reducers {
 			reducer.Close()
 		}

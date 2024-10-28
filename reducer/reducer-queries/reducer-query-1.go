@@ -32,7 +32,7 @@ func (r *ReducerQuery1) QueueResult(result *middleware.Result) {
 }
 
 func (r *ReducerQuery1) Close() {
-	// r.middleware.Close()
+	r.middleware.Close()
 	close(r.results)
 }
 
@@ -64,9 +64,7 @@ func (r *ReducerQuery1) processResult(result *middleware.Result) {
 		if query1Result.Final {
 			r.pendingAnswers--
 		}
-
 	}
-
 }
 
 func (r *ReducerQuery1) SendResult(isFinalMessage bool) {

@@ -29,7 +29,7 @@ func (r *ReducerQuery3) QueueResult(result *middleware.Result) {
 
 
 func (r *ReducerQuery3) Close() {
-	// r.middleware.Close()
+	r.middleware.Close()
 	close(r.results)
 }
 
@@ -62,8 +62,6 @@ func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []
 }
 
 func (r *ReducerQuery3) Run() {
-	defer r.Close()
-
 	for result := range r.results {
 		r.processResult(result)
 

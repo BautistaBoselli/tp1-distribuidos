@@ -26,13 +26,11 @@ func (r *ReducerQuery4) QueueResult(result *middleware.Result) {
 
 
 func (r *ReducerQuery4) Close() {
-	// r.middleware.Close()
+	r.middleware.Close()
 	close(r.results)
 }
 
 func (r *ReducerQuery4) Run() {
-	defer r.Close()
-
 	for result := range r.results {
 		r.processResult(result)
 

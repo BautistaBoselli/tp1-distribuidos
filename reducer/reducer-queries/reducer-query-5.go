@@ -46,13 +46,11 @@ func (r *ReducerQuery5) QueueResult(result *middleware.Result) {
 
 
 func (r *ReducerQuery5) Close() {
-	// r.middleware.Close()
+	r.middleware.Close()
 	close(r.results)
 }
 
 func (r *ReducerQuery5) Run() {
-	defer r.Close()
-
 	for result := range r.results {
 		if err := r.processResult(result); err != nil {
 			log.Fatalf("action: process result | result: error | message: %s", err)

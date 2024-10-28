@@ -29,7 +29,8 @@ func (r *ReducerQuery2) QueueResult(result *middleware.Result) {
 
 
 func (r *ReducerQuery2) Close() {
-	// r.middleware.Close()
+	log.Infof("Reducer Query 2 closing")
+	r.middleware.Close()
 	close(r.results)
 }
 
