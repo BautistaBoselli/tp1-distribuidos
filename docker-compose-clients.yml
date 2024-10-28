@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: client/Dockerfile
     entrypoint: /client
+    environment:
+      - CLI_RESULTS_PATH=/results/results_1.txt
     networks:
       - tp1_network
     volumes:
@@ -17,6 +19,8 @@ services:
       context: .
       dockerfile: client/Dockerfile
     entrypoint: /client
+    environment:
+      - CLI_RESULTS_PATH=/results/results_2.txt
     networks:
       - tp1_network
     volumes:

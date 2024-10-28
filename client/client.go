@@ -22,15 +22,20 @@ type BatchConfig struct {
 	Amount int `mapstructure:"amount"`
 }
 
+type ResultsConfig struct {
+	Path string `mapstructure:"path"`
+}
+
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
-	Log    LogConfig    `mapstructure:"log"`
-	Batch  BatchConfig  `mapstructure:"batch"`
+	Server  ServerConfig  `mapstructure:"server"`
+	Log     LogConfig     `mapstructure:"log"`
+	Batch   BatchConfig   `mapstructure:"batch"`
+	Results ResultsConfig `mapstructure:"results"`
 }
 
 type Client struct {
-	config Config
-	conn   net.Conn
+	config          Config
+	conn            net.Conn
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -159,7 +164,8 @@ func (c *Client) SendAllSent() error {
 }
 
 func (c *Client) ReceiveResponse() error {
-	resultsFile, err := os.Create("./results/results.txt")
+	// resultsFile, err := os.Create("./results/results.txt")
+	resultsFile, err := os.Create(c.config.Results.Path)
 	if err != nil {
 		return err
 	}

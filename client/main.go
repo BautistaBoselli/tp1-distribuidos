@@ -22,6 +22,7 @@ func InitConfig() (*Config, error) {
 	v.BindEnv("server.address", "CLI_SERVER_ADDRESS")
 	v.BindEnv("log.level", "CLI_LOG_LEVEL")
 	v.BindEnv("batch.amount", "CLI_BATCH_AMOUNT")
+	v.BindEnv("results.path", "CLI_RESULTS_PATH")
 
 	v.SetConfigFile("./config.yml")
 	if err := v.ReadInConfig(); err != nil {
@@ -37,9 +38,10 @@ func InitConfig() (*Config, error) {
 }
 
 func PrintConfig(config *Config) {
-	log.Infof("action: config | result: success | server: %s | log_level: %s",
+	log.Infof("action: config | result: success | server: %s | log_level: %s | results path: %s",
 		config.Server.Address,
 		config.Log.Level,
+		config.Results.Path,
 	)
 }
 

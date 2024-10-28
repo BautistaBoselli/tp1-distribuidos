@@ -5,3 +5,4 @@ datasets
 results/results.txt
 results/results.json
 *.ogv
+.vscode/
