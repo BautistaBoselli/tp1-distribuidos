@@ -8,18 +8,26 @@ type ReducerQuery4 struct {
 	middleware     *middleware.Middleware
 	results        chan *middleware.Result
 	pendingAnswers int
+	ClientId       string
 }
 
-func NewReducerQuery4(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery4 {
+func NewReducerQuery4(clientId string, m *middleware.Middleware) *ReducerQuery4 {
 	return &ReducerQuery4{
-		middleware:     middleware,
-		results:        results,
-		pendingAnswers: middleware.Config.Sharding.Amount,
+		middleware:     m,
+		results:        make(chan *middleware.Result),
+		pendingAnswers: m.Config.Sharding.Amount,
+		ClientId:       clientId,
 	}
 }
 
+func (r *ReducerQuery4) QueueResult(result *middleware.Result) {
+	r.results <- result
+}
+
+
 func (r *ReducerQuery4) Close() {
-	r.middleware.Close()
+	// r.middleware.Close()
+	close(r.results)
 }
 
 func (r *ReducerQuery4) Run() {

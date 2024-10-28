@@ -11,18 +11,26 @@ type ReducerQuery2 struct {
 	results        chan *middleware.Result
 	pendingAnswers int
 	TopGames       []middleware.Game
+	ClientId       string
 }
 
-func NewReducerQuery2(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery2 {
+func NewReducerQuery2(clientId string, m *middleware.Middleware) *ReducerQuery2 {
 	return &ReducerQuery2{
-		middleware:     middleware,
-		results:        results,
-		pendingAnswers: middleware.Config.Sharding.Amount,
+		middleware:     m,
+		results:        make(chan *middleware.Result),
+		pendingAnswers: m.Config.Sharding.Amount,
+		ClientId:       clientId,
 	}
 }
 
+func (r *ReducerQuery2) QueueResult(result *middleware.Result) {
+	r.results <- result
+}
+
+
 func (r *ReducerQuery2) Close() {
-	r.middleware.Close()
+	// r.middleware.Close()
+	close(r.results)
 }
 
 func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []middleware.Game) []middleware.Game {
@@ -87,7 +95,7 @@ func (r *ReducerQuery2) SendResult() {
 	}
 
 	result := &middleware.Result{
-		ClientId:       "1",
+		ClientId:       r.ClientId,
 		QueryId:        2,
 		IsFinalMessage: true,
 		Payload:        query2Result,

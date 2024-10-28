@@ -16,6 +16,26 @@ import (
 
 var log = logging.MustGetLogger("log")
 
+func createReducer(env *config.Config, clientId string, mid *middleware.Middleware) Reducer {
+	var reduc Reducer
+	switch env.Query.Id {
+	case 1:
+		reduc = reducer.NewReducerQuery1(clientId, mid)
+	case 2:
+		reduc = reducer.NewReducerQuery2(clientId, mid)
+	case 3:
+		reduc = reducer.NewReducerQuery3(clientId, mid)
+	case 4:
+		reduc = reducer.NewReducerQuery4(clientId, mid)
+	case 5:
+		reduc = reducer.NewReducerQuery5(clientId, mid)
+	}
+
+	log.Infof("action: running reducer %d | result: success | client_id: %s", env.Query.Id, clientId)
+	go reduc.Run()
+	return reduc
+}
+
 func main() {
 	env, err := config.InitConfig()
 	if err != nil {
@@ -33,48 +53,34 @@ func main() {
 
 	resultsQueue, err := mid.ListenResults(strconv.Itoa(env.Query.Id))
 	if err != nil {
-		log.Fatalf("action: listen reviews| result: error | message: %s", err)
+		log.Fatalf("action: listen results| result: error | message: %s", err)
 		return
 	}
 
-	resultsChan := make(chan *middleware.Result)
-	go resultsQueue.Consume(func(msg *middleware.Result) error {
-		resultsChan <- msg
-		return nil
-	})
-	var reduc Reducer
-	log.Infof("action: creating reducer | result: success | reducer_id: %d", env.Query.Id)
-	switch env.Query.Id {
-	case 1:
-		reduc = reducer.NewReducerQuery1(mid, resultsChan)
-
-	case 2:
-		reduc = reducer.NewReducerQuery2(mid, resultsChan)
-
-	case 3:
-		reduc = reducer.NewReducerQuery3(mid, resultsChan)
-
-	case 4:
-		reduc = reducer.NewReducerQuery4(mid, resultsChan)
-	case 5:
-		reduc = reducer.NewReducerQuery5(mid, resultsChan)
-	}
-
+	reducers := make(map[string]Reducer)
+	
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-
+	
 	go func() {
 		<-ctx.Done()
-		reduc.Close()
+		for _, reducer := range reducers {
+			reducer.Close()
+		}
 	}()
 
-	log.Infof("action: running reducer | result: success")
-	reduc.Run()
-
+	resultsQueue.Consume(func(msg *middleware.Result) error {
+		if _, ok := reducers[msg.ClientId]; !ok {
+			reducers[msg.ClientId] = createReducer(env, msg.ClientId, mid)
+		}
+		reducers[msg.ClientId].QueueResult(msg)
+		return nil
+	})
 	log.Infof("action: reducer finished | result: success")
 }
 
 type Reducer interface {
+	QueueResult(*middleware.Result)
 	Run()
 	Close()
 }

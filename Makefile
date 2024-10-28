@@ -39,3 +39,17 @@ docker-compose-down:
 docker-compose-logs:
 	docker compose logs -f
 .PHONY: docker-compose-logs
+
+# Entradas para el cliente
+
+client-up:
+	docker compose -f docker-compose-clients.yml up --build
+
+client-down:
+	docker compose -f docker-compose-clients.yml stop -t 20
+	docker compose -f docker-compose-clients.yml down
+
+client-logs:
+	docker compose logs -f client
+
+.PHONY: client-up client-down client-logs

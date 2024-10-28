@@ -20,9 +20,10 @@ type ReducerQuery5 struct {
 	results             chan *middleware.Result
 	pendingFinalAnswers int
 	totalGames          int
+	ClientId            string
 }
 
-func NewReducerQuery5(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery5 {
+func NewReducerQuery5(clientId string, m *middleware.Middleware) *ReducerQuery5 {
 	file, err := os.Create("reducer-query-5.csv")
 	if err != nil {
 		log.Fatalf("action: create file | result: error | message: %s", err)
@@ -31,15 +32,22 @@ func NewReducerQuery5(middleware *middleware.Middleware, results chan *middlewar
 	defer file.Close()
 
 	return &ReducerQuery5{
-		middleware:          middleware,
-		results:             results,
-		pendingFinalAnswers: middleware.Config.Sharding.Amount,
+		middleware:          m,
+		results:             make(chan *middleware.Result),
+		pendingFinalAnswers: m.Config.Sharding.Amount,
 		totalGames:          0,
+		ClientId:            clientId,
 	}
 }
 
+func (r *ReducerQuery5) QueueResult(result *middleware.Result) {
+	r.results <- result
+}
+
+
 func (r *ReducerQuery5) Close() {
-	r.middleware.Close()
+	// r.middleware.Close()
+	close(r.results)
 }
 
 func (r *ReducerQuery5) Run() {
@@ -176,7 +184,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 
 		if len(batch.Stats) == resultsBatchSize {
 			result := middleware.Result{
-				ClientId:       "1",
+				ClientId:       r.ClientId,
 				QueryId:        5,
 				IsFinalMessage: false,
 				Payload:        batch,
@@ -192,7 +200,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	}
 
 	result := middleware.Result{
-		ClientId:       "1",
+		ClientId:       r.ClientId,
 		QueryId:        5,
 		IsFinalMessage: true,
 		Payload:        batch,

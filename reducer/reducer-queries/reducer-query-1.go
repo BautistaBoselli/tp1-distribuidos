@@ -15,18 +15,25 @@ type ReducerQuery1 struct {
 	Mac            int64
 	Linux          int64
 	pendingAnswers int
+	ClientId       string
 }
 
-func NewReducerQuery1(middleware *middleware.Middleware, results chan *middleware.Result) *ReducerQuery1 {
+func NewReducerQuery1(clientId string, m *middleware.Middleware) *ReducerQuery1 {
 	return &ReducerQuery1{
-		middleware:     middleware,
-		results:        results,
-		pendingAnswers: middleware.Config.Sharding.Amount,
+		middleware:     m,
+		results:        make(chan *middleware.Result),
+		pendingAnswers: m.Config.Sharding.Amount,
+		ClientId:       clientId,
 	}
 }
 
+func (r *ReducerQuery1) QueueResult(result *middleware.Result) {
+	r.results <- result
+}
+
 func (r *ReducerQuery1) Close() {
-	r.middleware.Close()
+	// r.middleware.Close()
+	close(r.results)
 }
 
 func (r *ReducerQuery1) Run() {
@@ -70,7 +77,7 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 	}
 
 	result := &middleware.Result{
-		ClientId:       "1",
+		ClientId:       r.ClientId,
 		QueryId:        1,
 		Payload:        query1Result,
 		IsFinalMessage: isFinalMessage,

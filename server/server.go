@@ -40,7 +40,7 @@ func NewServer(config *config.Config) (*Server, error) {
 		middleware:      middleware,
 		config:          config,
 		clients:         make([]*Client, 0),
-		clientsReceived: 0,
+		clientsReceived: 1000,
 	}, nil
 }
 
@@ -55,15 +55,18 @@ func (s *Server) Run() {
 	go s.handleResponses()
 
 	for {
+		log.Infof("action: hola1")
 		client, err := s.acceptNewConnection()
+		log.Infof("action: hola2")
 		if err != nil {
 			log.Errorf("action: accept_connections | result: fail | error: %s", err)
 			return
 		}
-
+		
 		go client.handleConnection()
 		go client.handleGames()
 		go client.handleReviews()
+		log.Infof("action: hola3")
 	}
 
 }
@@ -86,7 +89,7 @@ func (s *Server) acceptNewConnection() (*Client, error) {
 	client := NewClient(strconv.Itoa(s.clientsReceived), clientSocket, s.middleware, s.config.Server.ReviewsBatchAmount)
 	s.clients = append(s.clients, client)
 
-	log.Infof("action: accept_connections | result: success | agency: %d", client.id)
+	log.Infof("action: accept_connections | result: success | client_id: %d", client.id)
 
 	return client, nil
 }

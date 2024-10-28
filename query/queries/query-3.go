@@ -73,6 +73,7 @@ func (q *Query3) sendResult(clientId string) {
 	}
 
 	result := &middleware.Result{
+		ClientId:       clientId,
 		Payload:        query3Result,
 		IsFinalMessage: true,
 		QueryId:        3,

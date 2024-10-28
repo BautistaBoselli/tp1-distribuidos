@@ -200,6 +200,7 @@ func (q *Query5) sendResult(clientId string) {
 		record, err := reader.Read()
 		if err == io.EOF {
 			q.middleware.SendResult("5", &middleware.Result{
+				ClientId:       clientId,
 				QueryId:        5,
 				IsFinalMessage: true,
 				Payload:        result,
@@ -221,6 +222,7 @@ func (q *Query5) sendResult(clientId string) {
 		result.Stats = append(result.Stats, *stats)
 		if len(result.Stats) == 50 {
 			q.middleware.SendResult("5", &middleware.Result{
+				ClientId:       clientId,
 				QueryId:        5,
 				IsFinalMessage: false,
 				Payload:        result,
