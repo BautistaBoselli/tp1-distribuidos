@@ -220,7 +220,6 @@ func (m Middleware) SendReviewsFinished(clientId string, last int) error {
 type ReviewsQueue struct {
 	queue      *amqp.Queue
 	middleware *Middleware
-	finished   bool
 }
 
 func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg) error) error {
@@ -237,20 +236,6 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg) error) error 
 		if err != nil {
 			log.Errorf("Failed to decode message: %v", err)
 			continue
-		}
-
-		if res.Last > 0 {
-			log.Infof("Received Last message for client %s: %v", res.ClientId, res.Last)
-			if !rq.finished {
-				rq.middleware.SendReviewsFinished(res.ClientId, res.Last+1)
-				rq.finished = true
-				msg.Ack(false)
-				continue
-			} else {
-				log.Infof("Received Last again, ignoring and NACKing...")
-				msg.Nack(false, true)
-				continue
-			}
 		}
 
 		res.msg = msg

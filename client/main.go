@@ -37,8 +37,7 @@ func InitConfig() (*Config, error) {
 }
 
 func PrintConfig(config *Config) {
-	log.Infof("action: config | result: success | client: %v | server: %s | log_level: %s",
-		config.ID,
+	log.Infof("action: config | result: success | server: %s | log_level: %s",
 		config.Server.Address,
 		config.Log.Level,
 	)

@@ -19,6 +19,7 @@ type MapperClient struct {
 	gamesDir   shared.Directory
 	reviews    chan middleware.ReviewsMsg
 	totalGames int
+	finished   bool
 }
 
 func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
@@ -44,11 +45,17 @@ func (c *MapperClient) Close() {
 
 func (c *MapperClient) consumeGames() {
 
+	pendingLast := c.middleware.Config.Sharding.Amount
 	for game := range c.games {
 
 		if game.Last {
-			go c.consumeReviews()
-			return
+			pendingLast--
+			if pendingLast == 0 {
+				go c.consumeReviews()
+				close(c.games)
+			}
+			game.Ack()
+			continue
 		}
 
 		file, err := os.OpenFile(fmt.Sprintf("database/%s/%d.csv", c.id, game.Game.AppId), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -83,6 +90,11 @@ func (c *MapperClient) consumeReviews() {
 	log.Infof("Starting to consume reviews")
 
 	for reviewBatch := range c.reviews {
+
+		if reviewBatch.Last > 0 {
+			c.handleFinsished(reviewBatch)
+			continue
+		}
 
 		for _, review := range reviewBatch.Reviews {
 
@@ -119,4 +131,16 @@ func (c *MapperClient) consumeReviews() {
 
 		reviewBatch.Ack()
 	}
+}
+
+func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
+	log.Infof("Received Last message for client %s: %v", reviewBatch.ClientId, reviewBatch.Last)
+	if c.finished {
+		log.Infof("Received Last again, ignoring and NACKing...")
+		reviewBatch.Nack()
+	}
+	c.middleware.SendReviewsFinished(reviewBatch.ClientId, reviewBatch.Last+1)
+	c.finished = true
+	reviewBatch.Ack()
+	os.RemoveAll(fmt.Sprintf("database/%s", c.id))
 }

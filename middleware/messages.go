@@ -116,6 +116,10 @@ func (r *ReviewsMsg) Ack() {
 	r.msg.Ack(false)
 }
 
+func (r *ReviewsMsg) Nack() {
+	r.msg.Nack(false, true)
+}
+
 type Stats struct {
 	AppId     int
 	Name      string

@@ -92,6 +92,7 @@ func (m *Mapper) consumeReviewsMessages() {
 	err := m.reviewsQueue.Consume(func(msg *middleware.ReviewsMsg) error {
 		metric.Update(len(msg.Reviews))
 
+		// log.Infof("consumeRev: client id %s", msg.ClientId)
 		client := m.clients[msg.ClientId]
 		client.reviews <- *msg
 		return nil

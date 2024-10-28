@@ -55,18 +55,15 @@ func (s *Server) Run() {
 	go s.handleResponses()
 
 	for {
-		log.Infof("action: hola1")
 		client, err := s.acceptNewConnection()
-		log.Infof("action: hola2")
 		if err != nil {
 			log.Errorf("action: accept_connections | result: fail | error: %s", err)
 			return
 		}
-		
+
 		go client.handleConnection()
 		go client.handleGames()
 		go client.handleReviews()
-		log.Infof("action: hola3")
 	}
 
 }
@@ -162,7 +159,7 @@ func (c *Client) handleConnection() {
 
 		case protocol.MessageTypeReview:
 			if !c.gamesFinished {
-				log.Infof("action: receive_games | result: success")
+				log.Infof("action: receive_games | result: success | client_id: %s", c.id)
 				c.gamesFinished = true
 				close(c.games)
 			}
@@ -221,6 +218,7 @@ func (c *Client) handleReviews() {
 			reader.FieldsPerRecord = -1
 			record, err := reader.Read()
 			if err != nil {
+				reader.FieldsPerRecord = -1
 				log.Errorf("Failed to read review error: %v", err)
 				continue
 			}
@@ -229,7 +227,6 @@ func (c *Client) handleReviews() {
 				continue
 			}
 			reviewBatch = append(reviewBatch, *review)
-
 			if len(reviewBatch) == c.reviewsBatchAmount {
 				err := c.middleware.SendReviewBatch(&middleware.ReviewsMsg{ClientId: c.id, Reviews: reviewBatch})
 				if err != nil {

@@ -23,7 +23,6 @@ type BatchConfig struct {
 }
 
 type Config struct {
-	ID     string       `mapstructure:"id"`
 	Server ServerConfig `mapstructure:"server"`
 	Log    LogConfig    `mapstructure:"log"`
 	Batch  BatchConfig  `mapstructure:"batch"`
@@ -40,8 +39,7 @@ func NewClient(config Config) *Client {
 	conn, err := net.Dial("tcp", config.Server.Address)
 	if err != nil {
 		log.Criticalf(
-			"action: connect | result: fail | client: %v | error: %v",
-			config.ID,
+			"action: connect | result: fail| error: %v",
 			err,
 		)
 	}
@@ -54,7 +52,7 @@ func NewClient(config Config) *Client {
 }
 
 func (c *Client) Cancel() {
-	log.Debugf("action: cerrar_conexion | result: success | client: %v", c.config.ID)
+	log.Debugf("action: cerrar_conexion | result: success")
 	c.Close()
 }
 
@@ -64,7 +62,7 @@ func (c *Client) Close() {
 
 func (c *Client) SendGames(file *os.File) error {
 	defer file.Close()
-	log.Infof("action: enviar_juegos | result: in_progress | client: %v", c.config.ID)
+	log.Infof("action: enviar_juegos | result: in_progress")
 
 	// reader := csv.NewReader(file)
 	// _, _ = reader.Read()
@@ -88,7 +86,7 @@ func (c *Client) SendGames(file *os.File) error {
 				break
 			}
 			if err != nil {
-				log.Errorf("action: enviar_juegos | result: fail | client: %v | error csv: %v", c.config.ID, err)
+				log.Errorf("action: enviar_juegos | result: fail | error csv: %v", err)
 				return err
 			}
 
@@ -101,7 +99,7 @@ func (c *Client) SendGames(file *os.File) error {
 
 		err := protocol.Send(c.conn, &batch)
 		if err != nil {
-			log.Errorf("action: enviar_juegos | result: fail | client: %v | error: %v", c.config.ID, err)
+			log.Errorf("action: enviar_juegos | result: fail | error: %v", err)
 			return err
 		}
 
@@ -112,7 +110,7 @@ func (c *Client) SendGames(file *os.File) error {
 
 func (c *Client) SendReviews(file *os.File) error {
 	defer file.Close()
-	log.Infof("action: enviar_reviews | result: in_progress | client: %v", c.config.ID)
+	log.Infof("action: enviar_reviews | result: in_progress")
 
 	reader := bufio.NewReader(file)
 	reader.ReadString('\n')
@@ -134,7 +132,7 @@ func (c *Client) SendReviews(file *os.File) error {
 				break
 			}
 			if err != nil {
-				log.Errorf("action: enviar_reviews | result: fail | client: %v | error: %v", c.config.ID, err)
+				log.Errorf("action: enviar_reviews | result: fail | error: %v", err)
 				return err
 			}
 
@@ -147,7 +145,7 @@ func (c *Client) SendReviews(file *os.File) error {
 
 		err := protocol.Send(c.conn, &batch)
 		if err != nil {
-			log.Errorf("action: enviar_reviews | result: fail | client: %v | error: %v", c.config.ID, err)
+			log.Errorf("action: enviar_reviews | result: fail | error: %v", err)
 			return err
 		}
 		time.Sleep(10 * time.Millisecond)
