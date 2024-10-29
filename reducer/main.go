@@ -18,7 +18,7 @@ import (
 var log = logging.MustGetLogger("log")
 
 func createReducer(env *config.Config, clientId string, mid *middleware.Middleware) Reducer {
-	if err := os.MkdirAll(fmt.Sprintf("reducer-clients/%s", clientId), 0644); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(fmt.Sprintf("database/%s", clientId), 0644); err != nil && !os.IsExist(err) {
 		log.Errorf("Failed to create directory for client %s: %v", clientId, err)
 		return nil
 	}
