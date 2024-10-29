@@ -8,29 +8,39 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"tp1-distribuidos/middleware"
-	"tp1-distribuidos/shared"
 )
 
 type MapperClient struct {
-	id         string
-	middleware *middleware.Middleware
-	games      chan middleware.GameMsg
-	gamesDir   shared.Directory
-	reviews    chan middleware.ReviewsMsg
-	totalGames int
-	finished   bool
+	id            string
+	middleware    *middleware.Middleware
+	games         chan middleware.GameMsg
+	reviews       chan middleware.ReviewsMsg
+	reviewsFile   *os.File
+	finishedFile  bool
+	finished      bool
+	finishedGames bool
 }
 
 func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 	os.MkdirAll(fmt.Sprintf("database/%s", id), 0644)
 
+	reviewsFile, err := os.OpenFile(fmt.Sprintf("database/%s/reviews.csv", id), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Errorf("Failed to open reviews.csv: %v", err)
+		return nil
+	}
+
 	client := &MapperClient{
-		id:         id,
-		middleware: m,
-		games:      make(chan middleware.GameMsg),
-		// gamesDir:   dir,
-		reviews: make(chan middleware.ReviewsMsg),
+		id:            id,
+		middleware:    m,
+		games:         make(chan middleware.GameMsg),
+		reviews:       make(chan middleware.ReviewsMsg),
+		reviewsFile:   reviewsFile,
+		finishedFile:  false,
+		finished:      false,
+		finishedGames: false,
 	}
 
 	go client.consumeGames()
@@ -38,9 +48,9 @@ func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 }
 
 func (c *MapperClient) Close() {
+	c.reviewsFile.Close()
 	close(c.games)
 	close(c.reviews)
-	c.gamesDir.Delete()
 }
 
 func (c *MapperClient) consumeGames() {
@@ -51,7 +61,9 @@ func (c *MapperClient) consumeGames() {
 		if game.Last {
 			pendingLast--
 			if pendingLast == 0 {
+				c.finishedGames = true
 				go c.consumeReviews()
+				go c.writeFileToChan()
 				close(c.games)
 			}
 			game.Ack()
@@ -78,8 +90,6 @@ func (c *MapperClient) consumeGames() {
 		}
 		writer.Flush()
 
-		c.totalGames++
-
 		file.Close()
 
 		game.Ack()
@@ -92,6 +102,7 @@ func (c *MapperClient) consumeReviews() {
 	for reviewBatch := range c.reviews {
 
 		if reviewBatch.Last > 0 {
+
 			c.handleFinsished(reviewBatch)
 			continue
 		}
@@ -133,10 +144,78 @@ func (c *MapperClient) consumeReviews() {
 	}
 }
 
+func (c *MapperClient) storeReviews(reviews *middleware.ReviewsMsg) {
+	writer := csv.NewWriter(c.reviewsFile)
+
+	for _, review := range reviews.Reviews {
+		reviewStats := []string{
+			review.AppId,
+			review.Text,
+			strconv.Itoa(review.Score),
+		}
+
+		if err := writer.Write(reviewStats); err != nil {
+			log.Errorf("Failed to write to reviews.csv: %v", err)
+		}
+	}
+	writer.Flush()
+	reviews.Ack()
+}
+
+func (c *MapperClient) writeFileToChan() {
+	file, err := os.Open(fmt.Sprintf("database/%s/reviews.csv", c.id))
+	if err != nil {
+		log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
+		return
+	}
+
+	reader := csv.NewReader(file)
+	batch := middleware.ReviewsMsg{ClientId: c.id, Reviews: make([]middleware.Review, 0)}
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
+			return
+		}
+
+		score, err := strconv.Atoi(record[2])
+		if err != nil {
+			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
+			return
+		}
+
+		review := middleware.Review{
+			AppId: record[0],
+			Text:  record[1],
+			Score: score,
+		}
+
+		batch.Reviews = append(batch.Reviews, review)
+
+		if len(batch.Reviews) == 100 {
+			c.reviews <- batch
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+
+	log.Infof("Finished reading reviews file for client %s", c.id)
+	c.reviews <- batch
+	c.finishedFile = true
+}
+
 func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
 	log.Infof("Received Last message for client %s: %v", reviewBatch.ClientId, reviewBatch.Last)
 	if c.finished {
 		log.Infof("Received Last again, ignoring and NACKing...")
+		reviewBatch.Nack()
+		return
+	}
+	if !c.finishedFile {
+		log.Infof("Received Last but not finished reviews file, ignoring and NACKing...")
 		reviewBatch.Nack()
 		return
 	}

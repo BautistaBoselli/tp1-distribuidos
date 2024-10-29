@@ -92,13 +92,16 @@ func (m *Mapper) consumeReviewsMessages() {
 
 		// log.Infof("consumeRev: client id %s", msg.ClientId)
 		client := m.clients[msg.ClientId]
-		client.reviews <- *msg
+		if !client.finishedGames {
+			client.storeReviews(msg)
+		} else {
+			client.reviews <- *msg
+		}
 		return nil
 	})
 
 	if err != nil {
 		log.Errorf("Failed to consume from reviews exchange: %v", err)
-		time.Sleep(5 * time.Second)
 	}
 
 	if m.cancelled {
