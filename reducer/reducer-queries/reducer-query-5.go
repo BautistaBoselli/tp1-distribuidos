@@ -4,6 +4,7 @@ import (
 	// "encoding/csv"
 	// "io"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"math"
 	"os"
@@ -21,16 +22,11 @@ type ReducerQuery5 struct {
 	pendingFinalAnswers int
 	totalGames          int
 	ClientId            string
+	finished            bool
 }
 
 func NewReducerQuery5(clientId string, m *middleware.Middleware) *ReducerQuery5 {
-	file, err := os.Create("reducer-query-5.csv")
-	if err != nil {
-		log.Fatalf("action: create file | result: error | message: %s", err)
-		return nil
-	}
-	defer file.Close()
-
+	os.MkdirAll(fmt.Sprintf("./database/%s/", clientId), os.ModePerm)
 	return &ReducerQuery5{
 		middleware:          m,
 		results:             make(chan *middleware.Result),
@@ -44,9 +40,12 @@ func (r *ReducerQuery5) QueueResult(result *middleware.Result) {
 	r.results <- result
 }
 
-
 func (r *ReducerQuery5) Close() {
-	r.middleware.Close()
+	if r.finished {
+		return
+	}
+	r.finished = true
+	os.RemoveAll(fmt.Sprintf("./database/%s", r.ClientId))
 	close(r.results)
 }
 
@@ -65,6 +64,8 @@ func (r *ReducerQuery5) Run() {
 
 		if r.pendingFinalAnswers == 0 {
 			r.sendFinalResult()
+			r.Close()
+			break
 		}
 
 	}
@@ -78,7 +79,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	file, err := os.Open("reducer-query-5.csv")
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/reducer-query-5.csv", r.ClientId), os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("action: open file | result: error | message: %s", err)
 		return err
@@ -128,7 +129,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 
 	writer.Flush()
 	// replace file with tmp file
-	if err := os.Rename(tmpFile.Name(), "reducer-query-5.csv"); err != nil {
+	if err := os.Rename(tmpFile.Name(), fmt.Sprintf("./database/%s/reducer-query-5.csv", r.ClientId)); err != nil {
 		log.Fatalf("action: rename file | result: error | message: %s", err)
 		return err
 	}
@@ -139,7 +140,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	gamesNeeded := int(math.Ceil(float64(r.totalGames) / 10.0))
 	log.Infof("total games: %d, games needed %v", r.totalGames, gamesNeeded)
 
-	file, err := os.Open("reducer-query-5.csv")
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/reducer-query-5.csv", r.ClientId), os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("action: open file | result: error | message: %s", err)
 		return

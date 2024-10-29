@@ -51,6 +51,7 @@ func (q *Query5) Run() {
 		if message.Last {
 			q.calculatePercentile(message.ClientId)
 			message.Ack()
+			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
 			return nil
 		}
 
@@ -101,6 +102,7 @@ func (q *Query5) calculatePercentile(clientId string) {
 	}
 
 	q.sendResult(clientId)
+	
 
 }
 

@@ -52,8 +52,6 @@ func (m *Mapper) Close() error {
 }
 
 func (m *Mapper) Run() {
-	//defer m.Close() esto causaba el panic
-
 	go m.consumeGameMessages()
 	m.consumeReviewsMessages()
 }

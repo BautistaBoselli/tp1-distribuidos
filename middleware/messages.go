@@ -209,5 +209,4 @@ type Query4Result struct {
 
 type Query5Result struct {
 	Stats []Stats
-	// GamesNeeded int
 }

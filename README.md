@@ -7,7 +7,6 @@ Importantes:
 - [ ] Mapper: archivo de reviews (aka lo de franco)
 - [ ] Queries: mover 1 y 2 a disco
 - [ ] Reducer: mover 1, 2 y 3 a disco
-- [ ] Queries: al recibir EOF, cerrar el directorio del cliente
-- [ ] Reducer: al recibir EOF, cerrar el directorio del cliente
+- [X] Reducer: al recibir EOF, cerrar el directorio del cliente
 - [ ] Actualizar informe
 - [ ] Actualizar logs en gral

@@ -12,9 +12,11 @@ type ReducerQuery2 struct {
 	pendingAnswers int
 	TopGames       []middleware.Game
 	ClientId       string
+	finished       bool
 }
 
 func NewReducerQuery2(clientId string, m *middleware.Middleware) *ReducerQuery2 {
+
 	return &ReducerQuery2{
 		middleware:     m,
 		results:        make(chan *middleware.Result),
@@ -27,11 +29,14 @@ func (r *ReducerQuery2) QueueResult(result *middleware.Result) {
 	r.results <- result
 }
 
-
 func (r *ReducerQuery2) Close() {
+	if r.finished {
+		return
+	}
+	r.finished = true
 	log.Infof("Reducer Query 2 closing")
-	r.middleware.Close()
 	close(r.results)
+	// os.RemoveAll(fmt.Sprintf("./database/%s", r.ClientId))
 }
 
 func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []middleware.Game) []middleware.Game {
@@ -78,6 +83,8 @@ func (r *ReducerQuery2) Run() {
 
 		if r.pendingAnswers == 0 {
 			r.SendResult()
+			r.Close()
+			break
 		}
 
 	}

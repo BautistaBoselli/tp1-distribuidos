@@ -12,6 +12,7 @@ type ReducerQuery3 struct {
 	pendingAnswers int
 	TopStats       []middleware.Stats
 	ClientId       string
+	finished       bool
 }
 
 func NewReducerQuery3(clientId string, m *middleware.Middleware) *ReducerQuery3 {
@@ -27,10 +28,13 @@ func (r *ReducerQuery3) QueueResult(result *middleware.Result) {
 	r.results <- result
 }
 
-
 func (r *ReducerQuery3) Close() {
-	r.middleware.Close()
+	if r.finished {
+		return
+	}
+	r.finished = true
 	close(r.results)
+	// os.RemoveAll(fmt.Sprintf("./database/%s", r.ClientId))
 }
 
 func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []middleware.Stats) []middleware.Stats {

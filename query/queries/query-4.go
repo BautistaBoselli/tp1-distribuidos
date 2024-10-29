@@ -2,6 +2,7 @@ package queries
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 	"tp1-distribuidos/middleware"
@@ -43,6 +44,8 @@ func (q *Query4) Run() {
 		if message.Last {
 			q.sendResultFinal(message.ClientId)
 			message.Ack()
+			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
+
 			return nil
 		}
 

@@ -138,6 +138,7 @@ func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
 	if c.finished {
 		log.Infof("Received Last again, ignoring and NACKing...")
 		reviewBatch.Nack()
+		return
 	}
 	c.middleware.SendReviewsFinished(reviewBatch.ClientId, reviewBatch.Last+1)
 	c.finished = true

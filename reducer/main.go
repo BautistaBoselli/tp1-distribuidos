@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
@@ -17,6 +18,11 @@ import (
 var log = logging.MustGetLogger("log")
 
 func createReducer(env *config.Config, clientId string, mid *middleware.Middleware) Reducer {
+	if err := os.MkdirAll(fmt.Sprintf("reducer-clients/%s", clientId), 0644); err != nil && !os.IsExist(err) {
+		log.Errorf("Failed to create directory for client %s: %v", clientId, err)
+		return nil
+	}
+
 	var reduc Reducer
 	switch env.Query.Id {
 	case 1:
@@ -58,13 +64,14 @@ func main() {
 	}
 
 	reducers := make(map[string]Reducer)
-	
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	
+
 	go func() {
 		<-ctx.Done()
 		log.Info("action: reducer finishing | result: in progress")
+		mid.Close()
 		for _, reducer := range reducers {
 			reducer.Close()
 		}

@@ -16,6 +16,7 @@ type ReducerQuery1 struct {
 	Linux          int64
 	pendingAnswers int
 	ClientId       string
+	finished       bool
 }
 
 func NewReducerQuery1(clientId string, m *middleware.Middleware) *ReducerQuery1 {
@@ -32,8 +33,60 @@ func (r *ReducerQuery1) QueueResult(result *middleware.Result) {
 }
 
 func (r *ReducerQuery1) Close() {
-	r.middleware.Close()
+	if r.finished {
+		return
+	}
+	r.finished = true
+	// os.Remove(fmt.Sprintf("reducer-clients/%s/%d.txt", r.ClientId, 1))
 	close(r.results)
+}
+
+func (r *ReducerQuery1) getResultsFromFile() []int {
+	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/%reducer-d.txt", r.ClientId, 1), os.O_RDONLY, 0644)
+	// if err != nil {
+	// 	log.Errorf("Failed to open file: %v", err)
+	// 	return nil
+	// }
+	// defer file.Close()
+
+	// reader, err := file.Read()
+
+	// line, err := reader.ReadString('\n')
+	// if err != nil {
+	// 	log.Errorf("Failed to read line: %v", err)
+	// 	return nil
+	// }
+
+	// parts := strings.Split(line, ",")
+	// 	parts := strings.Split(line, ",")
+	// 	if len(parts) != 3 {
+	// 		log.Errorf("Invalid line: %s", line)
+	// 		continue
+	// 	}
+
+	// 	windows, err := strconv.ParseInt(parts[0], 10, 64)
+	// 	if err != nil {
+	// 		log.Errorf("Failed to parse windows: %v", err)
+	// 		continue
+	// 	}
+
+	// 	mac, err := strconv.ParseInt(parts[1], 10, 64)
+	// 	if err != nil {
+	// 		log.Errorf("Failed to parse mac: %v", err)
+	// 		continue
+	// 	}
+
+	// 	linux, err := strconv.ParseInt(parts[2], 10, 64)
+	// 	if err != nil {
+	// 		log.Errorf("Failed to parse linux: %v", err)
+	// 		continue
+	// 	}
+
+	// 	r.Windows += windows
+	// 	r.Mac += mac
+	// 	r.Linux += linux
+	// }
+	return nil
 }
 
 func (r *ReducerQuery1) Run() {
@@ -46,6 +99,8 @@ func (r *ReducerQuery1) Run() {
 
 		if r.pendingAnswers == 0 {
 			r.SendResult(true)
+			// r.Close()
+			// break
 		} else {
 			r.SendResult(false)
 		}
@@ -53,6 +108,15 @@ func (r *ReducerQuery1) Run() {
 }
 
 func (r *ReducerQuery1) processResult(result *middleware.Result) {
+	// file, err := os.OpenFile(fmt.Sprintf("reducer-clients/%s/%d.txt", r.ClientId, 1), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	log.Errorf("Failed to open file: %v", err)
+	// 	return
+	// }
+	// defer file.Close()
+
+	// reader := file.Read()
+
 	switch result.Payload.(type) {
 	case middleware.Query1Result:
 		query1Result := result.Payload.(middleware.Query1Result)

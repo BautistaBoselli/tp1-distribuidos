@@ -9,6 +9,7 @@ type ReducerQuery4 struct {
 	results        chan *middleware.Result
 	pendingAnswers int
 	ClientId       string
+	finished       bool
 }
 
 func NewReducerQuery4(clientId string, m *middleware.Middleware) *ReducerQuery4 {
@@ -24,9 +25,11 @@ func (r *ReducerQuery4) QueueResult(result *middleware.Result) {
 	r.results <- result
 }
 
-
 func (r *ReducerQuery4) Close() {
-	r.middleware.Close()
+	if r.finished {
+		return
+	}
+	r.finished = true
 	close(r.results)
 }
 
@@ -47,8 +50,11 @@ func (r *ReducerQuery4) Run() {
 					Game: "",
 				},
 			})
+			r.Close()
+			result.Ack()
+			break
 		}
-
+		
 		result.Ack()
 
 	}
