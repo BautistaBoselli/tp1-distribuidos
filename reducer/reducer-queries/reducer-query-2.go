@@ -1,11 +1,10 @@
 package reducer
 
 import (
-	"bufio"
+	"encoding/csv"
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"tp1-distribuidos/middleware"
 )
 
@@ -44,7 +43,7 @@ func (r *ReducerQuery2) Close() {
 }
 
 func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.txt", r.ClientId), os.O_RDONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return nil
@@ -53,25 +52,26 @@ func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
 
 	result := make([]middleware.Game, 0)
 
-	reader := bufio.NewReader(file)
+	reader := csv.NewReader(file)
 	for {
-		line, err := reader.ReadString('\n')
+		line, err := reader.Read()
 		if err != nil && err.Error() == "EOF" {
 			return result
 		}
-		if err != nil && err.Error() != "EOF" {
-			log.Errorf("Failed to read line: %v", err)
+		if err != nil && err == csv.ErrFieldCount {
+			continue
+		}
+		if err != nil && err.Error() != "EOF" && err != csv.ErrFieldCount {
+			log.Errorf("Failed to read line: %v, line: %v", err, line)
 			return nil
 		}
 
-		line = strings.TrimRight(line, "\n")
-		parts := strings.Split(line, ",")
-		id, _ := strconv.Atoi(parts[0])
-		year, _ := strconv.Atoi(parts[2])
-		avgPlaytime, _ := strconv.Atoi(parts[7])
+		id, _ := strconv.Atoi(line[0])
+		year, _ := strconv.Atoi(line[2])
+		avgPlaytime, _ := strconv.Atoi(line[7])
 		game := middleware.Game{
 			AppId:       id,
-			Name:        parts[1],
+			Name:        line[1],
 			Year:        year,
 			Windows:     false, // no nos interesan ni los generos ni las plataformas
 			Mac:         false,
@@ -83,22 +83,35 @@ func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
 }
 
 func (r *ReducerQuery2) storeResults(topGames []middleware.Game) {
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.txt", r.ClientId), os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.CreateTemp("", "tmp-reducer-query-2.csv")
+	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return
 	}
 	defer file.Close()
 
-	writer := bufio.NewWriter(file)
+	writer := csv.NewWriter(file)
 	for _, game := range topGames {
-		_, err := writer.WriteString(fmt.Sprintf("%d,%s,%d,,%t,%t,%t,%d\n", game.AppId, game.Name, game.Year, game.Windows, game.Mac, game.Linux, game.AvgPlaytime))
-		if err != nil {
+		record := []string{
+			strconv.Itoa(game.AppId),
+			game.Name,
+			strconv.Itoa(game.Year),
+			"",
+			strconv.FormatBool(game.Windows),
+			strconv.FormatBool(game.Mac),
+			strconv.FormatBool(game.Linux),
+			strconv.FormatInt(game.AvgPlaytime, 10),
+		}
+		if err := writer.Write(record); err != nil {
 			log.Errorf("Failed to write line: %v", err)
 			return
 		}
 	}
 	writer.Flush()
+
+	os.Rename(file.Name(), fmt.Sprintf("./database/%s/2.csv", r.ClientId))
+	os.Remove(file.Name())
 }
 
 func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []middleware.Game) []middleware.Game {
