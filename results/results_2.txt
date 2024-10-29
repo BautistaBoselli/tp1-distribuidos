@@ -1,4 +1,4 @@
-[QUERY 1 - PARCIAL]: Windows: 2424, Mac: 559, Linux: 379
+[QUERY 1 - PARCIAL]: Windows: 2449, Mac: 546, Linux: 358
 [QUERY 1 - FINAL]: Windows: 4873, Mac: 1105, Linux: 737
 [QUERY 2]: Top Game 1: Clicker Heroes 2 (31708)
 [QUERY 2]: Top Game 2: Midas Gold Plus (19196)
