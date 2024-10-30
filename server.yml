@@ -7,7 +7,7 @@ log:
 mappers:
   amount: 2
 sharding:
-  amount: 2
+  amount: 4
 query:
   query1-result-interval: 10000
-  query4-min-negatives: 500
+  query4-min-negatives: 5000

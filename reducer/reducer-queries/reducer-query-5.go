@@ -79,7 +79,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/reducer-query-5.csv", r.ClientId), os.O_CREATE, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/5.csv", r.ClientId), os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("action: open file | result: error | message: %s", err)
 		return err
@@ -129,7 +129,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 
 	writer.Flush()
 	// replace file with tmp file
-	if err := os.Rename(tmpFile.Name(), fmt.Sprintf("./database/%s/reducer-query-5.csv", r.ClientId)); err != nil {
+	if err := os.Rename(tmpFile.Name(), fmt.Sprintf("./database/%s/5.csv", r.ClientId)); err != nil {
 		log.Fatalf("action: rename file | result: error | message: %s", err)
 		return err
 	}
@@ -140,7 +140,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	gamesNeeded := int(math.Ceil(float64(r.totalGames) / 10.0))
 	log.Infof("total games: %d, games needed %v", r.totalGames, gamesNeeded)
 
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/reducer-query-5.csv", r.ClientId), os.O_CREATE, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/5.csv", r.ClientId), os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("action: open file | result: error | message: %s", err)
 		return
