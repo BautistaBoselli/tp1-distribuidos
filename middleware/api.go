@@ -394,7 +394,6 @@ func (rq *ResponsesQueue) Consume(callback func(message *Result) error) error {
 
 		callback(&res)
 	}
-	log.Infof("Ay me cerraron la colita")
 
 	return nil
 }

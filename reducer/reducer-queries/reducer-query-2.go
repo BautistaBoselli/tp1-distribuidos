@@ -83,8 +83,7 @@ func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
 }
 
 func (r *ReducerQuery2) storeResults(topGames []middleware.Game) {
-	file, err := os.CreateTemp("", "tmp-reducer-query-2.csv")
-	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_WRONLY|os.O_CREATE, 0755)
+	file, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-reducer-query-2.csv")
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return
@@ -111,7 +110,6 @@ func (r *ReducerQuery2) storeResults(topGames []middleware.Game) {
 	writer.Flush()
 
 	os.Rename(file.Name(), fmt.Sprintf("./database/%s/2.csv", r.ClientId))
-	os.Remove(file.Name())
 }
 
 func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []middleware.Game) []middleware.Game {

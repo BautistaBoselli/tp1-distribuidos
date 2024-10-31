@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"sync"
 	"time"
 	"tp1-distribuidos/config"
@@ -63,10 +62,6 @@ func (m *Mapper) Run() {
 		client.Close()
 	}
 
-	err := os.RemoveAll("./database")
-	if err != nil {
-		log.Errorf("Failed to remove database: %v", err)
-	}
 }
 
 func (m *Mapper) consumeGameMessages() {

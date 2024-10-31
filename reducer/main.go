@@ -45,21 +45,21 @@ func createReducer(env *config.Config, clientId string, mid *middleware.Middlewa
 func main() {
 	env, err := config.InitConfig()
 	if err != nil {
-		log.Fatalf("action: init config | result: fail | error: %s", err)
+		log.Errorf("action: init config | result: fail | error: %s", err)
 	}
 
 	if err := shared.InitLogger(env.Log.Level); err != nil {
-		log.Fatalf("action: init logger | result: fail | error: %s", err)
+		log.Errorf("action: init logger | result: fail | error: %s", err)
 	}
 
 	mid, err := middleware.NewMiddleware(env)
 	if err != nil {
-		log.Fatalf("action: creating middleware | result: error | message: %s", err)
+		log.Errorf("action: creating middleware | result: error | message: %s", err)
 	}
 
 	resultsQueue, err := mid.ListenResults(strconv.Itoa(env.Query.Id))
 	if err != nil {
-		log.Fatalf("action: listen results| result: error | message: %s", err)
+		log.Errorf("action: listen results| result: error | message: %s", err)
 		return
 	}
 
@@ -72,9 +72,6 @@ func main() {
 		<-ctx.Done()
 		log.Info("action: reducer finishing | result: in progress")
 		mid.Close()
-		for _, reducer := range reducers {
-			reducer.Close()
-		}
 	}()
 
 	resultsQueue.Consume(func(msg *middleware.Result) error {
@@ -84,6 +81,11 @@ func main() {
 		reducers[msg.ClientId].QueueResult(msg)
 		return nil
 	})
+
+	for _, reducer := range reducers {
+		reducer.Close()
+	}
+
 	log.Infof("action: reducer finished | result: success")
 }
 

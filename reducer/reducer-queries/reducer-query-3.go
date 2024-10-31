@@ -36,7 +36,9 @@ func (r *ReducerQuery3) Close() {
 		return
 	}
 	r.finished = true
-	os.RemoveAll(fmt.Sprintf("./database/%s", r.ClientId))
+	if err := os.RemoveAll(fmt.Sprintf("./database/%s", r.ClientId)); err != nil {
+		log.Errorf("Failed to remove directory: %v", err)
+	}
 	close(r.results)
 }
 
@@ -56,7 +58,6 @@ func (r *ReducerQuery3) getResultsFromFile() []middleware.Stats {
 		if err != nil && err.Error() == "EOF" {
 			return result
 		}
-		log.Infof("Line: %v", line)
 		if err != nil && err == csv.ErrFieldCount {
 			continue
 		}
@@ -79,7 +80,7 @@ func (r *ReducerQuery3) getResultsFromFile() []middleware.Stats {
 }
 
 func (r *ReducerQuery3) storeResults(stats []middleware.Stats) {
-	file, err := os.CreateTemp("", "tmp-reducer-query-3.csv")
+	file, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-reducer-query-3.csv")
 	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/3.csv", r.ClientId), os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
@@ -106,7 +107,6 @@ func (r *ReducerQuery3) storeResults(stats []middleware.Stats) {
 	writer.Flush()
 
 	os.Rename(file.Name(), fmt.Sprintf("./database/%s/3.csv", r.ClientId))
-	os.Remove(file.Name())
 }
 
 func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []middleware.Stats) []middleware.Stats {
@@ -141,12 +141,14 @@ func (r *ReducerQuery3) Run() {
 	for result := range r.results {
 		r.processResult(result)
 
-		if result.IsFinalMessage { // como no hay resultados parciales esto en teoria pasa siempre pero por las dudas
+		if result.IsFinalMessage {
 			r.pendingAnswers--
 		}
 
 		if r.pendingAnswers == 0 {
 			r.SendResult()
+			r.Close()
+			break
 		}
 
 		result.Ack()
@@ -185,4 +187,5 @@ func (r *ReducerQuery3) SendResult() {
 	if err != nil {
 		log.Errorf("Failed to send result: %v", err)
 	}
+
 }

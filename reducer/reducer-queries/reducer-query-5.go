@@ -26,7 +26,6 @@ type ReducerQuery5 struct {
 }
 
 func NewReducerQuery5(clientId string, m *middleware.Middleware) *ReducerQuery5 {
-	os.MkdirAll(fmt.Sprintf("./database/%s/", clientId), os.ModePerm)
 	return &ReducerQuery5{
 		middleware:          m,
 		results:             make(chan *middleware.Result),
@@ -52,7 +51,7 @@ func (r *ReducerQuery5) Close() {
 func (r *ReducerQuery5) Run() {
 	for result := range r.results {
 		if err := r.processResult(result); err != nil {
-			log.Fatalf("action: process result | result: error | message: %s", err)
+			log.Errorf("action: process result | result: error | message: %s", err)
 			break
 		}
 
@@ -72,16 +71,16 @@ func (r *ReducerQuery5) Run() {
 }
 
 func (r *ReducerQuery5) processResult(result *middleware.Result) error {
-	tmpFile, err := os.CreateTemp("", "tmp-reducer-query-5.csv")
+	tmpFile, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-reducer-query-5.csv")
 	if err != nil {
-		log.Fatalf("action: create file | result: error | message: %s", err)
+		log.Errorf("action: create file | result: error | message: %s", err)
 		return err
 	}
 	defer os.Remove(tmpFile.Name())
 
 	file, err := os.OpenFile(fmt.Sprintf("./database/%s/5.csv", r.ClientId), os.O_CREATE, 0755)
 	if err != nil {
-		log.Fatalf("action: open file | result: error | message: %s", err)
+		log.Errorf("action: open file | result: error | message: %s", err)
 		return err
 	}
 	defer file.Close()
@@ -94,7 +93,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 	for {
 		storedRecord, err := reader.Read()
 		if err != nil && err != io.EOF {
-			log.Fatalf("action: read file | result: error | message: %s", err)
+			log.Errorf("action: read file | result: error | message: %s", err)
 			return err
 		}
 		if err == io.EOF {
@@ -103,7 +102,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 
 		negatives, err := strconv.Atoi(storedRecord[2])
 		if err != nil {
-			log.Fatalf("action: convert negative reviews to int | result: error | message: %s", err)
+			log.Errorf("action: convert negative reviews to int | result: error | message: %s", err)
 			return err
 		}
 
@@ -130,7 +129,7 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) error {
 	writer.Flush()
 	// replace file with tmp file
 	if err := os.Rename(tmpFile.Name(), fmt.Sprintf("./database/%s/5.csv", r.ClientId)); err != nil {
-		log.Fatalf("action: rename file | result: error | message: %s", err)
+		log.Errorf("action: rename file | result: error | message: %s", err)
 		return err
 	}
 	return nil
@@ -142,7 +141,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 
 	file, err := os.OpenFile(fmt.Sprintf("./database/%s/5.csv", r.ClientId), os.O_CREATE, 0755)
 	if err != nil {
-		log.Fatalf("action: open file | result: error | message: %s", err)
+		log.Errorf("action: open file | result: error | message: %s", err)
 		return
 	}
 	defer file.Close()
@@ -165,12 +164,12 @@ func (r *ReducerQuery5) sendFinalResult() {
 
 		appId, err := strconv.Atoi(record[0])
 		if err != nil {
-			log.Fatalf("action: convert appId to int | result: error | message: %s", err)
+			log.Errorf("action: convert appId to int | result: error | message: %s", err)
 			return
 		}
 		negatives, err := strconv.Atoi(record[2])
 		if err != nil {
-			log.Fatalf("action: convert negatives to int | result: error | message: %s", err)
+			log.Errorf("action: convert negatives to int | result: error | message: %s", err)
 			return
 		}
 
@@ -190,7 +189,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 			}
 
 			if err := r.middleware.SendResponse(&result); err != nil {
-				log.Fatalf("action: send final result | result: error | message: %s", err)
+				log.Errorf("action: send final result | result: error | message: %s", err)
 				break
 			}
 			batch.Stats = make([]middleware.Stats, 0)
@@ -206,6 +205,6 @@ func (r *ReducerQuery5) sendFinalResult() {
 	}
 
 	if err := r.middleware.SendResponse(&result); err != nil {
-		log.Fatalf("action: send final result | result: error | message: %s", err)
+		log.Errorf("action: send final result | result: error | message: %s", err)
 	}
 }

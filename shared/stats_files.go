@@ -19,13 +19,13 @@ func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 	os.MkdirAll(fmt.Sprintf("./database/%s", clientId), 0755)
 	file, err := os.OpenFile(fmt.Sprintf("./database/%s/%d.csv", clientId, stats.AppId), os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
-		log.Fatalf("failed to open file: %v", err)
+		log.Errorf("failed to open file: %v", err)
 	}
 	defer file.Close()
 
 	fileStat, err := file.Stat()
 	if err != nil {
-		log.Fatalf("failed to get file stat: %v", err)
+		log.Errorf("failed to get file stat: %v", err)
 	}
 
 	if fileStat.Size() > 0 {
@@ -33,7 +33,7 @@ func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 
 		record, err := reader.Read()
 		if err != nil && err != io.EOF {
-			log.Fatalf("failed to read line: %v", err)
+			log.Errorf("failed to read line: %v", err)
 		}
 
 		prevStat, err := ParseStat(record)
@@ -47,7 +47,7 @@ func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 
 		_, err = file.Seek(0, 0)
 		if err != nil {
-			log.Fatalf("failed to seek to start of file: %v", err)
+			log.Errorf("failed to seek to start of file: %v", err)
 		}
 	}
 
@@ -55,7 +55,7 @@ func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 
 	err = writer.Write([]string{strconv.Itoa(stats.AppId), stats.Name, strings.Join(stats.Genres, ","), strconv.Itoa(stats.Positives), strconv.Itoa(stats.Negatives)})
 	if err != nil {
-		log.Fatalf("failed to write to file: %v", err)
+		log.Errorf("failed to write to file: %v", err)
 	}
 
 	writer.Flush()
@@ -68,14 +68,14 @@ func GetTopStatsFS(clientId string, cant int, compare func(a *middleware.Stats, 
 
 	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s", clientId))
 	if err != nil {
-		log.Fatalf("failed to read directory: %v", err)
+		log.Errorf("failed to read directory: %v", err)
 	}
 
 	for _, dentry := range dentries {
 		func() {
 			file, err := os.Open(fmt.Sprintf("./database/%s/%s", clientId, dentry.Name()))
 			if err != nil {
-				log.Fatalf("failed to open file: %v", err)
+				log.Errorf("failed to open file: %v", err)
 			}
 
 			defer file.Close()
@@ -84,7 +84,7 @@ func GetTopStatsFS(clientId string, cant int, compare func(a *middleware.Stats, 
 
 			record, err := reader.Read()
 			if err != nil && err != io.EOF {
-				log.Fatalf("failed to read line: %v", err)
+				log.Errorf("failed to read line: %v", err)
 			}
 
 			newStat, err := ParseStat(record)

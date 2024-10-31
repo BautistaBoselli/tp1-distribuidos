@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
 )
@@ -21,6 +22,7 @@ type MapperClient struct {
 	finishedFile  bool
 	finished      bool
 	finishedGames bool
+	cancelWg      *sync.WaitGroup
 }
 
 func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
@@ -41,9 +43,12 @@ func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 		finishedFile:  false,
 		finished:      false,
 		finishedGames: false,
+		cancelWg:      &sync.WaitGroup{},
 	}
 
 	go client.consumeGames()
+
+	client.cancelWg.Add(1)
 	return client
 }
 
@@ -53,15 +58,23 @@ func (c *MapperClient) Close() {
 	}
 	c.finished = true
 	c.reviewsFile.Close()
+	c.cancelWg.Done()
 	if !c.finishedGames {
 		close(c.games)
 	}
 	close(c.reviews)
+	c.cancelWg.Wait()
+	if err := os.RemoveAll(fmt.Sprintf("database/%s", c.id)); err != nil {
+		log.Errorf("Failed to remove mapper client database: %v", err)
+	}
+	log.Infof("action: mapper_client_close | result: success | client_id: %s", c.id)
 }
 
 func (c *MapperClient) consumeGames() {
 
 	pendingLast := c.middleware.Config.Sharding.Amount
+
+	c.cancelWg.Add(1)
 	for game := range c.games {
 
 		if game.Last {
@@ -100,11 +113,13 @@ func (c *MapperClient) consumeGames() {
 
 		game.Ack()
 	}
+	c.cancelWg.Done()
 }
 
 func (c *MapperClient) consumeReviews() {
 	log.Infof("Starting to consume reviews")
 
+	c.cancelWg.Add(1)
 	for reviewBatch := range c.reviews {
 
 		if reviewBatch.Last > 0 {
@@ -148,6 +163,7 @@ func (c *MapperClient) consumeReviews() {
 
 		reviewBatch.Ack()
 	}
+	c.cancelWg.Done()
 }
 
 func (c *MapperClient) storeReviews(reviews *middleware.ReviewsMsg) {

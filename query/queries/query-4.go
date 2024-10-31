@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
@@ -14,13 +15,19 @@ import (
 type Query4 struct {
 	middleware *middleware.Middleware
 	shardId    int
+	finishedWg *sync.WaitGroup
 }
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 	return &Query4{
 		middleware: m,
 		shardId:    shardId,
+		finishedWg: &sync.WaitGroup{},
 	}
+}
+
+func (q *Query4) Close() {
+	
 }
 
 func (q *Query4) Run() {
@@ -42,9 +49,10 @@ func (q *Query4) Run() {
 		metric.Update(1)
 
 		if message.Last {
+			q.finishedWg.Wait()
 			q.sendResultFinal(message.ClientId)
-			message.Ack()
 			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
+			message.Ack()
 
 			return nil
 		}
@@ -53,10 +61,10 @@ func (q *Query4) Run() {
 		message.Ack()
 		return nil
 	})
-
 }
 
 func (q *Query4) updateStats(messages chan *middleware.StatsMsg) {
+	
 	for message := range messages {
 		isNegative := message.Stats.Negatives == 1
 		updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
@@ -68,6 +76,8 @@ func (q *Query4) updateStats(messages chan *middleware.StatsMsg) {
 }
 
 func (q *Query4) processStats(message *middleware.StatsMsg, messagesChan chan *middleware.StatsMsg) {
+	q.finishedWg.Add(1)
+	defer q.finishedWg.Done()
 	if message.Stats.Negatives == 0 {
 		return
 	}
@@ -76,7 +86,7 @@ func (q *Query4) processStats(message *middleware.StatsMsg, messagesChan chan *m
 		return
 	}
 
-	messagesChan <- message
+		messagesChan <- message
 }
 
 func (q *Query4) sendResult(clientId string, message *middleware.Stats) {

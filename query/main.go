@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/query/queries"
@@ -53,13 +53,21 @@ func main() {
 		<-ctx.Done()
 		log.Info("action: cancelar_query | result: in_progress")
 		middleware.Close()
-		time.Sleep(1 * time.Second)
-		if err := os.RemoveAll("/database/"); err != nil {
-			log.Criticalf("Error removing database: %s", err)
-		}
 	}()
 
 	query.Run()
+
+	dirNames, err := os.ReadDir("./database/")
+	if err != nil {
+		log.Criticalf("Error reading database: %s", err)
+	}
+
+	for _, dirName := range dirNames {
+		log.Infof("Removing client folder in database: %s", fmt.Sprintf("./database/%s", dirName.Name()))
+		if err = os.RemoveAll(fmt.Sprintf("./database/%s", dirName.Name())); err != nil {
+			log.Criticalf("Error removing client folder in database: %s", err)
+		}
+	}
 
 	log.Info("action: cerrar_query | result: success")
 }

@@ -71,14 +71,14 @@ func (q *Query5) calculatePercentile(clientId string) {
 	q.processedStats = 0
 	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s", clientId))
 	if err != nil {
-		log.Fatalf("failed to read directory: %v", err)
+		log.Errorf("failed to read directory: %v", err)
 	}
 
 	for _, dentry := range dentries {
 		func() {
 			file, err := os.Open(fmt.Sprintf("./database/%s/%s", clientId, dentry.Name()))
 			if err != nil {
-				log.Fatalf("failed to open file: %v", err)
+				log.Errorf("failed to open file: %v", err)
 			}
 
 			defer file.Close()

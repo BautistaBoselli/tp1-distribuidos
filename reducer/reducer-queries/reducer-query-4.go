@@ -1,6 +1,8 @@
 package reducer
 
 import (
+	"fmt"
+	"os"
 	"tp1-distribuidos/middleware"
 )
 
@@ -30,6 +32,7 @@ func (r *ReducerQuery4) Close() {
 		return
 	}
 	r.finished = true
+	os.RemoveAll(fmt.Sprintf("./database/%s", r.ClientId))
 	close(r.results)
 }
 
@@ -54,7 +57,7 @@ func (r *ReducerQuery4) Run() {
 			result.Ack()
 			break
 		}
-		
+
 		result.Ack()
 
 	}

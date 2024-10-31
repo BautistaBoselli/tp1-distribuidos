@@ -1,19 +1,14 @@
-[QUERY 1 - PARCIAL]: Windows: 9997, Mac: 2251, Linux: 1490
-[QUERY 1 - PARCIAL]: Windows: 19995, Mac: 4490, Linux: 3024
-[QUERY 1 - PARCIAL]: Windows: 29992, Mac: 6707, Linux: 4510
-[QUERY 1 - PARCIAL]: Windows: 39987, Mac: 8992, Linux: 6021
-[QUERY 1 - PARCIAL]: Windows: 49984, Mac: 10769, Linux: 7225
-[QUERY 1 - PARCIAL]: Windows: 59980, Mac: 12595, Linux: 8481
-[QUERY 1 - PARCIAL]: Windows: 69976, Mac: 14367, Linux: 9738
-[QUERY 1 - PARCIAL]: Windows: 79971, Mac: 16160, Linux: 11026
-[QUERY 1 - PARCIAL]: Windows: 83133, Mac: 16565, Linux: 11354
-[QUERY 1 - PARCIAL]: Windows: 86415, Mac: 16973, Linux: 11695
-[QUERY 1 - PARCIAL]: Windows: 89533, Mac: 17352, Linux: 12019
-[QUERY 1 - FINAL]: Windows: 92534, Mac: 17703, Linux: 12307
-[QUERY 4 - PARCIAL]: Grand Theft Auto IV: The Complete Edition
-[QUERY 4 - PARCIAL]: Batman™: Arkham Knight
-[QUERY 4 - PARCIAL]: PAYDAY 2
-[QUERY 4 - PARCIAL]: DayZ
-[QUERY 4 - PARCIAL]: Heroes & Generals
-[QUERY 4 - PARCIAL]: Nether: Resurrected
-[QUERY 4 - PARCIAL]: Rust
+[QUERY 1 - PARCIAL]: Windows: 1227, Mac: 270, Linux: 176
+[QUERY 1 - PARCIAL]: Windows: 2449, Mac: 546, Linux: 358
+[QUERY 1 - PARCIAL]: Windows: 3647, Mac: 829, Linux: 537
+[QUERY 2]: Top Game 1: Clicker Heroes 2 (31708)
+[QUERY 2]: Top Game 2: Midas Gold Plus (19196)
+[QUERY 2]: Top Game 3: Beasts of Bermuda (17147)
+[QUERY 2]: Top Game 4: Dragon Cliff (8285)
+[QUERY 2]: Top Game 5: Workers & Resources: Soviet Republic (6536)
+[QUERY 2]: Top Game 6: 上帝之城 I：监狱帝国 [City of God I - Prison Empire] (5326)
+[QUERY 2]: Top Game 7: Notes of Soul (4938)
+[QUERY 2]: Top Game 8: SCUM (4646)
+[QUERY 2]: Top Game 9: Spellweaver (4570)
+[QUERY 2]: Top Game 10: Geometry Dash (4536)
+[QUERY 1 - FINAL]: Windows: 4873, Mac: 1105, Linux: 737

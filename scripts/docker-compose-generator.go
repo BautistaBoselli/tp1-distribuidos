@@ -73,7 +73,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
-      - /mapper-%d_database:/database`, i, i, i)
+      - ../database/mapper-%d_database:/database`, i, i, i)
 		composeStr += clientStr
 	}
 
@@ -91,7 +91,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
-      - /queries-%d-%d_database:/database
+      - ../database/queries-%d-%d_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy`, query, i, query, i, query, i, query, i)
@@ -105,7 +105,7 @@ services:
       - CLI_QUERY_ID=%d
     volumes:
       - ./server.yml:/server.yml
-      - /reducer-%d_database:/database
+      - ../database/reducer-%d_database:/database
     networks:
       - network
     depends_on:
