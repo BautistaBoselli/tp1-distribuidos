@@ -32,7 +32,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 		return nil, err
 	}
 	channel.Qos(
-		250,     // prefetch count
+		250,   // prefetch count
 		0,     // prefetch size
 		false, // global
 	)
@@ -50,7 +50,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 func (m *Middleware) Close() error {
 	m.cancelled = true
 	m.channel.Close()
-	return m.conn.Close()
+	return nil
 }
 
 func (m *Middleware) publishExchange(exchange string, key string, body interface{}) error {

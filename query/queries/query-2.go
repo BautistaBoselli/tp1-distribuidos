@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
@@ -39,7 +40,8 @@ func (q *Query2) Run() {
 		return fmt.Sprintf("[Query 2-%d] Processed %d games in %s (%.2f games/s)", q.shardId, total, elapsed, rate)
 	})
 
-	gamesQueue.Consume(func(message *middleware.GameMsg) error {
+	cancelWg := &sync.WaitGroup{}
+	gamesQueue.Consume(cancelWg, func(message *middleware.GameMsg) error {
 		metric.Update(1)
 
 		if message.Last {

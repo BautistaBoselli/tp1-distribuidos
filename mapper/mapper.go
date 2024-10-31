@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"sync"
 	"time"
 	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
@@ -14,6 +16,7 @@ type Mapper struct {
 	clients      map[string]*MapperClient
 	gamesQueue   *middleware.GamesQueue
 	reviewsQueue *middleware.ReviewsQueue
+	cancelWg     *sync.WaitGroup
 	cancelled    bool
 }
 
@@ -39,21 +42,31 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 		clients:      make(map[string]*MapperClient),
 		gamesQueue:   gq,
 		reviewsQueue: rq,
+		cancelWg:     &sync.WaitGroup{},
 	}, nil
 }
 
 func (m *Mapper) Close() error {
 	m.cancelled = true
 	m.middleware.Close()
-	for _, client := range m.clients {
-		client.Close()
-	}
+	m.cancelWg.Done()
 	return nil
 }
 
 func (m *Mapper) Run() {
+	m.cancelWg.Add(1)
 	go m.consumeGameMessages()
-	m.consumeReviewsMessages()
+	go m.consumeReviewsMessages()
+
+	m.cancelWg.Wait()
+	for _, client := range m.clients {
+		client.Close()
+	}
+
+	err := os.RemoveAll("./database")
+	if err != nil {
+		log.Errorf("Failed to remove database: %v", err)
+	}
 }
 
 func (m *Mapper) consumeGameMessages() {
@@ -63,14 +76,14 @@ func (m *Mapper) consumeGameMessages() {
 		return fmt.Sprintf("Processed %d games in %s (%.2f games/s)", total, elapsed, rate)
 	})
 
-	err := m.gamesQueue.Consume(func(msg *middleware.GameMsg) error {
+	err := m.gamesQueue.Consume(m.cancelWg, func(msg *middleware.GameMsg) error {
 		metric.Update(1)
-		
+
 		if _, exists := m.clients[msg.ClientId]; !exists {
 			log.Infof("New client %s", msg.ClientId)
 			m.clients[msg.ClientId] = NewMapperClient(msg.ClientId, m.middleware)
 		}
-		
+
 		client := m.clients[msg.ClientId]
 		if m.cancelled {
 			return nil
@@ -90,7 +103,7 @@ func (m *Mapper) consumeReviewsMessages() {
 		return fmt.Sprintf("[Mapper] Processed %d reviews in %s (%.2f reviews/s)", total, elapsed, rate)
 	})
 
-	err := m.reviewsQueue.Consume(func(msg *middleware.ReviewsMsg) error {
+	err := m.reviewsQueue.Consume(m.cancelWg, func(msg *middleware.ReviewsMsg) error {
 		metric.Update(len(msg.Reviews))
 		client := m.clients[msg.ClientId]
 		if m.cancelled {

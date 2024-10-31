@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"strconv"
 	"strings"
+	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -174,12 +175,13 @@ type GamesQueue struct {
 	middleware *Middleware
 }
 
-func (gq *GamesQueue) Consume(callback func(message *GameMsg) error) error {
+func (gq *GamesQueue) Consume(wg *sync.WaitGroup, callback func(message *GameMsg) error) error {
 	msgs, err := gq.middleware.consumeQueue(gq.queue)
 	if err != nil {
 		return err
 	}
 
+	wg.Add(1)
 	for msg := range msgs {
 		var res GameMsg
 
@@ -194,6 +196,8 @@ func (gq *GamesQueue) Consume(callback func(message *GameMsg) error) error {
 
 		callback(&res)
 	}
+
+	wg.Done()
 
 	return nil
 }
@@ -222,12 +226,13 @@ type ReviewsQueue struct {
 	middleware *Middleware
 }
 
-func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg) error) error {
+func (rq *ReviewsQueue) Consume(wg *sync.WaitGroup, callback func(message *ReviewsMsg) error) error {
 	msgs, err := rq.middleware.consumeQueue(rq.queue)
 	if err != nil {
 		return err
 	}
 
+	wg.Add(1)
 	for msg := range msgs {
 		var res ReviewsMsg
 
@@ -242,6 +247,7 @@ func (rq *ReviewsQueue) Consume(callback func(message *ReviewsMsg) error) error 
 
 		callback(&res)
 	}
+	wg.Done()
 
 	return nil
 }

@@ -34,10 +34,10 @@ func main() {
 
 	go func() {
 		<-ctx.Done()
+		log.Info("action: cerrar_mapper | result: in_progress")
 		mapper.Close()
 	}()
 
 	mapper.Run()
 	log.Info("action: cerrar_mapper | result: success")
-
 }
