@@ -102,7 +102,6 @@ func (q *Query5) calculatePercentile(clientId string) {
 	}
 
 	q.sendResult(clientId)
-	
 
 }
 

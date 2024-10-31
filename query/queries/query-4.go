@@ -15,19 +15,18 @@ import (
 type Query4 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	finishedWg *sync.WaitGroup
+	finishedWg map[string]*sync.WaitGroup
 }
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 	return &Query4{
 		middleware: m,
 		shardId:    shardId,
-		finishedWg: &sync.WaitGroup{},
+		finishedWg: make(map[string]*sync.WaitGroup),
 	}
 }
 
 func (q *Query4) Close() {
-	
 }
 
 func (q *Query4) Run() {
@@ -48,8 +47,12 @@ func (q *Query4) Run() {
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		metric.Update(1)
 
+		if _, exists := q.finishedWg[message.ClientId]; !exists {
+			q.finishedWg[message.ClientId] = &sync.WaitGroup{}
+		}
+
 		if message.Last {
-			q.finishedWg.Wait()
+			q.finishedWg[message.ClientId].Wait()
 			q.sendResultFinal(message.ClientId)
 			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
 			message.Ack()
@@ -61,10 +64,14 @@ func (q *Query4) Run() {
 		message.Ack()
 		return nil
 	})
+
+	for _, wg := range q.finishedWg {
+		wg.Wait()
+	}
 }
 
 func (q *Query4) updateStats(messages chan *middleware.StatsMsg) {
-	
+
 	for message := range messages {
 		isNegative := message.Stats.Negatives == 1
 		updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
@@ -76,8 +83,8 @@ func (q *Query4) updateStats(messages chan *middleware.StatsMsg) {
 }
 
 func (q *Query4) processStats(message *middleware.StatsMsg, messagesChan chan *middleware.StatsMsg) {
-	q.finishedWg.Add(1)
-	defer q.finishedWg.Done()
+	q.finishedWg[message.ClientId].Add(1)
+	defer q.finishedWg[message.ClientId].Done()
 	if message.Stats.Negatives == 0 {
 		return
 	}
@@ -86,7 +93,7 @@ func (q *Query4) processStats(message *middleware.StatsMsg, messagesChan chan *m
 		return
 	}
 
-		messagesChan <- message
+	messagesChan <- message
 }
 
 func (q *Query4) sendResult(clientId string, message *middleware.Stats) {
