@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/query/queries"
@@ -34,19 +35,14 @@ func main() {
 
 	switch config.Query.Id {
 	case 1:
-		log.Info("Running query 1")
 		query = queries.NewQuery1(middleware, config.Query.Shard, config.Query.ResultInterval)
 	case 2:
-		log.Info("Running query 2")
 		query = queries.NewQuery2(middleware, config.Query.Shard)
 	case 3:
-		log.Info("Running query 3")
 		query = queries.NewQuery3(middleware, config.Query.Shard)
 	case 4:
-		log.Info("Running query 4")
 		query = queries.NewQuery4(middleware, config.Query.Shard)
 	case 5:
-		log.Info("Running query 5")
 		query = queries.NewQuery5(middleware, config.Query.Shard)
 	}
 
@@ -57,9 +53,12 @@ func main() {
 		<-ctx.Done()
 		log.Info("action: cancelar_query | result: in_progress")
 		middleware.Close()
+		time.Sleep(1 * time.Second)
+		if err := os.RemoveAll("/database/"); err != nil {
+			log.Criticalf("Error removing database: %s", err)
+		}
 	}()
 
-	log.Info("Running query")
 	query.Run()
 
 	log.Info("action: cerrar_query | result: success")

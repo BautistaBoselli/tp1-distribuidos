@@ -43,7 +43,7 @@ func (r *ReducerQuery2) Close() {
 }
 
 func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_RDONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_RDONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return nil
@@ -84,7 +84,7 @@ func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
 
 func (r *ReducerQuery2) storeResults(topGames []middleware.Game) {
 	file, err := os.CreateTemp("", "tmp-reducer-query-2.csv")
-	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_WRONLY|os.O_CREATE, 0644)
+	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return

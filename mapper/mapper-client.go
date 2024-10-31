@@ -24,9 +24,9 @@ type MapperClient struct {
 }
 
 func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
-	os.MkdirAll(fmt.Sprintf("database/%s", id), 0644)
+	os.MkdirAll(fmt.Sprintf("database/%s", id), 0755)
 
-	reviewsFile, err := os.OpenFile(fmt.Sprintf("database/%s/reviews.csv", id), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	reviewsFile, err := os.OpenFile(fmt.Sprintf("database/%s/reviews.csv", id), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
 		log.Errorf("Failed to open reviews.csv: %v", err)
 		return nil
@@ -48,8 +48,14 @@ func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 }
 
 func (c *MapperClient) Close() {
+	if c.finished {
+		return
+	}
+	c.finished = true
 	c.reviewsFile.Close()
-	close(c.games)
+	if !c.finishedGames {
+		close(c.games)
+	}
 	close(c.reviews)
 }
 
@@ -70,7 +76,7 @@ func (c *MapperClient) consumeGames() {
 			continue
 		}
 
-		file, err := os.OpenFile(fmt.Sprintf("database/%s/%d.csv", c.id, game.Game.AppId), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(fmt.Sprintf("database/%s/%d.csv", c.id, game.Game.AppId), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
 		if err != nil {
 			log.Errorf("Failed to open games.csv: %v", err)
 			return

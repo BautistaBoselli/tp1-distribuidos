@@ -31,11 +31,11 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 	if err != nil {
 		return nil, err
 	}
-	// channel.Qos(
-	// 	5,     // prefetch count
-	// 	0,     // prefetch size
-	// 	false, // global
-	// )
+	channel.Qos(
+		250,     // prefetch count
+		0,     // prefetch size
+		false, // global
+	)
 
 	middleware := &Middleware{conn: conn, channel: channel, Config: config, clientsLastsDict: make(map[string]int)}
 

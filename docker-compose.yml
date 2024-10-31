@@ -97,6 +97,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /mapper-1_database:/database
   mapper-2:
     container_name: mapper-2
     image: mapper:latest
@@ -108,6 +109,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /mapper-2_database:/database
   queries-1-0:
     container_name: queries-1-0
     image: query:latest
@@ -119,6 +121,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-1-0_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -133,6 +136,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-1-1_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -147,6 +151,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-1-2_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -161,6 +166,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-1-3_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -172,6 +178,7 @@ services:
       - CLI_QUERY_ID=1
     volumes:
       - ./server.yml:/server.yml
+      - /reducer-1_database:/database
     networks:
       - network
     depends_on:
@@ -188,6 +195,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-2-0_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -202,6 +210,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-2-1_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -216,6 +225,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-2-2_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -230,6 +240,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-2-3_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -241,6 +252,7 @@ services:
       - CLI_QUERY_ID=2
     volumes:
       - ./server.yml:/server.yml
+      - /reducer-2_database:/database
     networks:
       - network
     depends_on:
@@ -257,6 +269,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-3-0_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -271,6 +284,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-3-1_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -285,6 +299,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-3-2_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -299,6 +314,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-3-3_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -310,6 +326,7 @@ services:
       - CLI_QUERY_ID=3
     volumes:
       - ./server.yml:/server.yml
+      - /reducer-3_database:/database
     networks:
       - network
     depends_on:
@@ -326,6 +343,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-4-0_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -340,6 +358,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-4-1_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -354,6 +373,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-4-2_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -368,6 +388,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-4-3_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -379,6 +400,7 @@ services:
       - CLI_QUERY_ID=4
     volumes:
       - ./server.yml:/server.yml
+      - /reducer-4_database:/database
     networks:
       - network
     depends_on:
@@ -395,6 +417,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-5-0_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -409,6 +432,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-5-1_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -423,6 +447,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-5-2_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -437,6 +462,7 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-5-3_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -448,6 +474,7 @@ services:
       - CLI_QUERY_ID=5
     volumes:
       - ./server.yml:/server.yml
+      - /reducer-5_database:/database
     networks:
       - network
     depends_on:

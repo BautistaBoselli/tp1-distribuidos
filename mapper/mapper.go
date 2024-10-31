@@ -65,13 +65,16 @@ func (m *Mapper) consumeGameMessages() {
 
 	err := m.gamesQueue.Consume(func(msg *middleware.GameMsg) error {
 		metric.Update(1)
-
+		
 		if _, exists := m.clients[msg.ClientId]; !exists {
 			log.Infof("New client %s", msg.ClientId)
 			m.clients[msg.ClientId] = NewMapperClient(msg.ClientId, m.middleware)
 		}
-
+		
 		client := m.clients[msg.ClientId]
+		if m.cancelled {
+			return nil
+		}
 		client.games <- *msg
 		return nil
 	})
@@ -84,14 +87,15 @@ func (m *Mapper) consumeReviewsMessages() {
 	log.Info("Starting to consume reviews messages")
 
 	metric := shared.NewMetric(10000, func(total int, elapsed time.Duration, rate float64) string {
-		return fmt.Sprintf("[Mapper %d] Processed %d reviews in %s (%.2f reviews/s)", m.id, total, elapsed, rate)
+		return fmt.Sprintf("[Mapper] Processed %d reviews in %s (%.2f reviews/s)", total, elapsed, rate)
 	})
 
 	err := m.reviewsQueue.Consume(func(msg *middleware.ReviewsMsg) error {
 		metric.Update(len(msg.Reviews))
-
-		// log.Infof("consumeRev: client id %s", msg.ClientId)
 		client := m.clients[msg.ClientId]
+		if m.cancelled {
+			return nil
+		}
 		if !client.finishedGames {
 			client.storeReviews(msg)
 		} else {

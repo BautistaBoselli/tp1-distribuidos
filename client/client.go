@@ -34,8 +34,8 @@ type Config struct {
 }
 
 type Client struct {
-	config          Config
-	conn            net.Conn
+	config Config
+	conn   net.Conn
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -47,6 +47,7 @@ func NewClient(config Config) *Client {
 			"action: connect | result: fail| error: %v",
 			err,
 		)
+		return nil
 	}
 
 	client := &Client{
@@ -120,13 +121,7 @@ func (c *Client) SendReviews(file *os.File) error {
 	reader := bufio.NewReader(file)
 	reader.ReadString('\n')
 
-	// i := 0
 	for {
-		// i++
-		// // if i > 50 {
-		// // 	break
-		// // }
-
 		batch := protocol.ClientReview{
 			Lines: make([]string, 0),
 		}
@@ -153,7 +148,7 @@ func (c *Client) SendReviews(file *os.File) error {
 			log.Errorf("action: enviar_reviews | result: fail | error: %v", err)
 			return err
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 
 	return nil
@@ -164,7 +159,6 @@ func (c *Client) SendAllSent() error {
 }
 
 func (c *Client) ReceiveResponse() error {
-	// resultsFile, err := os.Create("./results/results.txt")
 	resultsFile, err := os.Create(c.config.Results.Path)
 	if err != nil {
 		return err

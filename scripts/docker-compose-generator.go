@@ -72,7 +72,8 @@ services:
     networks:
       - network
     volumes:
-      - ./server.yml:/server.yml`, i, i)
+      - ./server.yml:/server.yml
+      - /mapper-%d_database:/database`, i, i, i)
 		composeStr += clientStr
 	}
 
@@ -90,9 +91,10 @@ services:
       - network
     volumes:
       - ./server.yml:/server.yml
+      - /queries-%d-%d_database:/database
     depends_on:
       rabbitmq:
-        condition: service_healthy`, query, i, query, i, query, i)
+        condition: service_healthy`, query, i, query, i, query, i, query, i)
 		}
 		composeStr += fmt.Sprintf(`
   reducer-%d:
@@ -103,11 +105,12 @@ services:
       - CLI_QUERY_ID=%d
     volumes:
       - ./server.yml:/server.yml
+      - /reducer-%d_database:/database
     networks:
       - network
     depends_on:
       rabbitmq:
-        condition: service_healthy`, query, query, query)
+        condition: service_healthy`, query, query, query, query)
 	}
 
 	composeStr += `
@@ -117,7 +120,7 @@ networks:
   `
 
 	// Write the docker-compose file
-	err := os.WriteFile("docker-compose.yml", []byte(composeStr), 0644)
+	err := os.WriteFile("docker-compose.yml", []byte(composeStr), 0755)
 	if err != nil {
 		fmt.Printf("Error writing file: %v\n", err)
 		os.Exit(1)

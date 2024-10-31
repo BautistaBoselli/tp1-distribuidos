@@ -44,7 +44,7 @@ func (r *ReducerQuery1) Close() {
 }
 
 func (r *ReducerQuery1) getResultsFromFile() []int64 {
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/1.txt", r.ClientId), os.O_RDONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/1.txt", r.ClientId), os.O_RDONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return nil
@@ -71,7 +71,7 @@ func (r *ReducerQuery1) getResultsFromFile() []int64 {
 }
 
 func (r *ReducerQuery1) storeResults(windows int64, mac int64, linux int64) {
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/1.txt", r.ClientId), os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/1.txt", r.ClientId), os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return

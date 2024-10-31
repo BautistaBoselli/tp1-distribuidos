@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	"tp1-distribuidos/shared"
 
 	"github.com/op/go-logging"
@@ -71,6 +73,10 @@ func main() {
 	}
 
 	client := NewClient(*config)
+	if client == nil {
+		log.Critical("Error creating client")
+		return
+	}
 	defer client.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
@@ -80,6 +86,8 @@ func main() {
 		<-ctx.Done()
 		client.Cancel()
 	}()
+
+	startTime := time.Now()
 
 	err = client.SendGames(gamesFile)
 	if err != nil {
@@ -106,6 +114,10 @@ func main() {
 		log.Criticalf("Error receiving response: %s", err)
 		return
 	}
+
+	elapsed := time.Since(startTime)
+
+	log.Infof("action: client finished | result: success | duration: %.0fm %ds", math.Floor(elapsed.Minutes()), int64(elapsed.Seconds())%60)
 }
 
 func openFile(path string) (*os.File, error) {
