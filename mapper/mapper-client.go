@@ -63,7 +63,10 @@ func (c *MapperClient) Close() {
 		close(c.games)
 	}
 	close(c.reviews)
+	log.Infof("Waiting for mapper client %s to finish", c.id)
 	c.cancelWg.Wait()
+	log.Infof("Mapper client %s finished", c.id)
+
 	if err := os.RemoveAll(fmt.Sprintf("database/%s", c.id)); err != nil {
 		log.Errorf("Failed to remove mapper client database: %v", err)
 	}
@@ -113,6 +116,7 @@ func (c *MapperClient) consumeGames() {
 
 		game.Ack()
 	}
+	log.Infof("Mapper client %s finished consuming games", c.id)
 	c.cancelWg.Done()
 }
 
@@ -163,6 +167,7 @@ func (c *MapperClient) consumeReviews() {
 
 		reviewBatch.Ack()
 	}
+	log.Infof("Mapper client %s finished consuming reviews", c.id)
 	c.cancelWg.Done()
 }
 

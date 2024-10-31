@@ -148,6 +148,7 @@ func (r *ReducerQuery3) Run() {
 		if r.pendingAnswers == 0 {
 			r.SendResult()
 			r.Close()
+			result.Ack()
 			break
 		}
 
