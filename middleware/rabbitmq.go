@@ -50,6 +50,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 func (m *Middleware) Close() error {
 	m.cancelled = true
 	m.channel.Close()
+	log.Info("Middleware closed")
 	return nil
 }
 

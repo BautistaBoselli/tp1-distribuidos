@@ -26,11 +26,11 @@ func (m *Metric) Update(i int) {
 	m.i += i
 	m.totalI += i
 	if m.i >= m.interval {
-		elapsed := time.Since(m.lastTs)
-		m.lastTs = time.Now()
-		msg := m.msgFn(m.totalI, elapsed, float64(m.i)/elapsed.Seconds())
-		log.Infof(msg)
-		m.i = 0
+		// elapsed := time.Since(m.lastTs)
+		// m.lastTs = time.Now()
+		// msg := m.msgFn(m.totalI, elapsed, float64(m.i)/elapsed.Seconds())
+		// log.Infof(msg)
+		// m.i = 0
 	}
 }
 

@@ -81,6 +81,7 @@ func (m *Mapper) consumeGameMessages() {
 
 		client := m.clients[msg.ClientId]
 		if m.cancelled {
+			log.Infof("Ignoring game message from cancelled client %s", msg.ClientId)
 			return nil
 		}
 		client.games <- *msg
@@ -102,6 +103,7 @@ func (m *Mapper) consumeReviewsMessages() {
 		metric.Update(len(msg.Reviews))
 		client := m.clients[msg.ClientId]
 		if m.cancelled {
+			log.Infof("Ignoring reviews message from cancelled client %s", msg.ClientId)
 			return nil
 		}
 		if !client.finishedGames {

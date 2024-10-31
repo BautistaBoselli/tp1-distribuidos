@@ -199,6 +199,7 @@ func (c *MapperClient) writeFileToChan() {
 	reader := csv.NewReader(file)
 	batch := middleware.ReviewsMsg{ClientId: c.id, Reviews: make([]middleware.Review, 0)}
 
+	c.cancelWg.Add(1)
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -232,6 +233,7 @@ func (c *MapperClient) writeFileToChan() {
 	log.Infof("Finished reading reviews file for client %s", c.id)
 	c.reviews <- batch
 	c.finishedFile = true
+	c.cancelWg.Done()
 }
 
 func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
