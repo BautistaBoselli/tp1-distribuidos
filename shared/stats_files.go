@@ -20,12 +20,14 @@ func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 	file, err := os.OpenFile(fmt.Sprintf("./database/%s/%d.csv", clientId, stats.AppId), os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("failed to open file: %v", err)
+		return nil
 	}
 	defer file.Close()
 
 	fileStat, err := file.Stat()
 	if err != nil {
 		log.Errorf("failed to get file stat: %v", err)
+		return nil
 	}
 
 	if fileStat.Size() > 0 {

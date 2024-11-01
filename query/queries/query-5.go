@@ -62,7 +62,10 @@ func (q *Query5) Run() {
 }
 
 func (q *Query5) processStats(message *middleware.StatsMsg) {
-	shared.UpsertStats(message.ClientId, message.Stats)
+	if stat := shared.UpsertStats(message.ClientId, message.Stats); stat == nil {
+		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", message.ClientId)
+		return
+	}
 }
 
 func (q *Query5) calculatePercentile(clientId string) {

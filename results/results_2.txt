@@ -1,6 +1,6 @@
-[QUERY 1 - PARCIAL]: Windows: 1198, Mac: 283, Linux: 179
-[QUERY 1 - PARCIAL]: Windows: 2425, Mac: 553, Linux: 355
-[QUERY 1 - PARCIAL]: Windows: 3647, Mac: 829, Linux: 537
+[QUERY 1 - PARCIAL]: Windows: 1226, Mac: 276, Linux: 200
+[QUERY 1 - PARCIAL]: Windows: 2424, Mac: 559, Linux: 379
+[QUERY 1 - PARCIAL]: Windows: 3646, Mac: 835, Linux: 561
 [QUERY 1 - FINAL]: Windows: 4873, Mac: 1105, Linux: 737
 [QUERY 2]: Top Game 1: Clicker Heroes 2 (31708)
 [QUERY 2]: Top Game 2: Midas Gold Plus (19196)
@@ -12,41 +12,3 @@
 [QUERY 2]: Top Game 8: SCUM (4646)
 [QUERY 2]: Top Game 9: Spellweaver (4570)
 [QUERY 2]: Top Game 10: Geometry Dash (4536)
-[QUERY 3]: Top Game 1: Garry's Mod (22866)
-[QUERY 3]: Top Game 2: Hotline Miami (18201)
-[QUERY 3]: Top Game 3: BattleBlock Theater® (14903)
-[QUERY 3]: Top Game 4: Geometry Dash (12685)
-[QUERY 3]: Top Game 5: Firewatch (12406)
-[QUERY 5 - PARCIAL]: BLOCKADE 3D (3214)
-[QUERY 5 - PARCIAL]: The Culling (2705)
-[QUERY 5 - PARCIAL]: BioShock™ Remastered (1925)
-[QUERY 5 - PARCIAL]: Fallout: New Vegas (1438)
-[QUERY 5 - PARCIAL]: Awesomenauts - the 2D moba (1416)
-[QUERY 5 - PARCIAL]: How to Survive (1001)
-[QUERY 5 - PARCIAL]: RAGE (984)
-[QUERY 5 - PARCIAL]: Far Cry® 4 (818)
-[QUERY 5 - PARCIAL]: Kinetic Void (726)
-[QUERY 5 - PARCIAL]: The Escapists (615)
-[QUERY 5 - PARCIAL]: Digger Online (615)
-[QUERY 5 - PARCIAL]: Planetary Annihilation: TITANS (510)
-[QUERY 5 - PARCIAL]: Hotline Miami (484)
-[QUERY 5 - PARCIAL]: Kane & Lynch 2: Dog Days (475)
-[QUERY 5 - PARCIAL]: Geometry Dash (469)
-[QUERY 5 - PARCIAL]: Dead Space (449)
-[QUERY 5 - PARCIAL]: Magicka 2 (434)
-[QUERY 5 - PARCIAL]: Receiver (391)
-[QUERY 5 - PARCIAL]: Vanguard Princess (379)
-[QUERY 5 - PARCIAL]: The Darkness II (364)
-[QUERY 5 - PARCIAL]: God Mode (354)
-[QUERY 5 - PARCIAL]: King Arthur's Gold (337)
-[QUERY 5 - PARCIAL]: Spooky's Jump Scare Mansion (328)
-[QUERY 5 - PARCIAL]: Assassin’s Creed® Brotherhood (327)
-[QUERY 5 - PARCIAL]: Navy Field 2 : Conqueror of the Ocean (324)
-[QUERY 5 - PARCIAL]: BattleBlock Theater® (320)
-[QUERY 5 - PARCIAL]: Call of Duty® 4: Modern Warfare® (308)
-[QUERY 5 - PARCIAL]: Resident Evil: Operation Raccoon City (301)
-[QUERY 5 - PARCIAL]: Day of Defeat: Source (301)
-[QUERY 5 - PARCIAL]: Killer is Dead - Nightmare Edition (301)
-[QUERY 5 - PARCIAL]: ENSLAVED™: Odyssey to the West™ Premium Edition (291)
-[QUERY 5 - FINAL]
-[QUERY 4 - FINAL]

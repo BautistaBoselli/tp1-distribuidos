@@ -75,6 +75,10 @@ func (q *Query4) updateStats(messages chan *middleware.StatsMsg) {
 	for message := range messages {
 		isNegative := message.Stats.Negatives == 1
 		updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
+		if updatedStat == nil {
+			log.Errorf("Failed to update stat, could not retrieve file for client %s", message.ClientId)
+			continue
+		}
 
 		if isNegative && updatedStat.Negatives == q.middleware.Config.Query.MinNegatives {
 			q.sendResult(message.ClientId, updatedStat)
