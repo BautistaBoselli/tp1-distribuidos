@@ -18,16 +18,18 @@ type Query1 struct {
 	shardId        int
 	resultInterval int
 	processedGames int64
+	commitFile     string // TODO
 	results        map[string]*middleware.Query1Result
+	files          map[string]*os.File
 }
 
 func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query1 {
-
 	return &Query1{
 		middleware:     m,
 		shardId:        shardId,
 		resultInterval: resultInterval,
 		results:        make(map[string]*middleware.Query1Result),
+		files:          make(map[string]*os.File),
 	}
 }
 
@@ -51,6 +53,7 @@ func (q *Query1) Run() {
 		if message.Last {
 			q.sendResult(message.ClientId, true)
 			message.Ack()
+			q.files[message.ClientId].Close()
 			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
 			return nil
 		}
@@ -65,6 +68,8 @@ func (q *Query1) Run() {
 func (q *Query1) processGame(clientId string, game *middleware.Game) {
 	q.processedGames++
 	result, exists := q.results[clientId]
+	file := q.files[clientId]
+
 	if !exists {
 		result = &middleware.Query1Result{
 			Windows: 0,
@@ -72,7 +77,15 @@ func (q *Query1) processGame(clientId string, game *middleware.Game) {
 			Linux:   0,
 		}
 		q.results[clientId] = result
+
+		os.Mkdir(fmt.Sprintf("./database/%s", clientId), 0777)
+		file, err := os.OpenFile(fmt.Sprintf("./database/%s/query-1.txt", clientId), os.O_CREATE|os.O_WRONLY, 0777)
+		if err != nil {
+			log.Errorf("Error opening file: %s", err)
+		}
+		q.files[clientId] = file
 	}
+
 	if game.Windows {
 		result.Windows++
 	}
@@ -82,6 +95,9 @@ func (q *Query1) processGame(clientId string, game *middleware.Game) {
 	if game.Mac {
 		result.Mac++
 	}
+
+	file.Seek(0, 0)
+	file.WriteString(fmt.Sprintf("%d,%d,%d\n", result.Windows, result.Linux, result.Mac))
 
 	if q.processedGames%int64(q.resultInterval) == 0 {
 		q.sendResult(clientId, false)

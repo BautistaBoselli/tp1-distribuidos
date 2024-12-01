@@ -6,9 +6,6 @@ Importantes:
 
 ## Cronograma
 
-- [ ] Queries: commits y temps
-- [ ] Bully: Traer el bully
-
 ## Rabbit MQ
 
 - [ ] Rabbit: Verificar que todo este en durable

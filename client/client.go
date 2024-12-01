@@ -76,12 +76,7 @@ func (c *Client) SendGames(file *os.File) error {
 	reader := bufio.NewReader(file)
 	reader.ReadString('\n')
 
-	i := 0
 	for {
-		i++
-		// if i > 50 {
-		// 	break
-		// }
 		batch := protocol.ClientGame{
 			Lines: make([]string, 0),
 		}
@@ -108,6 +103,8 @@ func (c *Client) SendGames(file *os.File) error {
 			log.Errorf("action: enviar_juegos | result: fail | error: %v", err)
 			return err
 		}
+
+		time.Sleep(5 * time.Millisecond)
 
 	}
 

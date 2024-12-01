@@ -36,8 +36,8 @@ services:
         condition: service_started
       mapper-2:
         condition: service_started
-      # queries-1-0:
-      #   condition: service_started
+      queries-1-0:
+        condition: service_started
       # queries-1-1:
       #   condition: service_started
       # queries-1-2:
@@ -56,8 +56,8 @@ services:
       #   condition: service_started
       # reducer-2:
       #   condition: service_started
-      queries-3-0:
-        condition: service_started
+      # queries-3-0:
+      #   condition: service_started
       # queries-3-1:
       #   condition: service_started
       # queries-3-2:
@@ -110,21 +110,21 @@ services:
     volumes:
       - ./server.yml:/server.yml
       - ../database/mapper-2_database:/database
-  # queries-1-0:
-  #   container_name: queries-1-0
-  #   image: query:latest
-  #   entrypoint: /query
-  #   environment:
-  #     - CLI_QUERY_ID=1
-  #     - CLI_SHARD_ID=0
-  #   networks:
-  #     - network
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  #     - ../database/queries-1-0_database:/database
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  queries-1-0:
+    container_name: queries-1-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=1
+      - CLI_SHARD_ID=0
+    networks:
+      - network
+    volumes:
+      - ./server.yml:/server.yml
+      - ../database/queries-1-0_database:/database
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
   # queries-1-1:
   #   container_name: queries-1-1
   #   image: query:latest
@@ -258,21 +258,21 @@ services:
   #   depends_on:
   #     rabbitmq:
   #       condition: service_healthy
-  queries-3-0:
-    container_name: queries-3-0
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=3
-      - CLI_SHARD_ID=0
-    networks:
-      - network
-    volumes:
-      - ./server.yml:/server.yml
-      - ../database/queries-3-0_database:/database
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
+  # queries-3-0:
+  #   container_name: queries-3-0
+  #   image: query:latest
+  #   entrypoint: /query
+  #   environment:
+  #     - CLI_QUERY_ID=3
+  #     - CLI_SHARD_ID=0
+  #   networks:
+  #     - network
+  #   volumes:
+  #     - ./server.yml:/server.yml
+  #     - ../database/queries-3-0_database:/database
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
   # queries-3-1:
   #   container_name: queries-3-1
   #   image: query:latest

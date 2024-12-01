@@ -16,8 +16,8 @@ import (
 var log = logging.MustGetLogger("log")
 
 func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
-	os.MkdirAll(fmt.Sprintf("./database/%s", clientId), 0755)
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/%d.csv", clientId, stats.AppId), os.O_RDWR|os.O_CREATE, 0755)
+	os.MkdirAll(fmt.Sprintf("./database/%s", clientId), 0777)
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/%d.csv", clientId, stats.AppId), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		log.Errorf("failed to open file: %v", err)
 		return nil
