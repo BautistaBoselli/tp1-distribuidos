@@ -4,25 +4,30 @@ TP Multiples clientes:
 
 Importantes:
 
+## Cronograma
+
+- [ ] Queries: commits y temps
+- [ ] Bully: Traer el bully
+
 ## Rabbit MQ
 
-- Verificar que todo este en durable
-- Usar el amqp.Persistent (medir cambio de rendimientos)
+- [ ] Rabbit: Verificar que todo este en durable
+- [ ] Rabbit: Usar el amqp.Persistent (medir cambio de rendimientos)
 
 ## BullyResurrecter
 
-- [ ] Traer el bully
+- [ ] Bully: Traer el bully
 
 ## Server
 
 Siempre vivo (no recupera sesion de clientes), si se pierde conexion con el cliente pincho ese cleinte, cuando resucite habria que mandar a borrarlo
 
-- [ ] Server: calcular totales de juegos y reviews
-- [ ] Server: agregar Id a reviews
-- [ ] Server: ACK de reviews/games para controlar el flujo
-- [ ] Server: almacenar clientes activos
-- [ ] Server: Mandar a borrar clientes inactivos cuando termine/reconecte
+- [x] Server: calcular totales de juegos y reviews
+- [x] Server: agregar Id a reviews
 - [ ] Server: Finished con totales
+- [ ] Server: almacenar clientes activos
+- [ ] Server: ACK de reviews/games para controlar el flujo
+- [ ] Server: Mandar a borrar clientes inactivos cuando termine/reconecte
 
 ## Mapper
 
@@ -33,13 +38,14 @@ Es el mas basico, no necesita commits para los datos recibidos o mandados.
 
 Hay que usar los totales como condicion para el EOF.
 
-- [ ] Mapper: generar stat con el id de la review
+- [x] Mapper: generar stat con el id de la review
 - [ ] Mapper: EOF con finished + totals para condicion de corte para reviews (googlear como seria una buena condicion de corte para worker queues).
 
 ## Queries
 
 El gordo demo-falopa 😎
 
+- [ ] Queries: commits y temps
 - [ ] Queries: mover 1 y 2 a disco
 - [ ] Queries: ver como chota manejar los envios (no es grave los duplicados)
 - [ ] Queries: definir ids para los results
@@ -50,6 +56,12 @@ A priori no deberian importarle los duplicados tampoco
 
 - [ ] Reducer: commits similares a queries supongo 🤷‍♂️
 - [ ] Reducer: ver como chota manejar los envios (no es grave los duplicados)
+
+IDs:
+2 clientId
+1 byte QueryId
+1 byte ShardId
+4 bytes ID autoincremental
 
 ## Server (respuesta)
 

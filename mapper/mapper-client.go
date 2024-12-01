@@ -176,6 +176,7 @@ func (c *MapperClient) storeReviews(reviews *middleware.ReviewsMsg) {
 
 	for _, review := range reviews.Reviews {
 		reviewStats := []string{
+			strconv.Itoa(review.Id),
 			review.AppId,
 			review.Text,
 			strconv.Itoa(review.Score),
@@ -210,15 +211,22 @@ func (c *MapperClient) writeFileToChan() {
 			return
 		}
 
-		score, err := strconv.Atoi(record[2])
+		id, err := strconv.Atoi(record[0])
+		if err != nil {
+			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
+			return
+		}
+
+		score, err := strconv.Atoi(record[3])
 		if err != nil {
 			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
 			return
 		}
 
 		review := middleware.Review{
-			AppId: record[0],
-			Text:  record[1],
+			Id:    id,
+			AppId: record[1],
+			Text:  record[2],
 			Score: score,
 		}
 
@@ -226,6 +234,7 @@ func (c *MapperClient) writeFileToChan() {
 
 		if len(batch.Reviews) == 100 {
 			c.reviews <- batch
+			batch.Reviews = make([]middleware.Review, 0)
 			time.Sleep(50 * time.Millisecond)
 		}
 	}

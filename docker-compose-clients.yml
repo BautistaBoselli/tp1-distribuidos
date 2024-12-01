@@ -12,36 +12,36 @@ services:
     volumes:
       - ./client.yml:/config.yml
       - ./results:/results
-      - ../datasets/games.csv:/games.csv
-      - ../datasets/reviews.csv:/reviews.csv
-  client2:
-    build:
-      context: .
-      dockerfile: client/Dockerfile
-    entrypoint: /client
-    environment:
-      - CLI_RESULTS_PATH=/results/results_2.txt
-    networks:
-      - tp1_network
-    volumes:
-      - ./client.yml:/config.yml
-      - ./results:/results
-      - ../datasets/games.csv:/games.csv
-      - ../datasets/reviews.csv:/reviews.csv
-  client3:
-    build:
-      context: .
-      dockerfile: client/Dockerfile
-    entrypoint: /client
-    environment:
-      - CLI_RESULTS_PATH=/results/results_3.txt
-    networks:
-      - tp1_network
-    volumes:
-      - ./client.yml:/config.yml
-      - ./results:/results
-      - ../datasets/games.csv:/games.csv
-      - ../datasets/reviews.csv:/reviews.csv
+      - ../datasets/games_m.csv:/games.csv
+      - ../datasets/reviews_m.csv:/reviews.csv
+  # client2:
+  #   build:
+  #     context: .
+  #     dockerfile: client/Dockerfile
+  #   entrypoint: /client
+  #   environment:
+  #     - CLI_RESULTS_PATH=/results/results_2.txt
+  #   networks:
+  #     - tp1_network
+  #   volumes:
+  #     - ./client.yml:/config.yml
+  #     - ./results:/results
+  #     - ../datasets/games.csv:/games.csv
+  #     - ../datasets/reviews.csv:/reviews.csv
+  # client3:
+  #   build:
+  #     context: .
+  #     dockerfile: client/Dockerfile
+  #   entrypoint: /client
+  #   environment:
+  #     - CLI_RESULTS_PATH=/results/results_3.txt
+  #   networks:
+  #     - tp1_network
+  #   volumes:
+  #     - ./client.yml:/config.yml
+  #     - ./results:/results
+  #     - ../datasets/games.csv:/games.csv
+  #     - ../datasets/reviews.csv:/reviews.csv
 
 networks:
   tp1_network:

@@ -79,6 +79,7 @@ func (g *GameMsg) Ack() {
 }
 
 type Review struct {
+	Id    int
 	AppId string
 	Text  string
 	Score int
@@ -88,7 +89,7 @@ const appIdIndexReview = 0
 const textIndexReview = 2
 const scoreIndexReview = 3
 
-func NewReview(record []string) *Review {
+func NewReview(record []string, id int) *Review {
 	score, err := strconv.Atoi(record[scoreIndexReview])
 	if err != nil {
 		return nil
@@ -99,6 +100,7 @@ func NewReview(record []string) *Review {
 	}
 
 	return &Review{
+		Id:    id,
 		AppId: record[appIdIndexReview],
 		Text:  record[textIndexReview],
 		Score: score,
@@ -121,6 +123,7 @@ func (r *ReviewsMsg) Nack() {
 }
 
 type Stats struct {
+	Id        int
 	AppId     int
 	Name      string
 	Text      string
@@ -146,6 +149,7 @@ func NewStats(game []string, review *Review) *Stats {
 
 	if review.Score > 0 {
 		return &Stats{
+			Id:        review.Id,
 			AppId:     appId,
 			Name:      game[1],
 			Genres:    genres,
@@ -156,6 +160,7 @@ func NewStats(game []string, review *Review) *Stats {
 	}
 
 	return &Stats{
+		Id:        review.Id,
 		AppId:     appId,
 		Name:      game[1],
 		Genres:    genres,

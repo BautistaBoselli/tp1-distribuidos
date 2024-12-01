@@ -121,6 +121,8 @@ type Client struct {
 	reviews            chan protocol.ClientReview
 	reviewsFinished    bool
 	reviewsBatchAmount int
+	totalGames         int
+	totalReviews       int
 }
 
 func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBatchAmount int) *Client {
@@ -134,6 +136,8 @@ func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBa
 		reviews:            make(chan protocol.ClientReview),
 		reviewsFinished:    false,
 		reviewsBatchAmount: reviewsBatchAmount,
+		totalGames:         0,
+		totalReviews:       0,
 	}
 }
 
@@ -194,6 +198,7 @@ func (c *Client) handleGames() {
 				continue
 			}
 			err = c.middleware.SendGameMsg(&gameMsg)
+			c.totalGames++
 			if err != nil {
 				log.Errorf("Failed to publish game message: %v", err)
 			}
@@ -205,14 +210,14 @@ func (c *Client) handleGames() {
 		log.Errorf("Failed to publish game finished message: %v", err)
 	}
 
-	log.Info("All games received and sent to middleware")
+	log.Infof("All %d games received and sent to middleware", c.totalGames)
 }
 
 func (c *Client) handleReviews() {
 	reviewBatch := make([]middleware.Review, 0)
 
-	for review := range c.reviews {
-		for _, line := range review.Lines {
+	for msg := range c.reviews {
+		for _, line := range msg.Lines {
 			reader := csv.NewReader(strings.NewReader(line))
 			reader.LazyQuotes = true
 			reader.FieldsPerRecord = -1
@@ -222,11 +227,12 @@ func (c *Client) handleReviews() {
 				log.Errorf("Failed to read review error: %v", err)
 				continue
 			}
-			review := middleware.NewReview(record)
+			review := middleware.NewReview(record, c.totalReviews)
 			if review == nil {
 				continue
 			}
 			reviewBatch = append(reviewBatch, *review)
+			c.totalReviews++
 			if len(reviewBatch) == c.reviewsBatchAmount {
 				err := c.middleware.SendReviewBatch(&middleware.ReviewsMsg{ClientId: c.id, Reviews: reviewBatch})
 				if err != nil {
@@ -250,11 +256,10 @@ func (c *Client) handleReviews() {
 
 	}
 
-	log.Info("All reviews received and sent to middleware")
+	log.Infof("All %d reviews received and sent to middleware", c.totalReviews)
 }
 
 func (c *Client) handleResponse(response *middleware.Result) {
-	// 	// send to client
 	log.Debugf("Received response from query %d", response.QueryId)
 	switch response.QueryId {
 	case 1:

@@ -15,6 +15,8 @@ type Query3 struct {
 	middleware *middleware.Middleware
 	shardId    int
 	directory  shared.Directory
+	processed  map[int]bool
+	total      int
 }
 
 func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
@@ -22,6 +24,8 @@ func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
 		middleware: m,
 		shardId:    shardId,
 		directory:  shared.Directory{},
+		processed:  make(map[int]bool),
+		total:      0,
 	}
 }
 
@@ -49,6 +53,7 @@ func (q *Query3) Run() {
 		}
 
 		q.processStats(message)
+
 		message.Ack()
 		return nil
 	})
@@ -56,6 +61,11 @@ func (q *Query3) Run() {
 }
 
 func (q *Query3) processStats(message *middleware.StatsMsg) {
+	q.total++
+	if _, ok := q.processed[message.Stats.Id]; ok {
+		log.Infof("HOLA Stats id %d already processed", message.Stats.Id)
+	}
+	q.processed[message.Stats.Id] = true
 	if stat := shared.UpsertStats(message.ClientId, message.Stats); stat == nil {
 		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", message.ClientId)
 		return
@@ -64,6 +74,9 @@ func (q *Query3) processStats(message *middleware.StatsMsg) {
 
 func (q *Query3) sendResult(clientId string) {
 	log.Infof("Sending result for client %s", clientId)
+	log.Infof("Total stats received: %d", q.total)
+	log.Infof("Unique stats processed: %d", len(q.processed))
+
 	top := shared.GetTopStatsFS(clientId, QUERY3_TOP_SIZE, func(a *middleware.Stats, b *middleware.Stats) bool {
 		return a.Positives > b.Positives
 	})
