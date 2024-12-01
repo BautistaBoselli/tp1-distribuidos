@@ -27,6 +27,10 @@ type ShardingConfig struct {
 	Amount int `mapstructure:"amount"`
 }
 
+type ReviverConfig struct {
+	Amount int `mapstructure:"amount"`
+}
+
 type QueryConfig struct {
 	Id             int `mapstructure:"id"`
 	Shard          int `mapstructure:"shard"`
@@ -40,6 +44,7 @@ type Config struct {
 	Mappers  MappersConfig  `mapstructure:"mappers"`
 	Sharding ShardingConfig `mapstructure:"sharding"`
 	Query    QueryConfig    `mapstructure:"query"`
+	Reviver  ReviverConfig  `mapstructure:"reviver"`
 }
 
 func InitConfig() (*Config, error) {
@@ -57,6 +62,7 @@ func InitConfig() (*Config, error) {
 	v.BindEnv("query.query4-min-negatives", "CLI_QUERY4_MIN_NEGATIVES")
 	v.BindEnv("query.id", "CLI_QUERY_ID")
 	v.BindEnv("query.shard", "CLI_SHARD_ID")
+	v.BindEnv("reviver.amount", "CLI_TOPOLOGY_NODES")
 
 	v.SetConfigFile("./server.yml")
 	if err := v.ReadInConfig(); err != nil {
