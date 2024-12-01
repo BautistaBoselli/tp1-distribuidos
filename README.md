@@ -4,13 +4,22 @@ TP Multiples clientes:
 
 Importantes:
 
+## Rabbit MQ
+
+- Verificar que todo este en durable
+- Usar el amqp.Persistent (medir cambio de rendimientos)
+
+## BullyResurrecter
+
+- [ ] Traer el bully
+
 ## Server
 
 Siempre vivo (no recupera sesion de clientes), si se pierde conexion con el cliente pincho ese cleinte, cuando resucite habria que mandar a borrarlo
 
 - [ ] Server: calcular totales de juegos y reviews
-- [ ] Server: ACK de reviews/games para controlar el flujo
 - [ ] Server: agregar Id a reviews
+- [ ] Server: ACK de reviews/games para controlar el flujo
 - [ ] Server: almacenar clientes activos
 - [ ] Server: Mandar a borrar clientes inactivos cuando termine/reconecte
 - [ ] Server: Finished con totales
