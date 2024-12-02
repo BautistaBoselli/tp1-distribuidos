@@ -20,6 +20,7 @@ docker-image:
 	docker build -f ./mapper/Dockerfile -t "mapper:latest" .
 	docker build -f ./query/Dockerfile -t "query:latest" .
 	docker build -f ./reducer/Dockerfile -t "reducer:latest" .
+	docker build -f ./reviver/Dockerfile -t "reviver:latest" .
 	# Execute this command from time to time to clean up intermediate stages generated 
 	# during client build (your hard drive will like this :) ). Don't left uncommented if you 
 	# want to avoid rebuilding client image every time the docker-compose-up command 

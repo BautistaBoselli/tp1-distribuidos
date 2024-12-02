@@ -74,6 +74,8 @@ func main() {
 		mid.Close()
 	}()
 
+	go shared.RunUDPListener(8080)
+
 	resultsQueue.Consume(func(msg *middleware.Result) error {
 		if _, ok := reducers[msg.ClientId]; !ok {
 			reducers[msg.ClientId] = createReducer(env, msg.ClientId, mid)

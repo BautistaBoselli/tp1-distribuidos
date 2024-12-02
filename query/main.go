@@ -55,6 +55,8 @@ func main() {
 		middleware.Close()
 	}()
 
+
+	go shared.RunUDPListener(8080)
 	query.Run()
 
 	dirNames, err := os.ReadDir("./database/")

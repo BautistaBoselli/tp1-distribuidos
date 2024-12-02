@@ -38,6 +38,8 @@ func main() {
 		server.Close()
 	}()
 
+	go shared.RunUDPListener(8080)
+
 	server.Run()
 
 	log.Info("action: cerrar_servidor | result: success")

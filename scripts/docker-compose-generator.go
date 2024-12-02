@@ -72,6 +72,11 @@ services:
       reducer-%d:
         condition: service_started`, query)
 	}
+	for i := 1; i <= reviverNodes; i++ {
+		composeStr += fmt.Sprintf(`
+      reviver-%d:
+        condition: service_started`, i)
+	}
 
 	// Generate client services
 	for i := 1; i <= mappers; i++ {
@@ -145,8 +150,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./server.yml:/server.yml
+      - ./name_ip.csv:/name_ip.csv
     depends_on:
-      server:
+      rabbitmq:
         condition: service_healthy`, i, i, reviverNodes, i, strings.Replace(REVIVER_IP, "X", fmt.Sprintf("%d", i), 1))
 	}
 

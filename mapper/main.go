@@ -32,6 +32,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	defer stop()
 
+
+	go shared.RunUDPListener(8080)
+	
 	go func() {
 		<-ctx.Done()
 		log.Info("action: cerrar_mapper | result: in_progress")
