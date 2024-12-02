@@ -1,10 +1,20 @@
-[QUERY 1 - PARCIAL]: Windows: 9996, Mac: 2212, Linux: 1438
+[QUERY 1 - PARCIAL]: Windows: 9994, Mac: 2259, Linux: 1500
 [QUERY 1 - PARCIAL]: Windows: 19990, Mac: 4471, Linux: 2938
-[QUERY 1 - PARCIAL]: Windows: 29988, Mac: 6734, Linux: 4472
+[QUERY 2]: Top Game 1: Relive (68357)
+[QUERY 2]: Top Game 2: 拯救大魔王2 Rescue the Great Demon 2 (49555)
+[QUERY 2]: Top Game 3: Out of the Park Baseball 20 (34798)
+[QUERY 2]: Top Game 4: 时之回廊/Corridor of time (33343)
+[QUERY 2]: Top Game 5: Clicker Heroes 2 (31708)
+[QUERY 2]: Top Game 6: Time of Dragons (27080)
+[QUERY 2]: Top Game 7: Project AURA (26827)
+[QUERY 2]: Top Game 8: Midas Gold Plus (19196)
+[QUERY 2]: Top Game 9: Beasts of Bermuda (17147)
+[QUERY 2]: Top Game 10: Rust (16623)
+[QUERY 1 - PARCIAL]: Windows: 29989, Mac: 6731, Linux: 4477
 [QUERY 1 - PARCIAL]: Windows: 39987, Mac: 8994, Linux: 6011
-[QUERY 1 - PARCIAL]: Windows: 49982, Mac: 11203, Linux: 7480
+[QUERY 1 - PARCIAL]: Windows: 49981, Mac: 11183, Linux: 7533
 [QUERY 1 - PARCIAL]: Windows: 59976, Mac: 13392, Linux: 9002
-[QUERY 1 - PARCIAL]: Windows: 69974, Mac: 14776, Linux: 9990
+[QUERY 1 - PARCIAL]: Windows: 69973, Mac: 14781, Linux: 10036
 [QUERY 1 - PARCIAL]: Windows: 79971, Mac: 16165, Linux: 11024
-[QUERY 1 - PARCIAL]: Windows: 86415, Mac: 16981, Linux: 11700
+[QUERY 1 - PARCIAL]: Windows: 86090, Mac: 16887, Linux: 11631
 [QUERY 1 - FINAL]: Windows: 92534, Mac: 17703, Linux: 12307
