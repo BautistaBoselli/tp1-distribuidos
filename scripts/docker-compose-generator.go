@@ -88,12 +88,14 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    environment:
+      - CLI_MAPPER_ID=%d
     networks:
       network:
         ipv4_address: %s
     volumes:
       - ./server.yml:/server.yml
-      - ../database/mapper-%d_database:/database`, i, i, strings.Replace(MAPPER_IP, "X", fmt.Sprintf("%d", i), 1), i)
+      - ../database/mapper-%d_database:/database`, i, i, i, strings.Replace(MAPPER_IP, "X", fmt.Sprintf("%d", i), 1), i)
 		composeStr += clientStr
 	}
 
