@@ -20,6 +20,7 @@ type LogConfig struct {
 }
 
 type MappersConfig struct {
+	Id     int `mapstructure:"id"`
 	Amount int `mapstructure:"amount"`
 }
 
@@ -56,6 +57,7 @@ func InitConfig() (*Config, error) {
 	v.BindEnv("log.level", "CLI_LOG_LEVEL")
 	v.BindEnv("server.gamesBatchAmount", "CLI_GAMES_BATCH_AMOUNT")
 	v.BindEnv("server.reviewsBatchAmount", "CLI_REVIEWS_BATCH_AMOUNT")
+	v.BindEnv("mappers.id", "CLI_MAPPER_ID")
 	v.BindEnv("mappers.amount", "CLI_MAPPER_AMOUNT")
 	v.BindEnv("sharding.amount", "CLI_SHARDING_AMOUNT")
 	v.BindEnv("query.query1-result-interval", "CLI_QUERY1_RESULT_INTERVAL")

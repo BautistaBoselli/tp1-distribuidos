@@ -35,8 +35,8 @@ services:
         condition: service_healthy
       mapper-1:
         condition: service_started
-      mapper-2:
-        condition: service_started
+      # mapper-2:
+      #   condition: service_started
       queries-1-0:
         condition: service_started
       reducer-1:
@@ -70,6 +70,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    environment:
+      - CLI_MAPPER_ID=1
     networks:
       network:
         ipv4_address: 10.5.2.1
@@ -83,6 +85,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    environment:
+      - CLI_MAPPER_ID=2
     networks:
       network:
         ipv4_address: 10.5.2.2

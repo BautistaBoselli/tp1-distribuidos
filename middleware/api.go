@@ -135,8 +135,8 @@ func (m *Middleware) DeclareResponsesQueue() error {
 	return nil
 }
 
-func (m *Middleware) ListenGames(shardId string) (*GamesQueue, error) {
-	queue, err := m.bindExchange("games", shardId)
+func (m *Middleware) ListenGames(name string, shardId string) (*GamesQueue, error) {
+	queue, err := m.bindExchange(name, "games", shardId)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +196,8 @@ func (gq *GamesQueue) Consume(wg *sync.WaitGroup, callback func(message *GameMsg
 
 		callback(&res)
 	}
+
+	log.Info("HOLA 3 - Games queue finished")
 
 	wg.Done()
 
@@ -283,8 +285,8 @@ type StatsQueue struct {
 	middleware *Middleware
 }
 
-func (m *Middleware) ListenStats(shardId string, genre string) (*StatsQueue, error) {
-	queue, err := m.bindExchange("stats", shardId+".#."+genre+".#")
+func (m *Middleware) ListenStats(name string, shardId string, genre string) (*StatsQueue, error) {
+	queue, err := m.bindExchange(name, "stats", shardId+".#."+genre+".#")
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +324,7 @@ type ResultsQueue struct {
 }
 
 func (m *Middleware) ListenResults(queryId string) (*ResultsQueue, error) {
-	queue, err := m.bindExchange("results", queryId+".#")
+	queue, err := m.bindExchange(queryId, "results", queryId+".#")
 	if err != nil {
 		return nil, err
 	}

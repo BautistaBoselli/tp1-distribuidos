@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -59,17 +58,17 @@ func main() {
 	go shared.RunUDPListener(8080)
 	query.Run()
 
-	dirNames, err := os.ReadDir("./database/")
-	if err != nil {
-		log.Criticalf("Error reading database: %s", err)
-	}
+	// dirNames, err := os.ReadDir("./database/")
+	// if err != nil {
+	// 	log.Criticalf("Error reading database: %s", err)
+	// }
 
-	for _, dirName := range dirNames {
-		log.Infof("Removing client folder in database: %s", fmt.Sprintf("./database/%s", dirName.Name()))
-		if err = os.RemoveAll(fmt.Sprintf("./database/%s", dirName.Name())); err != nil {
-			log.Criticalf("Error removing client folder in database: %s", err)
-		}
-	}
+	// for _, dirName := range dirNames {
+	// 	log.Infof("Removing client folder in database: %s", fmt.Sprintf("./database/%s", dirName.Name()))
+	// 	if err = os.RemoveAll(fmt.Sprintf("./database/%s", dirName.Name())); err != nil {
+	// 		log.Criticalf("Error removing client folder in database: %s", err)
+	// 	}
+	// }
 
 	log.Info("action: cerrar_query | result: success")
 }

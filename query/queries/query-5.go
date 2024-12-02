@@ -36,7 +36,7 @@ func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
 func (q *Query5) Run() {
 	log.Info("Query 5 running")
 
-	statsQueue, err := q.middleware.ListenStats(strconv.Itoa(q.shardId), "Action")
+	statsQueue, err := q.middleware.ListenStats("5."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Action")
 	if err != nil {
 		log.Errorf("Error listening stats: %s", err)
 		return

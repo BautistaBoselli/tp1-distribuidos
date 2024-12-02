@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 	"tp1-distribuidos/config"
@@ -25,7 +26,7 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 		return nil, err
 	}
 
-	gq, err := middleware.ListenGames("*")
+	gq, err := middleware.ListenGames("mapper"+strconv.Itoa(config.Mappers.Id), "*")
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,13 @@ func (m *Mapper) consumeReviewsMessages() {
 
 	err := m.reviewsQueue.Consume(m.cancelWg, func(msg *middleware.ReviewsMsg) error {
 		metric.Update(len(msg.Reviews))
-		client := m.clients[msg.ClientId]
+		client, exists := m.clients[msg.ClientId]
+
+		if !exists {
+			log.Errorf("Received reviews message from unknown client %s", msg.ClientId)
+			return nil
+		}
+
 		if m.cancelled {
 			log.Infof("Ignoring reviews message from cancelled client %s", msg.ClientId)
 			return nil

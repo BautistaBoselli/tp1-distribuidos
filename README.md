@@ -42,6 +42,7 @@ Hay que usar los totales como condicion para el EOF.
 
 El gordo demo-falopa 😎
 
+- [ ] Queries: crear concepto de QueryClient
 - [ ] Queries: commits y temps
 - [ ] Queries: mover 1 y 2 a disco
 - [ ] Queries: ver como chota manejar los envios (no es grave los duplicados)
@@ -53,6 +54,7 @@ A priori no deberian importarle los duplicados tampoco
 
 - [ ] Reducer: commits similares a queries supongo 🤷‍♂️
 - [ ] Reducer: ver como chota manejar los envios (no es grave los duplicados)
+- [ ] Reducer: ver si simplificar el envio a los ReducerClients dejando de hacer channels (medir performance)
 
 IDs:
 2 clientId

@@ -14,15 +14,16 @@ import (
 )
 
 type MapperClient struct {
-	id            string
-	middleware    *middleware.Middleware
-	games         chan middleware.GameMsg
-	reviews       chan middleware.ReviewsMsg
-	reviewsFile   *os.File
-	finishedFile  bool
-	finished      bool
-	finishedGames bool
-	cancelWg      *sync.WaitGroup
+	id                string
+	middleware        *middleware.Middleware
+	games             chan middleware.GameMsg
+	reviews           chan middleware.ReviewsMsg
+	reviewsFile       *os.File
+	reviewsFileWriter *csv.Writer
+	finishedFile      bool
+	finished          bool
+	finishedGames     bool
+	cancelWg          *sync.WaitGroup
 }
 
 func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
@@ -35,15 +36,16 @@ func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 	}
 
 	client := &MapperClient{
-		id:            id,
-		middleware:    m,
-		games:         make(chan middleware.GameMsg),
-		reviews:       make(chan middleware.ReviewsMsg),
-		reviewsFile:   reviewsFile,
-		finishedFile:  false,
-		finished:      false,
-		finishedGames: false,
-		cancelWg:      &sync.WaitGroup{},
+		id:                id,
+		middleware:        m,
+		games:             make(chan middleware.GameMsg),
+		reviews:           make(chan middleware.ReviewsMsg),
+		reviewsFile:       reviewsFile,
+		reviewsFileWriter: csv.NewWriter(reviewsFile),
+		finishedFile:      false,
+		finished:          false,
+		finishedGames:     false,
+		cancelWg:          &sync.WaitGroup{},
 	}
 
 	go client.consumeGames()
@@ -172,8 +174,6 @@ func (c *MapperClient) consumeReviews() {
 }
 
 func (c *MapperClient) storeReviews(reviews *middleware.ReviewsMsg) {
-	writer := csv.NewWriter(c.reviewsFile)
-
 	for _, review := range reviews.Reviews {
 		reviewStats := []string{
 			strconv.Itoa(review.Id),
@@ -182,11 +182,11 @@ func (c *MapperClient) storeReviews(reviews *middleware.ReviewsMsg) {
 			strconv.Itoa(review.Score),
 		}
 
-		if err := writer.Write(reviewStats); err != nil {
+		if err := c.reviewsFileWriter.Write(reviewStats); err != nil {
 			log.Errorf("Failed to write to reviews.csv: %v", err)
 		}
 	}
-	writer.Flush()
+	c.reviewsFileWriter.Flush()
 	reviews.Ack()
 }
 
@@ -201,6 +201,7 @@ func (c *MapperClient) writeFileToChan() {
 	batch := middleware.ReviewsMsg{ClientId: c.id, Reviews: make([]middleware.Review, 0)}
 
 	c.cancelWg.Add(1)
+	var last middleware.Review
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -208,19 +209,20 @@ func (c *MapperClient) writeFileToChan() {
 		}
 		if err != nil {
 			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
-			return
+			log.Infof("Last review: %v", last)
+			continue
 		}
 
 		id, err := strconv.Atoi(record[0])
 		if err != nil {
 			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
-			return
+			continue
 		}
 
 		score, err := strconv.Atoi(record[3])
 		if err != nil {
 			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
-			return
+			continue
 		}
 
 		review := middleware.Review{
@@ -230,12 +232,14 @@ func (c *MapperClient) writeFileToChan() {
 			Score: score,
 		}
 
+		last = review
+
 		batch.Reviews = append(batch.Reviews, review)
 
 		if len(batch.Reviews) == 100 {
 			c.reviews <- batch
 			batch.Reviews = make([]middleware.Review, 0)
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 
@@ -246,14 +250,14 @@ func (c *MapperClient) writeFileToChan() {
 }
 
 func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
-	log.Infof("Received Last message for client %s: %v", reviewBatch.ClientId, reviewBatch.Last)
+	// log.Debugf("Received Last message for client %s: %v", reviewBatch.ClientId, reviewBatch.Last)
 	if c.finished {
-		log.Infof("Received Last again, ignoring and NACKing...")
+		// log.Debugf("Received Last again, ignoring and NACKing...")
 		reviewBatch.Nack()
 		return
 	}
 	if !c.finishedFile {
-		log.Infof("Received Last but not finished reviews file, ignoring and NACKing...")
+		// log.Debugf("Received Last but not finished reviews file, ignoring and NACKing...")
 		reviewBatch.Nack()
 		return
 	}

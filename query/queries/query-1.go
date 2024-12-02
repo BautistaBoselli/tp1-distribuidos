@@ -1,8 +1,11 @@
 package queries
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
@@ -17,10 +20,8 @@ type Query1 struct {
 	middleware     *middleware.Middleware
 	shardId        int
 	resultInterval int
-	processedGames int64
-	commitFile     string // TODO
-	results        map[string]*middleware.Query1Result
-	files          map[string]*os.File
+	clients        map[string]*Query1Client
+	commit         *shared.Commit
 }
 
 func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query1 {
@@ -28,15 +29,29 @@ func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query
 		middleware:     m,
 		shardId:        shardId,
 		resultInterval: resultInterval,
-		results:        make(map[string]*middleware.Query1Result),
-		files:          make(map[string]*os.File),
+		clients:        make(map[string]*Query1Client),
+		commit:         shared.NewCommit("./database/commit.csv"),
 	}
 }
 
 func (q *Query1) Run() {
+	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 1 running")
 
-	gamesQueue, err := q.middleware.ListenGames(fmt.Sprintf("%d", q.shardId))
+	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][1], commit.Data[0][2])
+
+		processed := shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", commit.Data[0][0]))
+
+		if processed != nil {
+			appId, _ := strconv.Atoi(commit.Data[0][0])
+			processed.Add(int64(appId))
+		}
+	})
+
+	gamesQueue, err := q.middleware.ListenGames("1."+strconv.Itoa(q.shardId), fmt.Sprintf("%d", q.shardId))
 	if err != nil {
 		log.Errorf("Error listening games: %s", err)
 		return
@@ -50,94 +65,151 @@ func (q *Query1) Run() {
 	gamesQueue.Consume(cancelWg, func(message *middleware.GameMsg) error {
 		metric.Update(1)
 
-		if message.Last {
-			q.sendResult(message.ClientId, true)
-			message.Ack()
-			q.files[message.ClientId].Close()
-			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
-			return nil
+		client, exists := q.clients[message.ClientId]
+		if !exists {
+			client = NewQuery1Client(q.middleware, q.commit, message.ClientId, q.shardId, q.resultInterval)
+			q.clients[message.ClientId] = client
 		}
 
-		q.processGame(message.ClientId, message.Game)
-		message.Ack()
+		client.processGame(message)
 		return nil
 	})
 
 }
 
-func (q *Query1) processGame(clientId string, game *middleware.Game) {
-	q.processedGames++
-	result, exists := q.results[clientId]
-	file := q.files[clientId]
+type Query1Client struct {
+	middleware     *middleware.Middleware
+	commit         *shared.Commit
+	clientId       string
+	shardId        int
+	processedGames *shared.Processed
+	result         middleware.Query1Result
+	resultInterval int
+}
 
-	if !exists {
-		result = &middleware.Query1Result{
-			Windows: 0,
-			Mac:     0,
-			Linux:   0,
+func NewQuery1Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int, resultInterval int) *Query1Client {
+	os.Mkdir(fmt.Sprintf("./database/%s", clientId), 0777)
+	resultFile, err := os.OpenFile(fmt.Sprintf("./database/%s/query-1.csv", clientId), os.O_CREATE|os.O_RDONLY, 0777)
+	if err != nil {
+		log.Errorf("Error opening file: %s", err)
+	}
+
+	result := middleware.Query1Result{
+		Windows: 0,
+		Mac:     0,
+		Linux:   0,
+	}
+
+	reader := bufio.NewReader(resultFile)
+	line, err := reader.ReadString('\n')
+
+	if err == nil {
+		fields := strings.Split(strings.TrimSuffix(line, "\n"), ",")
+
+		if len(fields) == 3 {
+			result.Windows, _ = strconv.ParseInt(fields[0], 10, 64)
+			result.Linux, _ = strconv.ParseInt(fields[1], 10, 64)
+			result.Mac, _ = strconv.ParseInt(fields[2], 10, 64)
 		}
-		q.results[clientId] = result
-
-		os.Mkdir(fmt.Sprintf("./database/%s", clientId), 0777)
-		file, err := os.OpenFile(fmt.Sprintf("./database/%s/query-1.txt", clientId), os.O_CREATE|os.O_WRONLY, 0777)
-		if err != nil {
-			log.Errorf("Error opening file: %s", err)
-		}
-		q.files[clientId] = file
 	}
 
-	if game.Windows {
-		result.Windows++
-	}
-	if game.Linux {
-		result.Linux++
-	}
-	if game.Mac {
-		result.Mac++
-	}
-
-	file.Seek(0, 0)
-	file.WriteString(fmt.Sprintf("%d,%d,%d\n", result.Windows, result.Linux, result.Mac))
-
-	if q.processedGames%int64(q.resultInterval) == 0 {
-		q.sendResult(clientId, false)
+	return &Query1Client{
+		middleware:     m,
+		commit:         commit,
+		clientId:       clientId,
+		shardId:        shardId,
+		processedGames: shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
+		resultInterval: resultInterval,
+		result:         result,
 	}
 }
 
-func (q *Query1) sendResult(clientId string, final bool) {
-	result, exists := q.results[clientId]
-	if !exists {
-		log.Errorf("Query 1 - Client %s not found", clientId)
+func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
+	if msg.Last {
+		qc.sendResult(true)
+		qc.Close()
+		msg.Ack()
 		return
 	}
-	result.Final = final
+
+	game := msg.Game
+
+	if qc.processedGames.Contains(int64(game.AppId)) {
+		log.Infof("Game %d already processed", game.AppId)
+		msg.Ack()
+		return
+	}
+
+	if game.Windows {
+		qc.result.Windows++
+	}
+	if game.Linux {
+		qc.result.Linux++
+	}
+	if game.Mac {
+		qc.result.Mac++
+	}
+
+	tmpFile, err := os.CreateTemp(fmt.Sprintf("./database/%s", qc.clientId), "query-1.csv")
+	if err != nil {
+		log.Errorf("failed to create temp file: %v", err)
+		return
+	}
+
+	tmpFile.WriteString(fmt.Sprintf("%d,%d,%d\n", qc.result.Windows, qc.result.Linux, qc.result.Mac))
+
+	realFilename := fmt.Sprintf("./database/%s/query-1.csv", qc.clientId)
+
+	qc.commit.Write([][]string{
+		{strconv.Itoa(game.AppId), tmpFile.Name(), realFilename},
+	})
+
+	qc.processedGames.Add(int64(game.AppId))
+	os.Rename(tmpFile.Name(), realFilename)
+
+	if qc.processedGames.Count()%qc.resultInterval == 0 {
+		qc.sendResult(false)
+	}
+
+	qc.commit.End()
+
+	msg.Ack()
+}
+
+func (qc *Query1Client) sendResult(final bool) {
+	qc.result.Final = final
 
 	resultMsg := &middleware.Result{
-		ClientId:       clientId,
+		ClientId:       qc.clientId,
 		QueryId:        1,
 		IsFinalMessage: final,
-		Payload:        result,
+		Payload:        qc.result,
 	}
 
 	if resultMsg.IsFinalMessage {
-		log.Infof("Query 1 [FINAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", q.shardId, result.Windows, result.Linux, result.Mac)
+		log.Infof("Query 1 [FINAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", qc.shardId, qc.result.Windows, qc.result.Linux, qc.result.Mac)
 
-		if err := q.middleware.SendResult("1", resultMsg); err != nil {
+		if err := qc.middleware.SendResult("1", resultMsg); err != nil {
 			log.Errorf("Failed to send result: %v", err)
 		}
 
 	} else {
-		log.Infof("Query 1 [PARTIAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", q.shardId, result.Windows, result.Linux, result.Mac)
+		log.Infof("Query 1 [PARTIAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", qc.shardId, qc.result.Windows, qc.result.Linux, qc.result.Mac)
 
-		if err := q.middleware.SendResult("1", resultMsg); err != nil {
+		if err := qc.middleware.SendResult("1", resultMsg); err != nil {
 			log.Errorf("Failed to send result: %v", err)
 		}
 	}
 
-	q.results[clientId] = &middleware.Query1Result{
-		Windows: 0,
-		Mac:     0,
-		Linux:   0,
+	qc.result = middleware.Query1Result{
 		Final:   false,
+		Windows: 0,
+		Linux:   0,
+		Mac:     0,
 	}
+}
+
+func (qc *Query1Client) Close() {
+	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	qc.processedGames.Close()
 }
