@@ -44,8 +44,8 @@ services:
       #   condition: service_started
       # queries-1-3:
       #   condition: service_started
-      # reducer-1:
-      #   condition: service_started
+      reducer-1:
+        condition: service_started
       # queries-2-0:
       #   condition: service_started
       # queries-2-1:
@@ -170,20 +170,20 @@ services:
   #   depends_on:
   #     rabbitmq:
   #       condition: service_healthy
-  # reducer-1:
-  #   container_name: reducer-1
-  #   image: reducer:latest
-  #   entrypoint: /reducer
-  #   environment:
-  #     - CLI_QUERY_ID=1
-  #   volumes:
-  #     - ./server.yml:/server.yml
-  #     - ../database/reducer-1_database:/database
-  #   networks:
-  #     - network
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
+  reducer-1:
+    container_name: reducer-1
+    image: reducer:latest
+    entrypoint: /reducer
+    environment:
+      - CLI_QUERY_ID=1
+    volumes:
+      - ./server.yml:/server.yml
+      - ../database/reducer-1_database:/database
+    networks:
+      - network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
   # queries-2-0:
   #   container_name: queries-2-0
   #   image: query:latest

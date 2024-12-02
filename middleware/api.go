@@ -197,6 +197,8 @@ func (gq *GamesQueue) Consume(wg *sync.WaitGroup, callback func(message *GameMsg
 		callback(&res)
 	}
 
+	log.Info("HOLA 3 - Games queue finished")
+
 	wg.Done()
 
 	return nil

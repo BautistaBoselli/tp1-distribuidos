@@ -1,0 +1,10 @@
+[QUERY 1 - PARCIAL]: Windows: 500, Mac: 120, Linux: 87
+[QUERY 1 - PARCIAL]: Windows: 999, Mac: 243, Linux: 171
+[QUERY 1 - PARCIAL]: Windows: 1498, Mac: 347, Linux: 229
+[QUERY 1 - PARCIAL]: Windows: 1997, Mac: 460, Linux: 296
+[QUERY 1 - PARCIAL]: Windows: 2496, Mac: 578, Linux: 374
+[QUERY 1 - PARCIAL]: Windows: 2996, Mac: 679, Linux: 449
+[QUERY 1 - PARCIAL]: Windows: 3496, Mac: 797, Linux: 523
+[QUERY 1 - PARCIAL]: Windows: 3995, Mac: 903, Linux: 598
+[QUERY 1 - PARCIAL]: Windows: 4495, Mac: 1014, Linux: 670
+[QUERY 1 - FINAL]: Windows: 4873, Mac: 1105, Linux: 737
