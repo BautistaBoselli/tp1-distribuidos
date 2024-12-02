@@ -34,8 +34,8 @@ services:
         condition: service_healthy
       mapper-1:
         condition: service_started
-      mapper-2:
-        condition: service_started
+      # mapper-2:
+      #   condition: service_started
       queries-1-0:
         condition: service_started
       # queries-1-1:
@@ -98,18 +98,18 @@ services:
     volumes:
       - ./server.yml:/server.yml
       - ../database/mapper-1_database:/database
-  mapper-2:
-    container_name: mapper-2
-    image: mapper:latest
-    entrypoint: /mapper
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - network
-    volumes:
-      - ./server.yml:/server.yml
-      - ../database/mapper-2_database:/database
+  # mapper-2:
+  #   container_name: mapper-2
+  #   image: mapper:latest
+  #   entrypoint: /mapper
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #   networks:
+  #     - network
+  #   volumes:
+  #     - ./server.yml:/server.yml
+  #     - ../database/mapper-2_database:/database
   queries-1-0:
     container_name: queries-1-0
     image: query:latest

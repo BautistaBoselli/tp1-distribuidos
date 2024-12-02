@@ -5,7 +5,7 @@ server:
 log:
   level: "DEBUG"
 mappers:
-  amount: 2
+  amount: 1
 sharding:
   amount: 1
 query:

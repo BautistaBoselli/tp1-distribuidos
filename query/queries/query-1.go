@@ -21,6 +21,7 @@ type Query1 struct {
 	shardId        int
 	resultInterval int
 	clients        map[string]*Query1Client
+	commit         *shared.Commit
 }
 
 func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query1 {
@@ -29,11 +30,28 @@ func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query
 		shardId:        shardId,
 		resultInterval: resultInterval,
 		clients:        make(map[string]*Query1Client),
+		commit:         shared.NewCommit("./database/commit.csv"),
 	}
 }
 
 func (q *Query1) Run() {
+	// log.Infof("HOLA 1")
+	// time.Sleep(3 * time.Second)
+	// log.Infof("HOLA 2")
 	log.Info("Query 1 running")
+
+	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][1], commit.Data[0][2])
+
+		processed := shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", commit.Data[0][0]))
+
+		if processed != nil {
+			appId, _ := strconv.Atoi(commit.Data[0][0])
+			processed.Add(int64(appId))
+		}
+	})
 
 	gamesQueue, err := q.middleware.ListenGames(fmt.Sprintf("%d", q.shardId))
 	if err != nil {
@@ -55,7 +73,7 @@ func (q *Query1) Run() {
 
 		client, exists := q.clients[message.ClientId]
 		if !exists {
-			client = NewQuery1Client(q.middleware, message.ClientId, q.shardId, q.resultInterval)
+			client = NewQuery1Client(q.middleware, q.commit, message.ClientId, q.shardId, q.resultInterval)
 			q.clients[message.ClientId] = client
 		}
 
@@ -68,6 +86,7 @@ func (q *Query1) Run() {
 
 type Query1Client struct {
 	middleware     *middleware.Middleware
+	commit         *shared.Commit
 	clientId       string
 	shardId        int
 	processedGames *shared.Processed
@@ -75,9 +94,9 @@ type Query1Client struct {
 	resultInterval int
 }
 
-func NewQuery1Client(m *middleware.Middleware, clientId string, shardId int, resultInterval int) *Query1Client {
+func NewQuery1Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int, resultInterval int) *Query1Client {
 	os.Mkdir(fmt.Sprintf("./database/%s", clientId), 0777)
-	resultFile, err := os.OpenFile(fmt.Sprintf("./database/%s/query-1.csv", clientId), os.O_CREATE|os.O_WRONLY, 0777)
+	resultFile, err := os.OpenFile(fmt.Sprintf("./database/%s/query-1.csv", clientId), os.O_CREATE|os.O_RDONLY, 0777)
 	if err != nil {
 		log.Errorf("Error opening file: %s", err)
 	}
@@ -90,8 +109,9 @@ func NewQuery1Client(m *middleware.Middleware, clientId string, shardId int, res
 
 	reader := bufio.NewReader(resultFile)
 	line, err := reader.ReadString('\n')
+
 	if err == nil {
-		fields := strings.Split(line, ",")
+		fields := strings.Split(strings.TrimSuffix(line, "\n"), ",")
 
 		if len(fields) == 3 {
 			result.Windows, _ = strconv.ParseInt(fields[0], 10, 64)
@@ -102,15 +122,12 @@ func NewQuery1Client(m *middleware.Middleware, clientId string, shardId int, res
 
 	return &Query1Client{
 		middleware:     m,
+		commit:         commit,
 		clientId:       clientId,
 		shardId:        shardId,
 		processedGames: shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
-		resultInterval: 500,
-		result: middleware.Query1Result{
-			Windows: 0,
-			Mac:     0,
-			Linux:   0,
-		},
+		resultInterval: resultInterval,
+		result:         result,
 	}
 }
 
@@ -124,7 +141,7 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 
 	game := msg.Game
 
-	if qc.processedGames.Contains(int32(game.AppId)) {
+	if qc.processedGames.Contains(int64(game.AppId)) {
 		log.Infof("Game %d already processed", game.AppId)
 		msg.Ack()
 		return
@@ -148,16 +165,20 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 
 	tmpFile.WriteString(fmt.Sprintf("%d,%d,%d\n", qc.result.Windows, qc.result.Linux, qc.result.Mac))
 
-	// TODO: commit
+	realFilename := fmt.Sprintf("./database/%s/query-1.csv", qc.clientId)
 
-	qc.processedGames.Add(int32(game.AppId))
-	os.Rename(tmpFile.Name(), fmt.Sprintf("./database/%s/query-1.csv", qc.clientId))
+	qc.commit.Write([][]string{
+		{strconv.Itoa(game.AppId), tmpFile.Name(), realFilename},
+	})
+
+	qc.processedGames.Add(int64(game.AppId))
+	os.Rename(tmpFile.Name(), realFilename)
 
 	if qc.processedGames.Count()%qc.resultInterval == 0 {
 		qc.sendResult(false)
 	}
 
-	// TODO: endCommit
+	qc.commit.End()
 
 	msg.Ack()
 }
