@@ -151,12 +151,8 @@ func (n *Node) StartElection() {
 
 			// Start a goroutine to wait for OK response from this peer
 			go func(peerId int) {
-				response := new(Message)
-				if err := peer.conn.SetReadDeadline(time.Now().Add(OkResponseTimeout)); err != nil {
-					log.Printf("Error setting read deadline for peer %d: %v", peerId, err)
-					return
-				}
-				if err := peer.decoder.Decode(response); err != nil {
+				response, err := peer.RecvTimeout(OkResponseTimeout)
+				if err != nil {
 					return
 				}
 
@@ -231,16 +227,16 @@ func (n *Node) startFollowerLoop(leaderId int) {
 				}
 			}
 
+			if leaderPeer == nil || leaderPeer.conn == nil {
+				go n.StartElection()
+				continue
+			}
+
 			if err := leaderPeer.Send(Message{PeerId: n.id, Type: MessageTypePing}); err != nil {
 				go n.StartElection()
 				continue
 			}
-			if err := leaderPeer.conn.SetReadDeadline(time.Now().Add(PongTimeout)); err != nil {
-				log.Printf("Error setting read deadline for leader %d: %v", leaderId, err)
-				continue
-			}
-			response := new(Message)
-			err := leaderPeer.decoder.Decode(response)
+			response, err := leaderPeer.RecvTimeout(PongTimeout)
 			if errors.Is(err, os.ErrDeadlineExceeded) || err == io.EOF {
 				if n.GetCurrentLeader() != leaderId { // si es distinto, significa que el lider cambió y ya no hay que tirarle ping a ese
 					continue
