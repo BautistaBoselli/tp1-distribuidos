@@ -269,9 +269,7 @@ func (n *Node) BecomeLeader() {
 
 	// Send coordinator message to all peers
 	for _, peer := range n.peers {
-		if err := peer.Send(Message{PeerId: n.id, Type: MessageTypeCoordinator}); err != nil {
-			log.Printf("Error sending coordinator message to peer %d with ip %s: %v", peer.id, peer.ip.String(), err)
-		}
+		peer.Send(Message{PeerId: n.id, Type: MessageTypeCoordinator})
 	}
 
 	if oldLeader != n.id {
@@ -350,7 +348,6 @@ func (n *Node) Listen() {
 				return
 			}
 			if err != nil {
-				// fmt.Printf("Error accepting connection: %v\n", err)
 				continue
 			}
 			go n.RespondToPeer(conn)
@@ -418,14 +415,12 @@ func (n *Node) handleCoordinator(message *Message) {
 	n.stateLock.Lock()
 	defer n.stateLock.Unlock()
 
-	log.Printf("Node %d received coordinator message from node %d", n.id, message.PeerId)
 	if n.id > message.PeerId {
 		go n.StartElection()
 		return
 	}
 
 	if n.state == NodeStateCoordinator {
-		log.Printf("Stopping leader loop")
 		n.stopLeader <- struct{}{}
 	}
 
