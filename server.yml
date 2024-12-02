@@ -5,9 +5,9 @@ server:
 log:
   level: "DEBUG"
 mappers:
-  amount: 1
+  amount: 2
 sharding:
-  amount: 1
+  amount: 2
 query:
   query1-result-interval: 10000
   query4-min-negatives: 5000

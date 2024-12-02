@@ -112,14 +112,14 @@ func (m *Middleware) consumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
 	return msgs, nil
 }
 
-func (m *Middleware) bindExchange(exchange string, key string) (*amqp.Queue, error) {
+func (m *Middleware) bindExchange(name string, exchange string, key string) (*amqp.Queue, error) {
 	q, err := m.channel.QueueDeclare(
-		exchange+","+key, // name // TODO: traer name real, esto es solo para testing
-		false,            // durable
-		false,            // delete when unused
-		false,            // exclusive
-		false,            // no-wait
-		nil,              // arguments
+		name,  // name
+		false, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		log.Errorf("Failed to declare queue: %v", err)

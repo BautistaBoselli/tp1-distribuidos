@@ -35,9 +35,7 @@ func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query
 }
 
 func (q *Query1) Run() {
-	// log.Infof("HOLA 1")
-	// time.Sleep(3 * time.Second)
-	// log.Infof("HOLA 2")
+	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 1 running")
 
 	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
@@ -53,7 +51,7 @@ func (q *Query1) Run() {
 		}
 	})
 
-	gamesQueue, err := q.middleware.ListenGames(fmt.Sprintf("%d", q.shardId))
+	gamesQueue, err := q.middleware.ListenGames("1."+strconv.Itoa(q.shardId), fmt.Sprintf("%d", q.shardId))
 	if err != nil {
 		log.Errorf("Error listening games: %s", err)
 		return
@@ -67,10 +65,6 @@ func (q *Query1) Run() {
 	gamesQueue.Consume(cancelWg, func(message *middleware.GameMsg) error {
 		metric.Update(1)
 
-		if message.Last {
-			log.Info("HOLA 2 - Last para client: ", message.ClientId)
-		}
-
 		client, exists := q.clients[message.ClientId]
 		if !exists {
 			client = NewQuery1Client(q.middleware, q.commit, message.ClientId, q.shardId, q.resultInterval)
@@ -81,7 +75,6 @@ func (q *Query1) Run() {
 		return nil
 	})
 
-	log.Info("HOLA 1 - Query 1 finished")
 }
 
 type Query1Client struct {

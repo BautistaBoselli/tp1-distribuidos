@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 	"tp1-distribuidos/middleware"
@@ -30,7 +31,7 @@ func NewQuery2(m *middleware.Middleware, shardId int) *Query2 {
 func (q *Query2) Run() {
 	log.Info("Query 2 running")
 
-	gamesQueue, err := q.middleware.ListenGames(fmt.Sprintf("%d", q.shardId))
+	gamesQueue, err := q.middleware.ListenGames("2."+strconv.Itoa(q.shardId), fmt.Sprintf("%d", q.shardId))
 	if err != nil {
 		log.Errorf("Error listening games: %s", err)
 		return

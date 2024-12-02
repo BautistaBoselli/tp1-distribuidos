@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 	"tp1-distribuidos/config"
@@ -25,7 +26,7 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 		return nil, err
 	}
 
-	gq, err := middleware.ListenGames("*")
+	gq, err := middleware.ListenGames("mapper"+strconv.Itoa(config.Mappers.Id), "*")
 	if err != nil {
 		return nil, err
 	}
