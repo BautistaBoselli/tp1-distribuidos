@@ -13,28 +13,37 @@ import (
 )
 
 type Query5 struct {
-	middleware         *middleware.Middleware
-	shardId            int
-	processedStats     int
-	minNegativeReviews int
+	middleware *middleware.Middleware
+	shardId    int
+	clients    map[string]*Query5Client
+	commit     *shared.Commit
 }
 
 func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
-	file, err := os.Create("stored.csv")
-	if err != nil {
-		log.Errorf("Error creating stored file: %s", err)
-		return nil
-	}
-	file.Close()
-
 	return &Query5{
 		middleware: m,
 		shardId:    shardId,
+		clients:    make(map[string]*Query5Client),
+		commit:     shared.NewCommit("./database/commit.csv"),
 	}
 }
 
 func (q *Query5) Run() {
+	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 5 running")
+
+	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
+
+		processed := shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", commit.Data[0][0]))
+
+		if processed != nil {
+			id, _ := strconv.Atoi(commit.Data[0][1])
+			processed.Add(int64(id))
+		}
+	})
 
 	statsQueue, err := q.middleware.ListenStats("5."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Action")
 	if err != nil {
@@ -48,38 +57,88 @@ func (q *Query5) Run() {
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		metric.Update(1)
 
-		if message.Last {
-			q.calculatePercentile(message.ClientId)
-			message.Ack()
-			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
-			return nil
+		client, exists := q.clients[message.ClientId]
+		if !exists {
+			client = NewQuery5Client(q.middleware, q.commit, message.ClientId, q.shardId)
+			q.clients[message.ClientId] = client
 		}
 
-		q.processStats(message)
-		message.Ack()
+		client.processStat(message)
 		return nil
 	})
 }
 
-func (q *Query5) processStats(message *middleware.StatsMsg) {
-	if stat := shared.UpsertStats(message.ClientId, message.Stats); stat == nil {
-		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", message.ClientId)
-		return
+type Query5Client struct {
+	middleware         *middleware.Middleware
+	commit             *shared.Commit
+	clientId           string
+	shardId            int
+	processedStats     *shared.Processed
+	minNegativeReviews int
+	cache              *shared.Cache[*middleware.Stats]
+}
+
+func NewQuery5Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int) *Query5Client {
+	os.MkdirAll(fmt.Sprintf("./database/%s/stats", clientId), 0777)
+	return &Query5Client{
+		middleware:         m,
+		commit:             commit,
+		clientId:           clientId,
+		shardId:            shardId,
+		minNegativeReviews: -1,
+		processedStats:     shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
+		cache:              shared.NewCache[*middleware.Stats](),
 	}
 }
 
-func (q *Query5) calculatePercentile(clientId string) {
-	q.minNegativeReviews = -1
+func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
+	if msg.Last {
+		qc.calculatePercentile()
+		qc.End()
+		msg.Ack()
+	}
 
-	q.processedStats = 0
-	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s", clientId))
+	if qc.processedStats.Contains(int64(msg.Stats.Id)) {
+		msg.Ack()
+		return
+	}
+
+	tmpFile, err := os.CreateTemp("./database", fmt.Sprintf("%d.csv", msg.Stats.AppId))
+	if err != nil {
+		log.Errorf("failed to create temp file: %v", err)
+		return
+	}
+
+	if stat := shared.UpdateStat(qc.clientId, msg.Stats, tmpFile, qc.cache); stat == nil {
+		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", qc.clientId)
+		return
+	}
+
+	realFilename := fmt.Sprintf("./database/%s/stats/%d.csv", qc.clientId, msg.Stats.AppId)
+
+	qc.commit.Write([][]string{
+		{qc.clientId, strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
+	})
+
+	qc.processedStats.Add(int64(msg.Stats.Id))
+
+	os.Rename(tmpFile.Name(), realFilename)
+	qc.commit.End()
+
+	msg.Ack()
+}
+
+func (qc *Query5Client) calculatePercentile() {
+	qc.minNegativeReviews = -1
+
+	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s", qc.clientId))
 	if err != nil {
 		log.Errorf("failed to read directory: %v", err)
 	}
 
 	for _, dentry := range dentries {
 		func() {
-			file, err := os.Open(fmt.Sprintf("./database/%s/%s", clientId, dentry.Name()))
+			file, err := os.Open(fmt.Sprintf("./database/%s/%s", qc.clientId, dentry.Name()))
 			if err != nil {
 				log.Errorf("failed to open file: %v", err)
 			}
@@ -98,18 +157,18 @@ func (q *Query5) calculatePercentile(clientId string) {
 					return
 				}
 
-				q.handleRecord(clientId, record)
+				qc.handleRecord(record)
 			}
 		}()
 
 	}
 
-	q.sendResult(clientId)
+	qc.sendResult()
 
 }
 
-func (q *Query5) handleRecord(clientId string, record []string) {
-	path := path.Join("client-"+clientId, "stored.csv")
+func (qc *Query5Client) handleRecord(record []string) {
+	path := path.Join("client-"+qc.clientId, "stored.csv")
 	stats, err := shared.ParseStat(record)
 	if err != nil {
 		log.Errorf("Error parsing stats: %s", err)
@@ -117,7 +176,7 @@ func (q *Query5) handleRecord(clientId string, record []string) {
 	}
 
 	// si ya sabemos que va a ser el ultimo, lo agregamos directamente y actualizamos el minimo
-	if stats.Negatives < q.minNegativeReviews {
+	if stats.Negatives < qc.minNegativeReviews {
 		sortedFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE, 0666)
 		if err != nil {
 			log.Errorf("Error creating sorted file: %s", err)
@@ -129,9 +188,7 @@ func (q *Query5) handleRecord(clientId string, record []string) {
 		writer.Flush()
 		sortedFile.Close()
 
-		log.Infof("Appending last game: %s", stats.AppId)
-
-		q.minNegativeReviews = stats.Negatives
+		qc.minNegativeReviews = stats.Negatives
 		return
 	}
 
@@ -182,11 +239,10 @@ func (q *Query5) handleRecord(clientId string, record []string) {
 
 	os.Rename(tempFile.Name(), path)
 
-	q.processedStats++
 }
 
-func (q *Query5) sendResult(clientId string) {
-	path := path.Join("client-"+clientId, "stored.csv")
+func (qc *Query5Client) sendResult() {
+	path := path.Join("client-"+qc.clientId, "stored.csv")
 	file, err := os.Open(path)
 	if err != nil {
 		log.Errorf("Error opening stored.csv: %s", err)
@@ -203,8 +259,8 @@ func (q *Query5) sendResult(clientId string) {
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
-			q.middleware.SendResult("5", &middleware.Result{
-				ClientId:       clientId,
+			qc.middleware.SendResult("5", &middleware.Result{
+				ClientId:       qc.clientId,
 				QueryId:        5,
 				IsFinalMessage: true,
 				Payload:        result,
@@ -225,8 +281,8 @@ func (q *Query5) sendResult(clientId string) {
 
 		result.Stats = append(result.Stats, *stats)
 		if len(result.Stats) == 50 {
-			q.middleware.SendResult("5", &middleware.Result{
-				ClientId:       clientId,
+			qc.middleware.SendResult("5", &middleware.Result{
+				ClientId:       qc.clientId,
 				QueryId:        5,
 				IsFinalMessage: false,
 				Payload:        result,
@@ -235,4 +291,9 @@ func (q *Query5) sendResult(clientId string) {
 		}
 	}
 
+}
+
+func (qc *Query5Client) End() {
+	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	qc.processedStats.Close()
 }

@@ -32,7 +32,21 @@ func (q *Query4) Close() {
 }
 
 func (q *Query4) Run() {
+	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 4 running")
+
+	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
+
+		processed := shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", commit.Data[0][0]))
+
+		if processed != nil {
+			id, _ := strconv.Atoi(commit.Data[0][1])
+			processed.Add(int64(id))
+		}
+	})
 
 	statsQueue, err := q.middleware.ListenStats("4."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Action")
 	if err != nil {
@@ -55,7 +69,6 @@ func (q *Query4) Run() {
 		}
 
 		if message.Last {
-			log.Info("HOLA Last message")
 			messagesChan <- message
 			return nil
 		}
@@ -80,8 +93,8 @@ type Query4Client struct {
 	clientId       string
 	shardId        int
 	processedStats *shared.Processed
-	cache          map[int32]string
 	wg             sync.WaitGroup
+	cache          *shared.Cache[*middleware.Stats]
 }
 
 func NewQuery4Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int) *Query4Client {
@@ -92,7 +105,7 @@ func NewQuery4Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 		clientId:       clientId,
 		shardId:        shardId,
 		processedStats: shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
-		cache:          make(map[int32]string),
+		cache:          shared.NewCache[*middleware.Stats](),
 		wg:             sync.WaitGroup{},
 	}
 }
@@ -116,11 +129,9 @@ func (qc *Query4Client) filterStats(message *middleware.StatsMsg, messagesChan c
 func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 	if msg.Last {
 		go func() {
-			log.Info("HOLA 1")
 			qc.wg.Wait()
-			log.Info("HOLA 2")
 			qc.sendResultFinal()
-			// os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
+			qc.End()
 			msg.Ack()
 		}()
 		return
@@ -139,7 +150,7 @@ func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 
 	isNegative := msg.Stats.Negatives == 1
 
-	stat := shared.UpdateStat(qc.clientId, msg.Stats, tmpFile)
+	stat := shared.UpdateStat(qc.clientId, msg.Stats, tmpFile, qc.cache)
 	if stat == nil {
 		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", qc.clientId)
 		return
@@ -148,7 +159,7 @@ func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 	realFilename := fmt.Sprintf("./database/%s/stats/%d.csv", qc.clientId, msg.Stats.AppId)
 
 	qc.commit.Write([][]string{
-		{strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
+		{qc.clientId, strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
 	})
 
 	qc.processedStats.Add(int64(msg.Stats.Id))
@@ -203,4 +214,9 @@ func isEnglish(message *middleware.Stats) bool {
 	lang := getlang.FromString(message.Text)
 	// log.Infof("Language: %s", lang.LanguageName())
 	return lang.LanguageName() == "English"
+}
+
+func (qc *Query4Client) End() {
+	os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	qc.processedStats.Close()
 }

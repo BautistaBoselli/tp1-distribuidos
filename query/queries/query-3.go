@@ -14,7 +14,6 @@ const QUERY3_TOP_SIZE = 5
 type Query3 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	directory  shared.Directory
 	clients    map[string]*Query3Client
 	commit     *shared.Commit
 }
@@ -23,13 +22,28 @@ func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
 	return &Query3{
 		middleware: m,
 		shardId:    shardId,
-		directory:  shared.Directory{},
 		clients:    make(map[string]*Query3Client),
 		commit:     shared.NewCommit("./database/commit.csv"),
 	}
 }
 
 func (q *Query3) Run() {
+	time.Sleep(500 * time.Millisecond)
+	log.Info("Query 3 running")
+
+	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
+
+		processed := shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", commit.Data[0][0]))
+
+		if processed != nil {
+			id, _ := strconv.Atoi(commit.Data[0][1])
+			processed.Add(int64(id))
+		}
+	})
+
 	statsQueue, err := q.middleware.ListenStats("3."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Indie")
 	if err != nil {
 		log.Errorf("Error listening stats: %s", err)
@@ -62,7 +76,7 @@ type Query3Client struct {
 	clientId       string
 	shardId        int
 	processedStats *shared.Processed
-	cache          map[int32]string
+	cache          *shared.Cache[*middleware.Stats]
 }
 
 func NewQuery3Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int) *Query3Client {
@@ -73,7 +87,7 @@ func NewQuery3Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 		clientId:       clientId,
 		shardId:        shardId,
 		processedStats: shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
-		cache:          make(map[int32]string),
+		cache:          shared.NewCache[*middleware.Stats](),
 	}
 }
 
@@ -96,7 +110,7 @@ func (qc *Query3Client) processStat(msg *middleware.StatsMsg) {
 		return
 	}
 
-	if stat := shared.UpdateStat(qc.clientId, msg.Stats, tmpFile); stat == nil {
+	if stat := shared.UpdateStat(qc.clientId, msg.Stats, tmpFile, qc.cache); stat == nil {
 		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", qc.clientId)
 		return
 	}
@@ -104,7 +118,7 @@ func (qc *Query3Client) processStat(msg *middleware.StatsMsg) {
 	realFilename := fmt.Sprintf("./database/%s/stats/%d.csv", qc.clientId, msg.Stats.AppId)
 
 	qc.commit.Write([][]string{
-		{strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
+		{qc.clientId, strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
 	})
 
 	qc.processedStats.Add(int64(msg.Stats.Id))
@@ -144,6 +158,6 @@ func (qc *Query3Client) sendResult() {
 }
 
 func (qc *Query3Client) End() {
-	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
 	qc.processedStats.Close()
 }

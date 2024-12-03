@@ -32,17 +32,18 @@ func NewQuery2(m *middleware.Middleware, shardId int) *Query2 {
 }
 
 func (q *Query2) Run() {
+	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 2 running")
 
 	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
 		log.Infof("Restored commit: %v", commit)
 
-		os.Rename(commit.Data[0][1], commit.Data[0][2])
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
 
 		processed := shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", commit.Data[0][0]))
 
 		if processed != nil {
-			appId, _ := strconv.Atoi(commit.Data[0][0])
+			appId, _ := strconv.Atoi(commit.Data[0][1])
 			processed.Add(int64(appId))
 		}
 	})
@@ -168,7 +169,7 @@ func (qc *Query2Client) processGame(msg *middleware.GameMsg) {
 
 	writer := csv.NewWriter(tmpFile)
 	for _, game := range qc.result.TopGames {
-		writer.Write([]string{strconv.Itoa(game.AppId), game.Name, strconv.FormatInt(game.AvgPlaytime, 10)})
+		writer.Write([]string{qc.clientId, strconv.Itoa(game.AppId), game.Name, strconv.FormatInt(game.AvgPlaytime, 10)})
 	}
 	writer.Flush()
 
@@ -205,6 +206,6 @@ func (qc *Query2Client) sendResult() {
 }
 
 func (qc *Query2Client) End() {
-	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
 	qc.processedGames.Close()
 }

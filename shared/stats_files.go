@@ -64,44 +64,50 @@ func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 	return stats
 }
 
-func UpdateStat(clientId string, stat *middleware.Stats, tmpFile *os.File) *middleware.Stats {
-	file, err := os.Open(fmt.Sprintf("./database/%s/stats/%d.csv", clientId, stat.AppId))
-	if err == nil {
-		reader := csv.NewReader(file)
+func UpdateStat(clientId string, stat *middleware.Stats, tmpFile *os.File, cache *Cache[*middleware.Stats]) *middleware.Stats {
+	if cached, ok := cache.Get(int32(stat.AppId)); ok {
+		stat.Negatives += cached.Negatives
+		stat.Positives += cached.Positives
+	} else {
+		file, err := os.Open(fmt.Sprintf("./database/%s/stats/%d.csv", clientId, stat.AppId))
+		if err == nil {
+			defer file.Close()
+			reader := csv.NewReader(file)
 
-		record, err := reader.Read()
-		if err != nil && err != io.EOF {
-			log.Errorf("failed to read line: %v", err)
-			return nil
+			record, err := reader.Read()
+			if err != nil && err != io.EOF {
+				log.Errorf("failed to read line: %v", err)
+				return nil
+			}
+
+			positives, err := strconv.Atoi(record[2])
+			if err != nil {
+				log.Errorf("failed to convert positives to int: %v", err)
+				return nil
+			}
+
+			negatives, err := strconv.Atoi(record[3])
+			if err != nil {
+				log.Errorf("failed to convert negatives to int: %v", err)
+				return nil
+			}
+
+			stat.Positives += positives
+			stat.Negatives += negatives
 		}
-
-		positives, err := strconv.Atoi(record[2])
-		if err != nil {
-			log.Errorf("failed to convert positives to int: %v", err)
-			return nil
-		}
-
-		negatives, err := strconv.Atoi(record[3])
-		if err != nil {
-			log.Errorf("failed to convert negatives to int: %v", err)
-			return nil
-		}
-
-		stat.Positives += positives
-		stat.Negatives += negatives
 	}
-
-	file.Close()
 
 	writer := csv.NewWriter(tmpFile)
 
-	err = writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Positives), strconv.Itoa(stat.Negatives)})
+	err := writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Positives), strconv.Itoa(stat.Negatives)})
 	if err != nil {
 		log.Errorf("failed to write to file: %v", err)
 		return nil
 	}
 
 	writer.Flush()
+
+	cache.Add(int32(stat.AppId), stat)
 
 	return stat
 }
