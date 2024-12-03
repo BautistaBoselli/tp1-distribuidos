@@ -2,7 +2,6 @@ package queries
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -42,9 +41,8 @@ func (q *Query4) Run() {
 		return fmt.Sprintf("[Query 4-%d] Processed %d stats in %s (%.2f stats/s)", q.shardId, total, elapsed, rate)
 	})
 	messagesChan := make(chan *middleware.StatsMsg)
-	go q.updateStats(messagesChan)
 
-	statsQueue.Consume(func(message *middleware.StatsMsg) error {
+	go statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		metric.Update(1)
 
 		if _, exists := q.finishedWg[message.ClientId]; !exists {
@@ -54,24 +52,20 @@ func (q *Query4) Run() {
 		if message.Last {
 			q.finishedWg[message.ClientId].Wait()
 			q.sendResultFinal(message.ClientId)
-			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
+			// os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
 			message.Ack()
 
 			return nil
 		}
 
 		go q.processStats(message, messagesChan)
-		message.Ack()
 		return nil
 	})
 
-	for _, wg := range q.finishedWg {
-		wg.Wait()
-	}
+	q.updateStats(messagesChan)
 }
 
 func (q *Query4) updateStats(messages chan *middleware.StatsMsg) {
-
 	for message := range messages {
 		isNegative := message.Stats.Negatives == 1
 		updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
@@ -90,14 +84,17 @@ func (q *Query4) processStats(message *middleware.StatsMsg, messagesChan chan *m
 	q.finishedWg[message.ClientId].Add(1)
 	defer q.finishedWg[message.ClientId].Done()
 	if message.Stats.Negatives == 0 {
+		message.Ack()
 		return
 	}
 
 	if !isEnglish(message.Stats) {
+		message.Ack()
 		return
 	}
 
 	messagesChan <- message
+	message.Ack()
 }
 
 func (q *Query4) sendResult(clientId string, message *middleware.Stats) {

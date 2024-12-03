@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 	"tp1-distribuidos/middleware"
 
 	"github.com/op/go-logging"
@@ -55,7 +54,7 @@ func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
 
 	writer := csv.NewWriter(file)
 
-	err = writer.Write([]string{strconv.Itoa(stats.AppId), stats.Name, strings.Join(stats.Genres, ","), strconv.Itoa(stats.Positives), strconv.Itoa(stats.Negatives)})
+	err = writer.Write([]string{strconv.Itoa(stats.AppId), stats.Name, strconv.Itoa(stats.Positives), strconv.Itoa(stats.Negatives)})
 	if err != nil {
 		log.Errorf("failed to write to file: %v", err)
 	}

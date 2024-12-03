@@ -14,20 +14,20 @@ services:
       - ./results:/results
       - ../datasets/games_m.csv:/games.csv
       - ../datasets/reviews_m.csv:/reviews.csv
-  # client2:
-  #   build:
-  #     context: .
-  #     dockerfile: client/Dockerfile
-  #   entrypoint: /client
-  #   environment:
-  #     - CLI_RESULTS_PATH=/results/results_2.txt
-  #   networks:
-  #     - tp1_network
-  #   volumes:
-  #     - ./client.yml:/config.yml
-  #     - ./results:/results
-  #     - ../datasets/games_s.csv:/games.csv
-  #     - ../datasets/reviews_s.csv:/reviews.csv
+  client2:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    entrypoint: /client
+    environment:
+      - CLI_RESULTS_PATH=/results/results_2.txt
+    networks:
+      - tp1_network
+    volumes:
+      - ./client.yml:/config.yml
+      - ./results:/results
+      - ../datasets/games_m.csv:/games.csv
+      - ../datasets/reviews_m.csv:/reviews.csv
   # client3:
   #   build:
   #     context: .
