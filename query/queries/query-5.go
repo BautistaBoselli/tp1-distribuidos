@@ -96,6 +96,7 @@ func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 		qc.calculatePercentile()
 		qc.End()
 		msg.Ack()
+		return // esto no estaba antes pero lo agrego porque tira error el processed
 	}
 
 	if qc.processedStats.Contains(int64(msg.Stats.Id)) {
@@ -131,14 +132,14 @@ func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 func (qc *Query5Client) calculatePercentile() {
 	qc.minNegativeReviews = -1
 
-	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s", qc.clientId))
+	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s/stats", qc.clientId))
 	if err != nil {
 		log.Errorf("failed to read directory: %v", err)
 	}
 
 	for _, dentry := range dentries {
 		func() {
-			file, err := os.Open(fmt.Sprintf("./database/%s/%s", qc.clientId, dentry.Name()))
+			file, err := os.Open(fmt.Sprintf("./database/%s/stats/%s", qc.clientId, dentry.Name()))
 			if err != nil {
 				log.Errorf("failed to open file: %v", err)
 			}
@@ -156,7 +157,6 @@ func (qc *Query5Client) calculatePercentile() {
 					log.Errorf("Error reading file: %s", err)
 					return
 				}
-
 				qc.handleRecord(record)
 			}
 		}()
@@ -221,7 +221,7 @@ func (qc *Query5Client) handleRecord(record []string) {
 			return
 		}
 
-		storedNegatives, _ := strconv.Atoi(storedRecord[4])
+		storedNegatives, _ := strconv.Atoi(storedRecord[3])
 
 		if !found && stats.Negatives >= storedNegatives {
 			found = true
@@ -291,6 +291,7 @@ func (qc *Query5Client) sendResult() {
 		}
 	}
 
+	log.Infof("Query 5 finished")
 }
 
 func (qc *Query5Client) End() {

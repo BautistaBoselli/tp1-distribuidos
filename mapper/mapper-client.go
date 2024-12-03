@@ -253,11 +253,13 @@ func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
 	log.Debugf("Received Last message for client %s: %v", reviewBatch.ClientId, reviewBatch.Last)
 	if c.finished {
 		log.Debugf("Received Last again, ignoring and NACKing...")
+		time.Sleep(1 * time.Second)
 		reviewBatch.Nack()
 		return
 	}
 	if !c.finishedFile {
 		log.Debugf("Received Last but not finished reviews file, ignoring and NACKing...")
+		time.Sleep(1 * time.Second)
 		reviewBatch.Nack()
 		return
 	}
