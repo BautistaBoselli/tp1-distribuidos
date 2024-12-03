@@ -15,8 +15,8 @@ type Query3 struct {
 	middleware *middleware.Middleware
 	shardId    int
 	directory  shared.Directory
-	processed  map[int]bool
-	total      int
+	clients    map[string]*Query3Client
+	commit     *shared.Commit
 }
 
 func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
@@ -24,14 +24,12 @@ func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
 		middleware: m,
 		shardId:    shardId,
 		directory:  shared.Directory{},
-		processed:  make(map[int]bool),
-		total:      0,
+		clients:    make(map[string]*Query3Client),
+		commit:     shared.NewCommit("./database/commit.csv"),
 	}
 }
 
 func (q *Query3) Run() {
-	log.Info("Query 3 running")
-
 	statsQueue, err := q.middleware.ListenStats("3."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Indie")
 	if err != nil {
 		log.Errorf("Error listening stats: %s", err)
@@ -45,39 +43,82 @@ func (q *Query3) Run() {
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		metric.Update(1)
 
-		if message.Last {
-			q.sendResult(message.ClientId)
-			message.Ack()
-			os.RemoveAll(fmt.Sprintf("./database/%s", message.ClientId))
-			return nil
+		client, exists := q.clients[message.ClientId]
+		if !exists {
+			client = NewQuery3Client(q.middleware, q.commit, message.ClientId, q.shardId)
+			q.clients[message.ClientId] = client
 		}
 
-		q.processStats(message)
+		client.processStat(message)
 
-		message.Ack()
 		return nil
 	})
 
 }
 
-func (q *Query3) processStats(message *middleware.StatsMsg) {
-	q.total++
-	if _, ok := q.processed[message.Stats.Id]; ok {
-		log.Infof("HOLA Stats id %d already processed", message.Stats.Id)
-	}
-	q.processed[message.Stats.Id] = true
-	if stat := shared.UpsertStats(message.ClientId, message.Stats); stat == nil {
-		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", message.ClientId)
-		return
+type Query3Client struct {
+	middleware     *middleware.Middleware
+	commit         *shared.Commit
+	clientId       string
+	shardId        int
+	processedStats *shared.Processed
+	cache          map[int32]string
+}
+
+func NewQuery3Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int) *Query3Client {
+	os.MkdirAll(fmt.Sprintf("./database/%s/stats", clientId), 0777)
+	return &Query3Client{
+		middleware:     m,
+		commit:         commit,
+		clientId:       clientId,
+		shardId:        shardId,
+		processedStats: shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
+		cache:          make(map[int32]string),
 	}
 }
 
-func (q *Query3) sendResult(clientId string) {
-	log.Infof("Sending result for client %s", clientId)
-	log.Infof("Total stats received: %d", q.total)
-	log.Infof("Unique stats processed: %d", len(q.processed))
+func (qc *Query3Client) processStat(msg *middleware.StatsMsg) {
+	if msg.Last {
+		qc.sendResult()
+		qc.End()
+		msg.Ack()
+		return
+	}
 
-	top := shared.GetTopStatsFS(clientId, QUERY3_TOP_SIZE, func(a *middleware.Stats, b *middleware.Stats) bool {
+	if qc.processedStats.Contains(int64(msg.Stats.Id)) {
+		msg.Ack()
+		return
+	}
+
+	tmpFile, err := os.CreateTemp("./database", fmt.Sprintf("%d.csv", msg.Stats.AppId))
+	if err != nil {
+		log.Errorf("failed to create temp file: %v", err)
+		return
+	}
+
+	if stat := shared.UpdateStat(qc.clientId, msg.Stats, tmpFile); stat == nil {
+		log.Errorf("Failed to upsert stats, could not retrieve stat for client %s", qc.clientId)
+		return
+	}
+
+	realFilename := fmt.Sprintf("./database/%s/stats/%d.csv", qc.clientId, msg.Stats.AppId)
+
+	qc.commit.Write([][]string{
+		{strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
+	})
+
+	qc.processedStats.Add(int64(msg.Stats.Id))
+
+	os.Rename(tmpFile.Name(), realFilename)
+	qc.commit.End()
+
+	msg.Ack()
+}
+
+func (qc *Query3Client) sendResult() {
+	log.Infof("Sending result for client %s", qc.clientId)
+
+	top := shared.GetTopStatsFS(qc.clientId, QUERY3_TOP_SIZE, func(a *middleware.Stats, b *middleware.Stats) bool {
 		return a.Positives > b.Positives
 	})
 
@@ -91,14 +132,18 @@ func (q *Query3) sendResult(clientId string) {
 	}
 
 	result := &middleware.Result{
-		ClientId:       clientId,
+		ClientId:       qc.clientId,
 		Payload:        query3Result,
 		IsFinalMessage: true,
 		QueryId:        3,
 	}
 
-	if err := q.middleware.SendResult("3", result); err != nil {
+	if err := qc.middleware.SendResult("3", result); err != nil {
 		log.Errorf("Failed to send result: %v", err)
 	}
+}
 
+func (qc *Query3Client) End() {
+	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	qc.processedStats.Close()
 }

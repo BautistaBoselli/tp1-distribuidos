@@ -1,6 +1,7 @@
 .DS_Store
 out.txt
 *.csv
+!name_ip.csv
 datasets
 results/results.txt
 results/results.json

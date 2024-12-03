@@ -12,7 +12,7 @@ services:
     volumes:
       - ./client.yml:/config.yml
       - ./results:/results
-      - ../datasets/games.csv:/games.csv
+      - ../datasets/games_m.csv:/games.csv
       - ../datasets/reviews_m.csv:/reviews.csv
   # client2:
   #   build:

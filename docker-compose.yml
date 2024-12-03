@@ -49,6 +49,12 @@ services:
         condition: service_started
       reducer-2:
         condition: service_started
+      queries-3-0:
+        condition: service_started
+      queries-3-1:
+        condition: service_started
+      reducer-3:
+        condition: service_started
       reviver-1:
         condition: service_started
       reviver-2:
@@ -176,6 +182,53 @@ services:
     networks:
       network:
         ipv4_address: 10.5.4.2
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  queries-3-0:
+    container_name: queries-3-0
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=3
+      - CLI_SHARD_ID=0
+    networks:
+      network:
+        ipv4_address: 10.5.3.30
+    volumes:
+      - ./server.yml:/server.yml
+      - ../database/queries-3-0_database:/database
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  queries-3-1:
+    container_name: queries-3-1
+    image: query:latest
+    entrypoint: /query
+    environment:
+      - CLI_QUERY_ID=3
+      - CLI_SHARD_ID=1
+    networks:
+      network:
+        ipv4_address: 10.5.3.31
+    volumes:
+      - ./server.yml:/server.yml
+      - ../database/queries-3-1_database:/database
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  reducer-3:
+    container_name: reducer-3
+    image: reducer:latest
+    entrypoint: /reducer
+    environment:
+      - CLI_QUERY_ID=3
+    volumes:
+      - ./server.yml:/server.yml
+      - ../database/reducer-3_database:/database
+    networks:
+      network:
+        ipv4_address: 10.5.4.3
     depends_on:
       rabbitmq:
         condition: service_healthy
