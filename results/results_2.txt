@@ -1,13 +1,5 @@
-[QUERY 1 - PARCIAL]: Windows: 499, Mac: 121, Linux: 87
-[QUERY 1 - PARCIAL]: Windows: 499, Mac: 121, Linux: 87
-[QUERY 1 - PARCIAL]: Windows: 997, Mac: 234, Linux: 149
-[QUERY 1 - PARCIAL]: Windows: 1497, Mac: 343, Linux: 230
-[QUERY 1 - PARCIAL]: Windows: 1997, Mac: 466, Linux: 314
-[QUERY 1 - PARCIAL]: Windows: 2497, Mac: 567, Linux: 375
-[QUERY 1 - PARCIAL]: Windows: 2497, Mac: 567, Linux: 375
-[QUERY 1 - PARCIAL]: Windows: 2996, Mac: 676, Linux: 451
-[QUERY 1 - PARCIAL]: Windows: 3424, Mac: 783, Linux: 524
-[QUERY 1 - PARCIAL]: Windows: 3424, Mac: 783, Linux: 524
-[QUERY 1 - PARCIAL]: Windows: 3923, Mac: 898, Linux: 599
-[QUERY 1 - PARCIAL]: Windows: 4423, Mac: 1011, Linux: 671
-[QUERY 1 - FINAL]: Windows: 4873, Mac: 1105, Linux: 737
+[QUERY 3]: Top Game 1: Garry's Mod (22866)
+[QUERY 3]: Top Game 2: Hotline Miami (18201)
+[QUERY 3]: Top Game 3: BattleBlock Theater® (14903)
+[QUERY 3]: Top Game 4: Geometry Dash (12685)
+[QUERY 3]: Top Game 5: Firewatch (12406)

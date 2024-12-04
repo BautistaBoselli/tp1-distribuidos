@@ -17,6 +17,7 @@ type ReducerQuery3 struct {
 	receivedAnswers *shared.Processed
 	ClientId        string
 	finished        bool
+	commit          *shared.Commit
 }
 
 func NewReducerQuery3(clientId string, m *middleware.Middleware) *ReducerQuery3 {
@@ -25,14 +26,19 @@ func NewReducerQuery3(clientId string, m *middleware.Middleware) *ReducerQuery3 
 		results:         make(chan *middleware.Result),
 		receivedAnswers: shared.NewProcessed(fmt.Sprintf("./database/%s/received.bin", clientId)),
 		ClientId:        clientId,
+		commit:          shared.NewCommit(fmt.Sprintf("./database/%s/commit.csv", clientId)),
 	}
 }
 
 func (r *ReducerQuery3) QueueResult(result *middleware.Result) {
+	if r.finished {
+		result.Ack()
+		return
+	}
 	r.results <- result
 }
 
-func (r *ReducerQuery3) Close() {
+func (r *ReducerQuery3) End() {
 	if r.finished {
 		return
 	}
@@ -43,7 +49,7 @@ func (r *ReducerQuery3) Close() {
 	close(r.results)
 }
 
-func (r *ReducerQuery3) getResultsFromFile() []middleware.Stats {
+func (r *ReducerQuery3) RestoreResult() []middleware.Stats {
 	file, err := os.OpenFile(fmt.Sprintf("./database/%s/3.csv", r.ClientId), os.O_RDONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
@@ -59,33 +65,96 @@ func (r *ReducerQuery3) getResultsFromFile() []middleware.Stats {
 		if err != nil && err.Error() == "EOF" {
 			return result
 		}
-		if err != nil && err == csv.ErrFieldCount {
-			continue
-		}
-		if err != nil && err.Error() != "EOF" && err != csv.ErrFieldCount {
-			log.Errorf("Failed to read line: %v, line: %v", err, line)
-			return nil
-		}
+		// if err != nil && err == csv.ErrFieldCount {
+		// 	continue
+		// }
+		// if err != nil && err.Error() != "EOF" && err != csv.ErrFieldCount {
+		// 	log.Errorf("Failed to read line: %v, line: %v", err, line)
+		// return nil
+		// }
 
-		id, _ := strconv.Atoi(line[0])
-		positives, _ := strconv.Atoi(line[4])
-		negatives, _ := strconv.Atoi(line[5])
-		stats := middleware.Stats{
-			AppId:     id,
-			Name:      line[1],
-			Positives: positives,
-			Negatives: negatives,
-		}
-		result = append(result, stats)
+		stats, _ := shared.ParseStat(line)
+		result = append(result, *stats)
 	}
 }
 
-func (r *ReducerQuery3) storeResults(stats []middleware.Stats) {
+func (r *ReducerQuery3) Run() {
+	log.Infof("Reducer Query 3 running")
+	r.RestoreResult()
+
+	shared.RestoreCommit(fmt.Sprintf("./database/%s/commit.csv", r.ClientId), func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
+
+		id, _ := strconv.ParseInt(commit.Data[0][1], 10, 64)
+		r.receivedAnswers.Add(id)
+
+		r.RestoreResult()
+
+		isFinalMessage := r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount
+		if isFinalMessage {
+			r.SendResult()
+		}
+	})
+
+	for result := range r.results {
+		r.processResult(result)
+	}
+}
+
+func (r *ReducerQuery3) processResult(result *middleware.Result) {
+	query3Result := result.Payload.(middleware.Query3Result)
+
+	if r.receivedAnswers.Contains(int64(result.ShardId)) {
+		log.Infof("Result %d already processed", result.Id)
+		result.Ack()
+		return
+	}
+
+	topStats := r.RestoreResult()
+	topStats = r.mergeTopStats(topStats, query3Result.TopStats)
+	tmpFile := r.storeResults(topStats)
+	realFilename := fmt.Sprintf("./database/%s/3.csv", r.ClientId)
+
+	shared.TestTolerance(1, 3, "Exiting after tmp")
+
+	r.commit.Write([][]string{
+		{r.ClientId, strconv.Itoa(result.ShardId), tmpFile.Name(), realFilename},
+	})
+
+	shared.TestTolerance(1, 3, "Exiting after creating commit")
+
+	r.receivedAnswers.Add(int64(result.ShardId))
+
+	shared.TestTolerance(1, 3, "Exiting after adding processed answer")
+
+	os.Rename(tmpFile.Name(), realFilename)
+
+	shared.TestTolerance(1, 3, "Exiting after renaming")
+
+	isFinalMessage := r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount
+	if isFinalMessage {
+		r.SendResult()
+	}
+
+	shared.TestTolerance(1, 3, "Exiting after sending result")
+
+	r.commit.End()
+	result.Ack()
+
+	if isFinalMessage {
+		r.End()
+	}
+
+}
+
+func (r *ReducerQuery3) storeResults(stats []middleware.Stats) *os.File {
 	file, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-reducer-query-3.csv")
 	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/3.csv", r.ClientId), os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
-		return
+		return nil
 	}
 	defer file.Close()
 
@@ -94,20 +163,18 @@ func (r *ReducerQuery3) storeResults(stats []middleware.Stats) {
 		record := []string{
 			strconv.Itoa(stat.AppId),
 			stat.Name,
-			"text",
-			"genre",
 			strconv.Itoa(stat.Positives),
 			strconv.Itoa(stat.Negatives),
 		}
 
 		if err := writer.Write(record); err != nil {
 			log.Errorf("Failed to write line: %v", err)
-			return
+			return nil
 		}
 	}
 	writer.Flush()
 
-	os.Rename(file.Name(), fmt.Sprintf("./database/%s/3.csv", r.ClientId))
+	return file
 }
 
 func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []middleware.Stats) []middleware.Stats {
@@ -138,38 +205,8 @@ func (r *ReducerQuery3) mergeTopStats(topStats1 []middleware.Stats, topStats2 []
 	return merged
 }
 
-func (r *ReducerQuery3) Run() {
-	for result := range r.results {
-		r.processResult(result)
-
-		if result.IsFinalMessage {
-			r.receivedAnswers.Add(int64(result.ShardId))
-		}
-
-		if r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount {
-			r.SendResult()
-			r.Close()
-			result.Ack()
-			break
-		}
-
-		result.Ack()
-
-	}
-}
-
-func (r *ReducerQuery3) processResult(result *middleware.Result) {
-	switch result.Payload.(type) {
-	case middleware.Query3Result:
-		topStats := r.getResultsFromFile()
-		topStats = r.mergeTopStats(topStats, result.Payload.(middleware.Query3Result).TopStats)
-		log.Infof("Top stats: %v", topStats)
-		r.storeResults(topStats)
-	}
-}
-
 func (r *ReducerQuery3) SendResult() {
-	topStats := r.getResultsFromFile()
+	topStats := r.RestoreResult()
 	query3Result := &middleware.Query3Result{
 		TopStats: topStats,
 	}
