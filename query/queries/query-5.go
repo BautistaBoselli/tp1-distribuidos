@@ -285,8 +285,9 @@ func (qc *Query5Client) sendResult() {
 			qc.middleware.SendResult("5", &middleware.Result{
 				ClientId:       qc.clientId,
 				QueryId:        5,
-				IsFinalMessage: true,
+				ShardId:        qc.shardId,
 				Payload:        result,
+				IsFinalMessage: true,
 			})
 			log.Infof("Sending FINAL Query 5 message")
 			break
@@ -307,8 +308,9 @@ func (qc *Query5Client) sendResult() {
 			qc.middleware.SendResult("5", &middleware.Result{
 				ClientId:       qc.clientId,
 				QueryId:        5,
-				IsFinalMessage: false,
+				ShardId:        qc.shardId,
 				Payload:        result,
+				IsFinalMessage: false,
 			})
 			result.Stats = make([]middleware.Stats, 0)
 		}

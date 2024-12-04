@@ -182,6 +182,7 @@ func (qc *Query4Client) sendResult(message *middleware.Stats) {
 	result := &middleware.Result{
 		ClientId:       qc.clientId,
 		QueryId:        4,
+		ShardId:        qc.shardId,
 		Payload:        query4Result,
 		IsFinalMessage: false,
 	}
@@ -196,6 +197,7 @@ func (qc *Query4Client) sendResultFinal() {
 	result := &middleware.Result{
 		ClientId:       qc.clientId,
 		QueryId:        4,
+		ShardId:        qc.shardId,
 		IsFinalMessage: true,
 	}
 

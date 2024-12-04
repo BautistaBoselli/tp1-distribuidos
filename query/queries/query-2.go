@@ -210,6 +210,7 @@ func (qc *Query2Client) sendResult() {
 	result := middleware.Result{
 		ClientId:       qc.clientId,
 		QueryId:        2,
+		ShardId:        qc.shardId,
 		IsFinalMessage: true,
 		Payload:        qc.result,
 	}

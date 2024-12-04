@@ -170,9 +170,10 @@ func (qc *Query3Client) sendResult() {
 
 	result := &middleware.Result{
 		ClientId:       qc.clientId,
+		QueryId:        3,
+		ShardId:        qc.shardId,
 		Payload:        query3Result,
 		IsFinalMessage: true,
-		QueryId:        3,
 	}
 
 	shared.TestTolerance(1, 2, "Exiting before sending result")

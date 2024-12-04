@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"tp1-distribuidos/middleware"
+	"tp1-distribuidos/shared"
 
 	"github.com/op/go-logging"
 )
@@ -14,19 +15,21 @@ import (
 var log = logging.MustGetLogger("log")
 
 type ReducerQuery1 struct {
-	middleware     *middleware.Middleware
-	results        chan *middleware.Result
-	pendingAnswers int
-	ClientId       string
-	finished       bool
+	middleware *middleware.Middleware
+	results    chan *middleware.Result
+	// pendingAnswers int
+	receivedAnswers *shared.Processed
+	ClientId        string
+	finished        bool
 }
 
 func NewReducerQuery1(clientId string, m *middleware.Middleware) *ReducerQuery1 {
 	return &ReducerQuery1{
-		middleware:     m,
-		results:        make(chan *middleware.Result),
-		pendingAnswers: m.Config.Sharding.Amount,
-		ClientId:       clientId,
+		middleware: m,
+		results:    make(chan *middleware.Result),
+		// pendingAnswers: m.Config.Sharding.Amount,
+		receivedAnswers: shared.NewProcessed(fmt.Sprintf("./database/%s/received.bin", clientId)),
+		ClientId:        clientId,
 	}
 }
 
@@ -96,7 +99,7 @@ func (r *ReducerQuery1) Run() {
 
 		msg.Ack()
 
-		if r.pendingAnswers == 0 {
+		if r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount {
 			r.SendResult(true)
 			r.Close()
 			break
@@ -126,7 +129,7 @@ func (r *ReducerQuery1) processResult(result *middleware.Result) {
 		r.storeResults(windows, mac, linux)
 
 		if query1Result.Final {
-			r.pendingAnswers--
+			r.receivedAnswers.Add(int64(result.ShardId))
 		}
 	}
 }

@@ -12,26 +12,27 @@ import (
 
 	// "strconv"
 	"tp1-distribuidos/middleware"
+	"tp1-distribuidos/shared"
 )
 
 const resultsBatchSize = 50
 
 type ReducerQuery5 struct {
-	middleware          *middleware.Middleware
-	results             chan *middleware.Result
-	pendingFinalAnswers int
-	totalGames          int
-	ClientId            string
-	finished            bool
+	middleware      *middleware.Middleware
+	results         chan *middleware.Result
+	receivedAnswers *shared.Processed
+	totalGames      int
+	ClientId        string
+	finished        bool
 }
 
 func NewReducerQuery5(clientId string, m *middleware.Middleware) *ReducerQuery5 {
 	return &ReducerQuery5{
-		middleware:          m,
-		results:             make(chan *middleware.Result),
-		pendingFinalAnswers: m.Config.Sharding.Amount,
-		totalGames:          0,
-		ClientId:            clientId,
+		middleware:      m,
+		results:         make(chan *middleware.Result),
+		receivedAnswers: shared.NewProcessed(fmt.Sprintf("./database/%s/received.bin", clientId)),
+		totalGames:      0,
+		ClientId:        clientId,
 	}
 }
 
@@ -58,10 +59,10 @@ func (r *ReducerQuery5) Run() {
 		result.Ack()
 
 		if result.IsFinalMessage {
-			r.pendingFinalAnswers--
+			r.receivedAnswers.Add(int64(result.ShardId))
 		}
 
-		if r.pendingFinalAnswers == 0 {
+		if r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount {
 			r.sendFinalResult()
 			r.Close()
 			break

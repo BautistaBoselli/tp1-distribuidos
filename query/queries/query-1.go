@@ -201,6 +201,7 @@ func (qc *Query1Client) sendResult(final bool) {
 	resultMsg := &middleware.Result{
 		ClientId:       qc.clientId,
 		QueryId:        1,
+		ShardId:        qc.shardId,
 		IsFinalMessage: final,
 		Payload:        qc.result,
 	}
