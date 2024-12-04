@@ -34,12 +34,14 @@ type Node struct {
 	stateLock     sync.Mutex
 	state         NodeState
 	currentLeader int
+	peersLock     sync.Mutex
 	stopContext   context.Context
 	wg            sync.WaitGroup
 	electionLock  *sync.Mutex
 	stopLeader    chan struct{}
 	processList   [][]string
 	inElection    bool
+	leaderLock    *sync.Mutex
 }
 
 const INACTIVE_LEADER = -1
@@ -98,17 +100,20 @@ func NewNode(id int, stopContext context.Context) *Node {
 		electionLock:  &sync.Mutex{},
 		stopLeader:    make(chan struct{}),
 		processList:   processList,
+		leaderLock:    &sync.Mutex{},
 	}
 }
 
 func (n *Node) Close() {
+	for _, peer := range n.peers {
+		n.peersLock.Lock()
+		peer.Close()
+		n.peersLock.Unlock()
+	}
 	if n.serverConn != nil {
 		if err := n.serverConn.Close(); err != nil {
 			fmt.Printf("Error closing server connection: %v\n", err)
 		}
-	}
-	for _, peer := range n.peers {
-		peer.Close()
 	}
 }
 
@@ -165,7 +170,9 @@ func (n *Node) StartElection() {
 
 	// If no higher-numbered peers, become leader immediately
 	if len(waitingResponses) == 0 {
+		n.leaderLock.Lock()
 		go n.BecomeLeader()
+		n.leaderLock.Unlock()
 		return
 	}
 
@@ -188,7 +195,10 @@ electionLoop:
 			// If we timeout waiting for responses, we become the leader if we are a candidate
 			// or we wait for coordinator if we are waiting for one
 			if n.GetState() == NodeStateCandidate {
+				log.Printf("Node %d becoming leader\n", n.id)
+				n.leaderLock.Lock()
 				go n.BecomeLeader()
+				n.leaderLock.Unlock()
 			} else {
 				go n.waitForCoordinator()
 			}
@@ -219,7 +229,9 @@ func (n *Node) startFollowerLoop(leaderId int) {
 				return
 			}
 			n.stateLock.Unlock()
+
 			var leaderPeer *Peer
+			n.peersLock.Lock()
 			for _, peer := range n.peers {
 				if peer.id == leaderId {
 					leaderPeer = peer
@@ -227,29 +239,32 @@ func (n *Node) startFollowerLoop(leaderId int) {
 				}
 			}
 
-			if leaderPeer == nil || leaderPeer.conn == nil {
+			err := leaderPeer.Send(Message{PeerId: n.id, Type: MessageTypePing})
+			if err != nil || leaderPeer == nil || leaderPeer.conn == nil {
+				log.Printf("Could not send ping message to leader %d, starting election", leaderId)
 				go n.StartElection()
-				continue
+				n.peersLock.Unlock()
+				return
 			}
 
-			if err := leaderPeer.Send(Message{PeerId: n.id, Type: MessageTypePing}); err != nil {
-				go n.StartElection()
-				continue
-			}
 			response, err := leaderPeer.RecvTimeout(PongTimeout)
 			if errors.Is(err, os.ErrDeadlineExceeded) || err == io.EOF {
 				if n.GetCurrentLeader() != leaderId { // si es distinto, significa que el lider cambió y ya no hay que tirarle ping a ese
+					n.peersLock.Unlock()
 					continue
 				}
+				log.Printf("Leader %d is dead, starting election", leaderId)
 				n.ChangeState(NodeStateFollower)
-				n.SetCurrentLeader(INACTIVE_LEADER)
 				go n.StartElection()
+				n.peersLock.Unlock()
 				return
 			}
 			if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
 				log.Printf("Error decoding response from leader %d: %v", leaderId, err)
+				n.peersLock.Unlock()
 				continue
 			}
+			n.peersLock.Unlock()
 			if response.Type != MessageTypePong {
 				log.Printf("Node %d received wrong message type %d from leader %d\n", n.id, response.Type, leaderId)
 				continue
@@ -259,13 +274,17 @@ func (n *Node) startFollowerLoop(leaderId int) {
 }
 
 func (n *Node) BecomeLeader() {
-	oldLeader := n.GetCurrentLeader()
+	n.stateLock.Lock()
+	oldLeader := n.currentLeader
+	defer n.stateLock.Unlock()
 	n.ChangeState(NodeStateCoordinator)
-	n.SetCurrentLeader(n.id)
+	n.currentLeader = n.id
 
 	// Send coordinator message to all peers
 	for _, peer := range n.peers {
-		peer.Send(Message{PeerId: n.id, Type: MessageTypeCoordinator})
+		if err := peer.Send(Message{PeerId: n.id, Type: MessageTypeCoordinator}); err != nil {
+			log.Printf("Could not send coordinator message to peer %d: %v", peer.id, err)
+		}
 	}
 
 	if oldLeader != n.id {
@@ -274,7 +293,7 @@ func (n *Node) BecomeLeader() {
 }
 
 func (n *Node) StartLeaderLoop() {
-	log.Printf("Node %d is the new leader\n", n.id)
+	log.Printf("Node %d is the leader\n", n.id)
 
 	stopResurrecters, cancel := context.WithCancel(context.Background())
 	resurrecter := NewResurrecter(n.processList, stopResurrecters)
@@ -288,6 +307,12 @@ func (n *Node) StartLeaderLoop() {
 			resurrecter.Close()
 			cancel()
 			return
+		case <-time.After(time.Second):
+			if n.GetState() != NodeStateCoordinator || n.GetCurrentLeader() != n.id {
+				resurrecter.Close()
+				cancel()
+				return
+			}
 		}
 	}
 }
@@ -329,7 +354,7 @@ func (n *Node) CreateTopology(reviverNodes int) {
 func (n *Node) Listen() {
 	serverConn, err := net.ListenTCP("tcp", n.serverAddr)
 	if err != nil {
-		fmt.Printf("Error listening on server address %s: %v\n", n.serverAddr.String(), err)
+		fmt.Printf("Error listening on server address: %v\n", err)
 		os.Exit(1)
 	}
 	n.serverConn = serverConn
@@ -344,6 +369,7 @@ func (n *Node) Listen() {
 				return
 			}
 			if err != nil {
+				// fmt.Printf("Error accepting connection: %v\n", err)
 				continue
 			}
 			go n.RespondToPeer(conn)
@@ -380,7 +406,9 @@ func (n *Node) RespondToPeer(conn *net.TCPConn) {
 
 		n.handleMessage(message, encoder)
 	}
+	n.peersLock.Lock()
 	n.ClosePeer(strings.Split(conn.RemoteAddr().String(), ":")[0])
+	n.peersLock.Unlock()
 }
 
 func (n *Node) ClosePeer(ip string) {

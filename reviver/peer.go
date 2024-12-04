@@ -1,7 +1,5 @@
-package main // Representa a un PEER al que YO llamo y consulto, cuando el me consulta a mi usa su pripio call, no es full duplex
-//
-// A -> B y B -> A
-// en vez de A <--> B
+package main
+
 import (
 	"encoding/gob"
 	"errors"
@@ -11,6 +9,10 @@ import (
 	"time"
 )
 
+// Representa a un PEER al que YO llamo y consulto, cuando el me consulta a mi usa su pripio call, no es full duplex
+//
+// A -> B y B -> A
+// en vez de A <--> B
 type Peer struct {
 	id      int
 	name    *string
