@@ -17,6 +17,7 @@ type ReducerQuery2 struct {
 	receivedAnswers *shared.Processed
 	ClientId        string
 	finished        bool
+	commit          *shared.Commit
 }
 
 func NewReducerQuery2(clientId string, m *middleware.Middleware) *ReducerQuery2 {
@@ -26,24 +27,28 @@ func NewReducerQuery2(clientId string, m *middleware.Middleware) *ReducerQuery2 
 		results:         make(chan *middleware.Result),
 		receivedAnswers: shared.NewProcessed(fmt.Sprintf("./database/%s/received.bin", clientId)),
 		ClientId:        clientId,
+		commit:          shared.NewCommit(fmt.Sprintf("./database/%s/commit.csv", clientId)),
 	}
 }
 
 func (r *ReducerQuery2) QueueResult(result *middleware.Result) {
+	if r.finished {
+		result.Ack()
+		return
+	}
 	r.results <- result
 }
 
-func (r *ReducerQuery2) Close() {
+func (r *ReducerQuery2) End() {
 	if r.finished {
 		return
 	}
 	r.finished = true
-	log.Infof("Reducer Query 2 closing")
 	os.RemoveAll(fmt.Sprintf("./database/%s", r.ClientId))
 	close(r.results)
 }
 
-func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
+func (r *ReducerQuery2) RestoreResult() []middleware.Game {
 	file, err := os.OpenFile(fmt.Sprintf("./database/%s/2.csv", r.ClientId), os.O_RDONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
@@ -59,13 +64,13 @@ func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
 		if err != nil && err.Error() == "EOF" {
 			return result
 		}
-		if err != nil && err == csv.ErrFieldCount {
-			continue
-		}
-		if err != nil && err.Error() != "EOF" && err != csv.ErrFieldCount {
-			log.Errorf("Failed to read line: %v, line: %v", err, line)
-			return nil
-		}
+		// if err != nil && err == csv.ErrFieldCount {
+		// 	continue
+		// }
+		// if err != nil && err.Error() != "EOF" && err != csv.ErrFieldCount {
+		// 	log.Errorf("Failed to read line: %v, line: %v", err, line)
+		// 	return nil
+		// }
 
 		id, _ := strconv.Atoi(line[0])
 		year, _ := strconv.Atoi(line[2])
@@ -83,11 +88,81 @@ func (r *ReducerQuery2) getResultsFromFile() []middleware.Game {
 	}
 }
 
-func (r *ReducerQuery2) storeResults(topGames []middleware.Game) {
+func (r *ReducerQuery2) Run() {
+	log.Infof("Reducer Query 2 running")
+	r.RestoreResult()
+
+	shared.RestoreCommit(fmt.Sprintf("./database/%s/commit.csv", r.ClientId), func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
+
+		id, _ := strconv.ParseInt(commit.Data[0][1], 10, 64)
+		r.receivedAnswers.Add(id)
+
+		r.RestoreResult()
+
+		isFinalMessage := r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount
+		if isFinalMessage {
+			r.SendResult()
+		}
+	})
+
+	for msg := range r.results {
+		r.processResult(msg)
+	}
+}
+
+func (r *ReducerQuery2) processResult(result *middleware.Result) {
+	query2Result := result.Payload.(middleware.Query2Result)
+
+	if r.receivedAnswers.Contains(int64(result.ShardId)) {
+		log.Infof("Result %d already processed", result.Id)
+		result.Ack()
+		return
+	}
+
+	topGames := r.RestoreResult()
+	topGames = r.mergeTopGames(topGames, query2Result.TopGames)
+	tmpFile := r.storeResults(topGames)
+	realFilename := fmt.Sprintf("./database/%s/2.csv", r.ClientId)
+
+	shared.TestTolerance(1, 3, "Exiting after tmp")
+
+	r.commit.Write([][]string{
+		{r.ClientId, strconv.Itoa(result.ShardId), tmpFile.Name(), realFilename},
+	})
+
+	shared.TestTolerance(1, 3, "Exiting after creating commit")
+
+	r.receivedAnswers.Add(int64(result.ShardId))
+
+	shared.TestTolerance(1, 3, "Exiting after adding processed answer")
+
+	os.Rename(tmpFile.Name(), realFilename)
+
+	shared.TestTolerance(1, 3, "Exiting after renaming")
+
+	isFinalMessage := r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount
+	if isFinalMessage {
+		r.SendResult()
+	}
+	shared.TestTolerance(1, 3, "Exiting after sending result")
+
+	r.commit.End()
+	result.Ack()
+
+	if isFinalMessage {
+		r.End()
+	}
+
+}
+
+func (r *ReducerQuery2) storeResults(topGames []middleware.Game) *os.File {
 	file, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-reducer-query-2.csv")
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
-		return
+		return nil
 	}
 	defer file.Close()
 
@@ -105,12 +180,12 @@ func (r *ReducerQuery2) storeResults(topGames []middleware.Game) {
 		}
 		if err := writer.Write(record); err != nil {
 			log.Errorf("Failed to write line: %v", err)
-			return
+			return nil
 		}
 	}
 	writer.Flush()
 
-	os.Rename(file.Name(), fmt.Sprintf("./database/%s/2.csv", r.ClientId))
+	return file
 }
 
 func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []middleware.Game) []middleware.Game {
@@ -142,39 +217,8 @@ func (r *ReducerQuery2) mergeTopGames(topGames1 []middleware.Game, topGames2 []m
 	return merged
 }
 
-func (r *ReducerQuery2) Run() {
-	log.Infof("Reducer Query 2 running")
-
-	for msg := range r.results {
-		log.Infof("Top games: %v", msg.Payload.(middleware.Query2Result))
-		r.processResult(msg)
-
-		msg.Ack()
-
-		if msg.IsFinalMessage {
-			r.receivedAnswers.Add(int64(msg.ShardId))
-		}
-
-		if r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount {
-			r.SendResult()
-			r.Close()
-			break
-		}
-
-	}
-}
-
-func (r *ReducerQuery2) processResult(result *middleware.Result) {
-	switch result.Payload.(type) {
-	case middleware.Query2Result:
-		topGames := r.getResultsFromFile()
-		topGames = r.mergeTopGames(topGames, result.Payload.(middleware.Query2Result).TopGames)
-		r.storeResults(topGames)
-	}
-}
-
 func (r *ReducerQuery2) SendResult() {
-	topGames := r.getResultsFromFile()
+	topGames := r.RestoreResult()
 	query2Result := &middleware.Query2Result{
 		TopGames: topGames,
 	}

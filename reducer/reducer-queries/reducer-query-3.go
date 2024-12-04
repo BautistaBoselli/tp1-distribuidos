@@ -65,13 +65,6 @@ func (r *ReducerQuery3) RestoreResult() []middleware.Stats {
 		if err != nil && err.Error() == "EOF" {
 			return result
 		}
-		// if err != nil && err == csv.ErrFieldCount {
-		// 	continue
-		// }
-		// if err != nil && err.Error() != "EOF" && err != csv.ErrFieldCount {
-		// 	log.Errorf("Failed to read line: %v, line: %v", err, line)
-		// return nil
-		// }
 
 		stats, _ := shared.ParseStat(line)
 		result = append(result, *stats)
@@ -151,7 +144,6 @@ func (r *ReducerQuery3) processResult(result *middleware.Result) {
 
 func (r *ReducerQuery3) storeResults(stats []middleware.Stats) *os.File {
 	file, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-reducer-query-3.csv")
-	// file, err := os.OpenFile(fmt.Sprintf("./database/%s/3.csv", r.ClientId), os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
 		return nil
