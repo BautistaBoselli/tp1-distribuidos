@@ -37,6 +37,7 @@ func (p *Peer) call() error {
 		return err
 	}
 
+	// conn, err := net.DialTimeout("tcp", connAddr.String(), 1*time.Second)
 	conn, err := net.DialTCP("tcp", nil, connAddr)
 	if err != nil {
 		return err
@@ -67,7 +68,10 @@ func (p *Peer) Send(message Message) error {
 
 	if err := p.encoder.Encode(message); err != nil {
 		p.Close()
-		return err
+		if err := p.call(); err != nil {
+			return err
+		}
+		return p.encoder.Encode(message)
 	}
 
 	return nil

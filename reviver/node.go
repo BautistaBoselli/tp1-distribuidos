@@ -42,6 +42,7 @@ type Node struct {
 	processList   [][]string
 	inElection    bool
 	leaderLock    *sync.Mutex
+	execLock      *sync.Mutex
 }
 
 const INACTIVE_LEADER = -1
@@ -101,6 +102,7 @@ func NewNode(id int, stopContext context.Context) *Node {
 		stopLeader:    make(chan struct{}),
 		processList:   processList,
 		leaderLock:    &sync.Mutex{},
+		execLock:      &sync.Mutex{},
 	}
 }
 
@@ -121,7 +123,6 @@ func (n *Node) Run() {
 	fmt.Printf("Running reviver %d\n", n.id)
 	go shared.RunUDPListener(8080)
 	n.wg.Add(1)
-	go n.Listen() // solo responde por esta conexión TCP, no arranca la topología nunca (no PING, no ELECTION, etc)
 	time.Sleep(2 * time.Second)
 	go n.StartElection() // siempre queremos arrancar una eleccion cuando se levanta el nodo
 	n.wg.Done()
@@ -149,6 +150,7 @@ func (n *Node) StartElection() {
 				PeerId: n.id,
 				Type:   MessageTypeElection,
 			}); err != nil {
+				log.Printf("Could not send election message to peer %d, err: %v", peer.id, err)
 				continue
 			}
 
@@ -231,17 +233,26 @@ func (n *Node) startFollowerLoop(leaderId int) {
 			n.stateLock.Unlock()
 
 			var leaderPeer *Peer
+			found := false
 			n.peersLock.Lock()
 			for _, peer := range n.peers {
 				if peer.id == leaderId {
 					leaderPeer = peer
+					found = true
 					break
 				}
 			}
 
+			if !found {
+				log.Printf("Leader %d not found, starting election, lo estamos manejando", leaderId)
+				go n.StartElection()
+				n.peersLock.Unlock()
+				return
+			}
+
 			err := leaderPeer.Send(Message{PeerId: n.id, Type: MessageTypePing})
-			if err != nil || leaderPeer == nil || leaderPeer.conn == nil {
-				log.Printf("Could not send ping message to leader %d, starting election", leaderId)
+			if err != nil {
+				log.Printf("Could not send ping message to leader %d, starting election, err: %v", leaderId, err)
 				go n.StartElection()
 				n.peersLock.Unlock()
 				return
@@ -340,9 +351,11 @@ func (n *Node) CreateTopology(reviverNodes int) {
 		}
 		peerName := fmt.Sprintf("reviver-%d", i)
 		peer := NewPeer(i, &peerName)
-		if peer != nil {
-			n.peers = append(n.peers, peer)
+		if err := peer.call(); err != nil {
+			log.Printf("Could not connect to peer %d: %v", i, err)
+			continue
 		}
+		n.peers = append(n.peers, peer)
 	}
 }
 
@@ -429,9 +442,13 @@ func (n *Node) handleMessage(message *Message, encoder *gob.Encoder) {
 	case MessageTypePing:
 		n.handlePing(encoder)
 	case MessageTypeElection:
+		// n.execLock.Lock()
 		n.handleElection(encoder)
+		// n.execLock.Unlock()
 	case MessageTypeCoordinator:
+		// n.execLock.Lock()
 		n.handleCoordinator(message)
+		// n.execLock.Unlock()
 	}
 }
 
@@ -453,6 +470,16 @@ func (n *Node) handleCoordinator(message *Message) {
 		return
 	}
 	n.currentLeader = message.PeerId
+
+	n.peersLock.Lock()
+	for _, peer := range n.peers {
+		if peer.id == message.PeerId {
+			peer.call()
+			break
+		}
+	}
+	n.peersLock.Unlock()
+
 	go n.startFollowerLoop(message.PeerId)
 }
 

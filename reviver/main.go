@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -34,6 +35,10 @@ func main() {
 		fmt.Println("Received interrupt signal, shutting down")
 		node.Close()
 	}()
+
+	go node.Listen()
+
+	time.Sleep(1 * time.Second)
 
 	node.CreateTopology(bullyNodes)
 	node.Run()
