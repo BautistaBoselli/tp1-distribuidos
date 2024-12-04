@@ -182,6 +182,7 @@ func (s *StatsMsg) Ack() {
 }
 
 type Result struct {
+	Id             int64
 	ClientId       string
 	QueryId        int
 	ShardId        int

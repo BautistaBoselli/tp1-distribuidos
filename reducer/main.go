@@ -85,15 +85,10 @@ func main() {
 		return nil
 	})
 
-	for _, reducer := range reducers {
-		reducer.Close()
-	}
-
 	log.Infof("action: reducer finished | result: success")
 }
 
 type Reducer interface {
 	QueueResult(*middleware.Result)
 	Run()
-	Close()
 }

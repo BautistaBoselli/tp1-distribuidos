@@ -96,8 +96,8 @@ func NewQuery3Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 func (qc *Query3Client) processStat(msg *middleware.StatsMsg) {
 	if msg.Last {
 		qc.sendResult()
-		qc.End()
 		msg.Ack()
+		qc.End()
 		return
 	}
 

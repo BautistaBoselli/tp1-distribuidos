@@ -33,39 +33,11 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      mapper-1:
-        condition: service_started
-      mapper-2:
-        condition: service_started
       queries-1-0:
         condition: service_started
       queries-1-1:
         condition: service_started
       reducer-1:
-        condition: service_started
-      queries-2-0:
-        condition: service_started
-      queries-2-1:
-        condition: service_started
-      reducer-2:
-        condition: service_started
-      queries-3-0:
-        condition: service_started
-      queries-3-1:
-        condition: service_started
-      reducer-3:
-        condition: service_started
-      queries-4-0:
-        condition: service_started
-      queries-4-1:
-        condition: service_started
-      reducer-4:
-        condition: service_started
-      queries-5-0:
-        condition: service_started
-      queries-5-1:
-        condition: service_started
-      reducer-5:
         condition: service_started
       reviver-1:
         condition: service_started
@@ -73,34 +45,6 @@ services:
         condition: service_started
       reviver-3:
         condition: service_started
-  mapper-1:
-    container_name: mapper-1
-    image: mapper:latest
-    entrypoint: /mapper
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      - CLI_MAPPER_ID=1
-    networks:
-      network:
-        ipv4_address: 10.5.2.1
-    volumes:
-      - ./server.yml:/server.yml
-  mapper-2:
-    container_name: mapper-2
-    image: mapper:latest
-    entrypoint: /mapper
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      - CLI_MAPPER_ID=2
-    networks:
-      network:
-        ipv4_address: 10.5.2.2
-    volumes:
-      - ./server.yml:/server.yml
   queries-1-0:
     container_name: queries-1-0
     image: query:latest
@@ -142,182 +86,6 @@ services:
     networks:
       network:
         ipv4_address: 10.5.4.1
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-2-0:
-    container_name: queries-2-0
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=2
-      - CLI_SHARD_ID=0
-    networks:
-      network:
-        ipv4_address: 10.5.3.20
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-2-1:
-    container_name: queries-2-1
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=2
-      - CLI_SHARD_ID=1
-    networks:
-      network:
-        ipv4_address: 10.5.3.21
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  reducer-2:
-    container_name: reducer-2
-    image: reducer:latest
-    entrypoint: /reducer
-    environment:
-      - CLI_QUERY_ID=2
-    volumes:
-      - ./server.yml:/server.yml
-    networks:
-      network:
-        ipv4_address: 10.5.4.2
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-3-0:
-    container_name: queries-3-0
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=3
-      - CLI_SHARD_ID=0
-    networks:
-      network:
-        ipv4_address: 10.5.3.30
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-3-1:
-    container_name: queries-3-1
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=3
-      - CLI_SHARD_ID=1
-    networks:
-      network:
-        ipv4_address: 10.5.3.31
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  reducer-3:
-    container_name: reducer-3
-    image: reducer:latest
-    entrypoint: /reducer
-    environment:
-      - CLI_QUERY_ID=3
-    volumes:
-      - ./server.yml:/server.yml
-    networks:
-      network:
-        ipv4_address: 10.5.4.3
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-4-0:
-    container_name: queries-4-0
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=4
-      - CLI_SHARD_ID=0
-    networks:
-      network:
-        ipv4_address: 10.5.3.40
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-4-1:
-    container_name: queries-4-1
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=4
-      - CLI_SHARD_ID=1
-    networks:
-      network:
-        ipv4_address: 10.5.3.41
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  reducer-4:
-    container_name: reducer-4
-    image: reducer:latest
-    entrypoint: /reducer
-    environment:
-      - CLI_QUERY_ID=4
-    volumes:
-      - ./server.yml:/server.yml
-    networks:
-      network:
-        ipv4_address: 10.5.4.4
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-5-0:
-    container_name: queries-5-0
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=5
-      - CLI_SHARD_ID=0
-    networks:
-      network:
-        ipv4_address: 10.5.3.50
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  queries-5-1:
-    container_name: queries-5-1
-    image: query:latest
-    entrypoint: /query
-    environment:
-      - CLI_QUERY_ID=5
-      - CLI_SHARD_ID=1
-    networks:
-      network:
-        ipv4_address: 10.5.3.51
-    volumes:
-      - ./server.yml:/server.yml
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-  reducer-5:
-    container_name: reducer-5
-    image: reducer:latest
-    entrypoint: /reducer
-    environment:
-      - CLI_QUERY_ID=5
-    volumes:
-      - ./server.yml:/server.yml
-    networks:
-      network:
-        ipv4_address: 10.5.4.5
     depends_on:
       rabbitmq:
         condition: service_healthy

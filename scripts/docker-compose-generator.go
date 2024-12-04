@@ -19,7 +19,7 @@ const (
 
 const NAME_IP_FILE = "name_ip.csv"
 
-func generateDockerCompose(sharding int, mappers int, reviverNodes int) {
+func generateDockerCompose(config *config.Config) {
 	// Base structure of the docker-compose file
 	composeStr := `
 name: tp1
@@ -57,13 +57,18 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy`
-	for i := 1; i <= mappers; i++ {
-		composeStr += fmt.Sprintf(`
+	if config.Query.Query3 || config.Query.Query4 || config.Query.Query5 {
+		for i := 1; i <= config.Mappers.Amount; i++ {
+			composeStr += fmt.Sprintf(`
       mapper-%d:
         condition: service_started`, i)
+		}
 	}
 	for query := 1; query <= 5; query++ {
-		for i := 0; i < sharding; i++ {
+		if query == 1 && !config.Query.Query1 || query == 2 && !config.Query.Query2 || query == 3 && !config.Query.Query3 || query == 4 && !config.Query.Query4 || query == 5 && !config.Query.Query5 {
+			continue
+		}
+		for i := 0; i < config.Sharding.Amount; i++ {
 			composeStr += fmt.Sprintf(`
       queries-%d-%d:
         condition: service_started`, query, i)
@@ -72,15 +77,16 @@ services:
       reducer-%d:
         condition: service_started`, query)
 	}
-	for i := 1; i <= reviverNodes; i++ {
+	for i := 1; i <= config.Reviver.Amount; i++ {
 		composeStr += fmt.Sprintf(`
       reviver-%d:
         condition: service_started`, i)
 	}
 
 	// Generate client services
-	for i := 1; i <= mappers; i++ {
-		clientStr := fmt.Sprintf(`
+	if config.Query.Query3 || config.Query.Query4 || config.Query.Query5 {
+		for i := 1; i <= config.Mappers.Amount; i++ {
+			clientStr := fmt.Sprintf(`
   mapper-%d:
     container_name: mapper-%d
     image: mapper:latest
@@ -96,11 +102,14 @@ services:
     volumes:
       - ./server.yml:/server.yml
       - ../database/mapper-%d_database:/database`, i, i, i, strings.Replace(MAPPER_IP, "X", fmt.Sprintf("%d", i), 1), i)
-		composeStr += clientStr
+			composeStr += clientStr
+		}
 	}
-
 	for query := 1; query <= 5; query++ {
-		for i := 0; i < sharding; i++ {
+		if query == 1 && !config.Query.Query1 || query == 2 && !config.Query.Query2 || query == 3 && !config.Query.Query3 || query == 4 && !config.Query.Query4 || query == 5 && !config.Query.Query5 {
+			continue
+		}
+		for i := 0; i < config.Sharding.Amount; i++ {
 			composeStr += fmt.Sprintf(`
   queries-%d-%d:
     container_name: queries-%d-%d
@@ -137,7 +146,7 @@ services:
         condition: service_healthy`, query, query, query, query, strings.Replace(REDUCER_IP, "X", fmt.Sprintf("%d", query), 1))
 	}
 
-	for i := 1; i <= reviverNodes; i++ {
+	for i := 1; i <= config.Reviver.Amount; i++ {
 		composeStr += fmt.Sprintf(`
   reviver-%d:
     container_name: reviver-%d
@@ -155,7 +164,7 @@ services:
       - ./name_ip.csv:/name_ip.csv
     depends_on:
       rabbitmq:
-        condition: service_healthy`, i, i, reviverNodes, i, strings.Replace(REVIVER_IP, "X", fmt.Sprintf("%d", i), 1))
+        condition: service_healthy`, i, i, config.Reviver.Amount, i, strings.Replace(REVIVER_IP, "X", fmt.Sprintf("%d", i), 1))
 	}
 
 	composeStr += `
@@ -176,8 +185,8 @@ networks:
 
 }
 
-func generateNameIpFile(mappers int, sharding int, reviverNodes int) {
-	fmt.Printf("Generating name_ip file with %d mappers, %d sharding, and %d revivers\n", mappers, sharding, reviverNodes)
+func generateNameIpFile(config *config.Config) {
+	fmt.Printf("Generating name_ip file with %d mappers, %d sharding, and %d revivers\n", config.Mappers.Amount, config.Sharding.Amount, config.Reviver.Amount)
 	file, err := os.Create(NAME_IP_FILE)
 	if err != nil {
 		fmt.Printf("Error creating file: %v\n", err)
@@ -193,15 +202,20 @@ func generateNameIpFile(mappers int, sharding int, reviverNodes int) {
 		fmt.Printf("Error writing to file: %v\n", err)
 		os.Exit(1)
 	}
-	for i := 1; i <= mappers; i++ {
-		if err := writer.Write([]string{fmt.Sprintf("mapper-%d", i), strings.Replace(MAPPER_IP, "X", fmt.Sprintf("%d", i), 1)}); err != nil {
-			fmt.Printf("Error writing to file: %v\n", err)
-			os.Exit(1)
+	if config.Query.Query3 || config.Query.Query4 || config.Query.Query5 {
+		for i := 1; i <= config.Mappers.Amount; i++ {
+			if err := writer.Write([]string{fmt.Sprintf("mapper-%d", i), strings.Replace(MAPPER_IP, "X", fmt.Sprintf("%d", i), 1)}); err != nil {
+				fmt.Printf("Error writing to file: %v\n", err)
+				os.Exit(1)
+			}
 		}
 	}
 
 	for query := 1; query <= 5; query++ {
-		for i := 0; i < sharding; i++ {
+		if query == 1 && !config.Query.Query1 || query == 2 && !config.Query.Query2 || query == 3 && !config.Query.Query3 || query == 4 && !config.Query.Query4 || query == 5 && !config.Query.Query5 {
+			continue
+		}
+		for i := 0; i < config.Sharding.Amount; i++ {
 			if err := writer.Write([]string{fmt.Sprintf("queries-%d-%d", query, i), strings.Replace(QUERY_IP, "X", fmt.Sprintf("%d%d", query, i), 1)}); err != nil {
 				fmt.Printf("Error writing to file: %v\n", err)
 				os.Exit(1)
@@ -213,7 +227,7 @@ func generateNameIpFile(mappers int, sharding int, reviverNodes int) {
 		}
 	}
 
-	for i := 1; i <= reviverNodes; i++ {
+	for i := 1; i <= config.Reviver.Amount; i++ {
 		if err := writer.Write([]string{fmt.Sprintf("reviver-%d", i), strings.Replace(REVIVER_IP, "X", fmt.Sprintf("%d", i), 1)}); err != nil {
 			fmt.Printf("Error writing to file: %v\n", err)
 			os.Exit(1)
@@ -228,6 +242,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	generateDockerCompose(config.Sharding.Amount, config.Mappers.Amount, config.Reviver.Amount)
-	generateNameIpFile(config.Mappers.Amount, config.Sharding.Amount, config.Reviver.Amount)
+	generateDockerCompose(config)
+	generateNameIpFile(config)
 }

@@ -131,13 +131,21 @@ func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 		go func() {
 			qc.wg.Wait()
 			qc.sendResultFinal()
-			qc.End()
 			msg.Ack()
+			qc.End()
 		}()
 		return
 	}
 
 	if qc.processedStats.Contains(int64(msg.Stats.Id)) {
+
+		if msg.Stats.Negatives == 1 {
+			stat := shared.GetStat(qc.clientId, msg.Stats.AppId)
+			if stat.Negatives == qc.middleware.Config.Query.MinNegatives {
+				qc.sendResult(msg.Stats)
+			}
+		}
+
 		msg.Ack()
 		return
 	}
@@ -165,11 +173,12 @@ func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 	qc.processedStats.Add(int64(msg.Stats.Id))
 
 	os.Rename(tmpFile.Name(), realFilename)
-	qc.commit.End()
 
 	if isNegative && stat.Negatives == qc.middleware.Config.Query.MinNegatives {
 		qc.sendResult(stat)
 	}
+
+	qc.commit.End()
 	msg.Ack()
 }
 

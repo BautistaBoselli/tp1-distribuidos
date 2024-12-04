@@ -33,10 +33,15 @@ type ReviverConfig struct {
 }
 
 type QueryConfig struct {
-	Id             int `mapstructure:"id"`
-	Shard          int `mapstructure:"shard"`
-	ResultInterval int `mapstructure:"query1-result-interval"`
-	MinNegatives   int `mapstructure:"query4-min-negatives"`
+	Id             int  `mapstructure:"id"`
+	Shard          int  `mapstructure:"shard"`
+	ResultInterval int  `mapstructure:"query1-result-interval"`
+	MinNegatives   int  `mapstructure:"query4-min-negatives"`
+	Query1         bool `mapstructure:"query-1"`
+	Query2         bool `mapstructure:"query-2"`
+	Query3         bool `mapstructure:"query-3"`
+	Query4         bool `mapstructure:"query-4"`
+	Query5         bool `mapstructure:"query-5"`
 }
 
 type Config struct {

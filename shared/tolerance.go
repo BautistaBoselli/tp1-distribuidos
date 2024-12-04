@@ -9,7 +9,7 @@ import (
 	"math/rand"
 )
 
-var DEBUG_TOLERANCE = false
+var DEBUG_TOLERANCE = true
 
 type Processed struct {
 	file      *os.File
@@ -94,6 +94,7 @@ func (c *Commit) Write(data [][]string) {
 	}
 
 	c.Data = data
+	c.commit.Truncate(0)
 	c.writer.WriteAll(data)
 	c.writer.Write([]string{"END"})
 	c.writer.Flush()
@@ -107,7 +108,7 @@ func (c *Commit) End() {
 func RestoreCommit(path string, onCommit func(commit *Commit)) {
 	commitFile, err := os.Open(path)
 	if err != nil {
-		log.Infof("No commit file found: %v", err) // TODO: remove all logs and trucate commit if corrupted
+		log.Infof("No commit file found: %v", err)
 		return
 	}
 
@@ -138,6 +139,8 @@ func RestoreCommit(path string, onCommit func(commit *Commit)) {
 	commit := &Commit{commit: commitFile, Data: data[:len(data)-1]}
 
 	onCommit(commit)
+
+	commit.End()
 }
 
 type Cache[T any] struct {

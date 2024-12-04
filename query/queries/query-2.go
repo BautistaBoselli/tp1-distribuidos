@@ -125,8 +125,8 @@ func NewQuery2Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 func (qc *Query2Client) processGame(msg *middleware.GameMsg) {
 	if msg.Last {
 		qc.sendResult()
-		qc.End()
 		msg.Ack()
+		qc.End()
 		return
 	}
 

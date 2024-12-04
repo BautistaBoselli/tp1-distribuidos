@@ -68,7 +68,6 @@ func (m *Middleware) declareReviewsQueue() error {
 		false,     // no-wait
 		nil,       // arguments
 	)
-	log.Infof("Declared queue: %v", queue.Name)
 	m.reviewsQueue = &queue
 
 	if err != nil {
@@ -124,7 +123,6 @@ func (m *Middleware) DeclareResponsesQueue() error {
 		false,       // no-wait
 		nil,         // arguments
 	)
-	log.Infof("Declared queue: %v", queue.Name)
 	m.responsesQueue = &queue
 
 	if err != nil {

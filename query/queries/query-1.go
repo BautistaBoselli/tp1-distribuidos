@@ -49,13 +49,6 @@ func (q *Query1) Run() {
 			appId, _ := strconv.Atoi(commit.Data[0][1])
 			processed.Add(int64(appId))
 		}
-		// TODO: fijarse que el restore puede tener que hacer el envio!!
-		// TODO: en todos, que cagada lpm
-
-		// POSIBLE SOLUCION:
-		// if qc.processedGames.Count()%qc.resultInterval == 0 {
-		// 	qc.sendResult(false)
-		// }
 	})
 
 	gamesQueue, err := q.middleware.ListenGames("1."+strconv.Itoa(q.shardId), fmt.Sprintf("%d", q.shardId))
@@ -101,6 +94,8 @@ func NewQuery1Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 		log.Errorf("Error opening file: %s", err)
 	}
 
+	defer resultFile.Close()
+
 	result := middleware.Query1Result{
 		Windows: 0,
 		Mac:     0,
@@ -133,10 +128,9 @@ func NewQuery1Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 
 func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	if msg.Last {
-		qc.sendResult(true)
-		qc.End() // TODO CHUSMEAR COMO MANEJAR ESTO, supongo que el
-		// end puede ir despues (o saber que si ya no esta para borrar fulbo y se ACK igual)
+		qc.sendResult(true, 0)
 		msg.Ack()
+		qc.End()
 		return
 	}
 
@@ -144,6 +138,11 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 
 	if qc.processedGames.Contains(int64(game.AppId)) {
 		log.Infof("Game %d already processed", game.AppId)
+
+		if qc.processedGames.Count()%qc.resultInterval == 0 {
+			qc.sendResult(false, game.AppId)
+		}
+
 		msg.Ack()
 		return
 	}
@@ -185,7 +184,7 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after renaming (game %d)", game.AppId))
 
 	if qc.processedGames.Count()%qc.resultInterval == 0 {
-		qc.sendResult(false)
+		qc.sendResult(false, game.AppId)
 	}
 
 	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after sending result (game %d)", game.AppId))
@@ -195,16 +194,20 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	msg.Ack()
 }
 
-func (qc *Query1Client) sendResult(final bool) {
+func (qc *Query1Client) sendResult(final bool, appId int) {
 	qc.result.Final = final
 
+	id := qc.getNextId(appId)
 	resultMsg := &middleware.Result{
+		Id:             id,
 		ClientId:       qc.clientId,
 		QueryId:        1,
 		ShardId:        qc.shardId,
 		IsFinalMessage: final,
 		Payload:        qc.result,
 	}
+
+	shared.TestTolerance(1, 8, "Exiting before sending result")
 
 	if resultMsg.IsFinalMessage {
 		log.Infof("Query 1 [FINAL] - Query 1-%d - Windows: %d, Linux: %d, Mac: %d", qc.shardId, qc.result.Windows, qc.result.Linux, qc.result.Mac)
@@ -221,12 +224,28 @@ func (qc *Query1Client) sendResult(final bool) {
 		}
 	}
 
+	shared.TestTolerance(1, 8, "Exiting before restarting counter")
+
 	qc.result = middleware.Query1Result{
 		Final:   false,
 		Windows: 0,
 		Linux:   0,
 		Mac:     0,
 	}
+	os.Remove(fmt.Sprintf("./database/%s/query-1.csv", qc.clientId))
+
+}
+
+// clientId (2 bytes) + queryId (1 byte) + shardId (1 byte) + appId (4 bytes)
+func (qc *Query1Client) getNextId(appId int) int64 {
+	clientId, _ := strconv.Atoi(qc.clientId)
+
+	clientIdHigh := (clientId >> 8) & 0xFF // Get high byte
+	clientIdLow := clientId & 0xFF         // Get low byte
+
+	appId = qc.processedGames.Count() + 1 // 0 means last
+
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(1)<<40 | int64(qc.shardId)<<32 | int64(appId)
 }
 
 func (qc *Query1Client) End() {

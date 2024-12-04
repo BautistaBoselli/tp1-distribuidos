@@ -94,8 +94,8 @@ func NewQuery5Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 	if msg.Last {
 		qc.calculatePercentile()
-		qc.End()
 		msg.Ack()
+		qc.End()
 		return // esto no estaba antes pero lo agrego porque tira error el processed
 	}
 

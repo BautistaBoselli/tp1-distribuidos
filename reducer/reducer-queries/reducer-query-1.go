@@ -15,29 +15,37 @@ import (
 var log = logging.MustGetLogger("log")
 
 type ReducerQuery1 struct {
-	middleware *middleware.Middleware
-	results    chan *middleware.Result
-	// pendingAnswers int
-	receivedAnswers *shared.Processed
-	ClientId        string
-	finished        bool
+	middleware       *middleware.Middleware
+	results          chan *middleware.Result
+	processedAnswers *shared.Processed
+	finalAnswers     *shared.Processed
+	result           middleware.Query1Result
+	commit           *shared.Commit
+	ClientId         string
+	finished         bool
 }
 
 func NewReducerQuery1(clientId string, m *middleware.Middleware) *ReducerQuery1 {
+
 	return &ReducerQuery1{
-		middleware: m,
-		results:    make(chan *middleware.Result),
-		// pendingAnswers: m.Config.Sharding.Amount,
-		receivedAnswers: shared.NewProcessed(fmt.Sprintf("./database/%s/received.bin", clientId)),
-		ClientId:        clientId,
+		middleware:       m,
+		results:          make(chan *middleware.Result),
+		commit:           shared.NewCommit(fmt.Sprintf("./database/%s/commit.csv", clientId)),
+		processedAnswers: shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
+		finalAnswers:     shared.NewProcessed(fmt.Sprintf("./database/%s/received.bin", clientId)),
+		ClientId:         clientId,
 	}
 }
 
 func (r *ReducerQuery1) QueueResult(result *middleware.Result) {
+	if r.finished {
+		result.Ack()
+		return
+	}
 	r.results <- result
 }
 
-func (r *ReducerQuery1) Close() {
+func (r *ReducerQuery1) End() {
 	if r.finished {
 		return
 	}
@@ -46,113 +54,142 @@ func (r *ReducerQuery1) Close() {
 	close(r.results)
 }
 
-func (r *ReducerQuery1) getResultsFromFile() []int64 {
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/1.txt", r.ClientId), os.O_RDONLY|os.O_CREATE, 0755)
+func (r *ReducerQuery1) RestoreResult() {
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/query-1.csv", r.ClientId), os.O_RDONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("Failed to open file: %v", err)
-		return nil
+		return
 	}
 	defer file.Close()
+
+	result := middleware.Query1Result{
+		Windows: 0,
+		Mac:     0,
+		Linux:   0,
+	}
 
 	reader := bufio.NewReader(file)
 	line, err := reader.ReadString('\n')
-	if err != nil && err.Error() != "EOF" {
-		log.Errorf("Failed to read line: %v", err)
-		return nil
-	}
-	line = strings.TrimRight(line, "\n")
-	values := strings.Split(line, ",")
-	if len(values) != 3 {
-		return []int64{0, 0, 0}
-	}
 
-	windows, _ := strconv.Atoi(values[0])
-	mac, _ := strconv.Atoi(values[1])
-	linux, _ := strconv.Atoi(values[2])
+	log.Infof("Restoring line: %s", line)
 
-	return []int64{int64(windows), int64(mac), int64(linux)}
-}
+	if err == nil {
+		fields := strings.Split(strings.TrimSuffix(line, "\n"), ",")
 
-func (r *ReducerQuery1) storeResults(windows int64, mac int64, linux int64) {
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/1.txt", r.ClientId), os.O_WRONLY|os.O_CREATE, 0755)
-	if err != nil {
-		log.Errorf("Failed to open file: %v", err)
-		return
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	_, err = writer.WriteString(fmt.Sprintf("%d,%d,%d\n", windows, mac, linux))
-	if err != nil {
-		log.Errorf("Failed to write line: %v", err)
-		return
+		if len(fields) == 3 {
+			result.Windows, _ = strconv.ParseInt(fields[0], 10, 64)
+			result.Linux, _ = strconv.ParseInt(fields[1], 10, 64)
+			result.Mac, _ = strconv.ParseInt(fields[2], 10, 64)
+		}
 	}
 
-	writer.Flush()
+	r.result = result
 }
 
 func (r *ReducerQuery1) Run() {
 	log.Infof("Reducer Query 1 running")
+	r.RestoreResult()
+
+	shared.RestoreCommit(fmt.Sprintf("./database/%s/commit.csv", r.ClientId), func(commit *shared.Commit) {
+		log.Infof("Restored commit: %v", commit)
+
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
+
+		id, _ := strconv.ParseInt(commit.Data[0][1], 10, 64)
+		r.processedAnswers.Add(id)
+
+		if commit.Data[0][4] == "true" {
+			shardId, _ := strconv.Atoi(commit.Data[0][5])
+			r.finalAnswers.Add(int64(shardId))
+		}
+
+		r.RestoreResult()
+
+		isFinalMessage := r.finalAnswers.Count() == r.middleware.Config.Sharding.Amount
+		r.SendResult(isFinalMessage)
+	})
 
 	for msg := range r.results {
 		r.processResult(msg)
-
-		msg.Ack()
-
-		if r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount {
-			r.SendResult(true)
-			r.Close()
-			break
-		} else {
-			r.SendResult(false)
-		}
 	}
 }
 
 func (r *ReducerQuery1) processResult(result *middleware.Result) {
+	query1Result := result.Payload.(middleware.Query1Result)
 
-	switch result.Payload.(type) {
-	case middleware.Query1Result:
-		query1Result := result.Payload.(middleware.Query1Result)
-		values := r.getResultsFromFile()
-		if len(values) != 3 {
-			values = []int64{0, 0, 0}
-		}
-		windows := values[0]
-		mac := values[1]
-		linux := values[2]
+	if r.processedAnswers.Contains(result.Id) {
+		log.Infof("Result %d already processed", result.Id)
+		result.Ack()
+		return
+	}
 
-		windows += query1Result.Windows
-		mac += query1Result.Mac
-		linux += query1Result.Linux
+	r.result.Windows += query1Result.Windows
+	r.result.Mac += query1Result.Mac
+	r.result.Linux += query1Result.Linux
 
-		r.storeResults(windows, mac, linux)
+	tmpFile, err := os.CreateTemp(fmt.Sprintf("./database/%s", r.ClientId), "query-1.csv")
+	if err != nil {
+		log.Errorf("failed to create temp file: %v", err)
+		return
+	}
 
-		if query1Result.Final {
-			r.receivedAnswers.Add(int64(result.ShardId))
-		}
+	tmpFile.WriteString(fmt.Sprintf("%d,%d,%d\n", r.result.Windows, r.result.Linux, r.result.Mac))
+	realFilename := fmt.Sprintf("./database/%s/query-1.csv", r.ClientId)
+
+	shared.TestTolerance(1, 10, "Exiting after tmp")
+
+	r.commit.Write([][]string{
+		{r.ClientId, strconv.FormatInt(result.Id, 10), tmpFile.Name(), realFilename, strconv.FormatBool(query1Result.Final), strconv.Itoa(result.ShardId)},
+	})
+
+	shared.TestTolerance(1, 10, "Exiting after creating commit")
+
+	r.processedAnswers.Add(result.Id)
+
+	shared.TestTolerance(1, 10, "Exiting after adding processed answer")
+
+	os.Rename(tmpFile.Name(), realFilename)
+
+	shared.TestTolerance(1, 10, "Exiting after renaming")
+
+	if query1Result.Final {
+		r.finalAnswers.Add(int64(result.ShardId))
+	}
+
+	shared.TestTolerance(1, 10, "Exiting after adding final answer")
+
+	isFinalMessage := r.finalAnswers.Count() == r.middleware.Config.Sharding.Amount
+	r.SendResult(isFinalMessage)
+
+	shared.TestTolerance(1, 10, "Exiting after sending result")
+
+	r.commit.End()
+
+	result.Ack()
+
+	if isFinalMessage {
+		r.End()
 	}
 }
 
 func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
-	values := r.getResultsFromFile()
-	query1Result := &middleware.Query1Result{
-		Windows: values[0],
-		Mac:     values[1],
-		Linux:   values[2],
-	}
 
 	result := &middleware.Result{
 		ClientId:       r.ClientId,
 		QueryId:        1,
-		Payload:        query1Result,
+		Payload:        r.result,
 		IsFinalMessage: isFinalMessage,
 	}
 
-	log.Infof("Reducer Query 1: Windows: %d, Mac: %d, Linux: %d, IsFinalMessage: %t", values[0], values[1], values[2], isFinalMessage)
+	if r.result.Windows == 0 && r.result.Mac == 0 && r.result.Linux == 0 {
+		return
+	}
+
+	log.Infof("Reducer Query 1: Windows: %d, Mac: %d, Linux: %d, IsFinalMessage: %t", r.result.Windows, r.result.Mac, r.result.Linux, isFinalMessage)
 
 	err := r.middleware.SendResponse(result)
 	if err != nil {
 		log.Errorf("Failed to send response: %v", err)
 	}
+
 }

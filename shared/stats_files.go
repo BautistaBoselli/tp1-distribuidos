@@ -14,54 +14,29 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-func UpsertStats(clientId string, stats *middleware.Stats) *middleware.Stats {
-	os.MkdirAll(fmt.Sprintf("./database/%s/stats", clientId), 0777)
-	file, err := os.OpenFile(fmt.Sprintf("./database/%s/stats/%d.csv", clientId, stats.AppId), os.O_RDWR|os.O_CREATE, 0777)
+func GetStat(clientId string, appId int) *middleware.Stats {
+	file, err := os.OpenFile(fmt.Sprintf("./database/%s/stats/%d.csv", clientId, appId), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		log.Errorf("failed to open file: %v", err)
 		return nil
 	}
 	defer file.Close()
 
-	fileStat, err := file.Stat()
-	if err != nil {
-		log.Errorf("failed to get file stat: %v", err)
+	reader := csv.NewReader(file)
+
+	record, err := reader.Read()
+	if err != nil && err != io.EOF {
+		log.Errorf("failed to read line: %v", err)
 		return nil
 	}
 
-	if fileStat.Size() > 0 {
-		reader := csv.NewReader(file)
-
-		record, err := reader.Read()
-		if err != nil && err != io.EOF {
-			log.Errorf("failed to read line: %v", err)
-		}
-
-		prevStat, err := ParseStat(record)
-		if err != nil {
-			log.Errorf("Error parsing stat: %s", err)
-			return nil
-		}
-
-		stats.Positives += prevStat.Positives
-		stats.Negatives += prevStat.Negatives
-
-		_, err = file.Seek(0, 0)
-		if err != nil {
-			log.Errorf("failed to seek to start of file: %v", err)
-		}
-	}
-
-	writer := csv.NewWriter(file)
-
-	err = writer.Write([]string{strconv.Itoa(stats.AppId), stats.Name, strconv.Itoa(stats.Positives), strconv.Itoa(stats.Negatives)})
+	stat, err := ParseStat(record)
 	if err != nil {
-		log.Errorf("failed to write to file: %v", err)
+		log.Errorf("Error parsing stat: %s", err)
+		return nil
 	}
 
-	writer.Flush()
-
-	return stats
+	return stat
 }
 
 func UpdateStat(clientId string, stat *middleware.Stats, tmpFile *os.File, cache *Cache[*middleware.Stats]) *middleware.Stats {
@@ -163,7 +138,6 @@ func GetTopStatsFS(clientId string, cant int, compare func(a *middleware.Stats, 
 	}
 
 	return top
-
 }
 
 func ParseStat(record []string) (*middleware.Stats, error) {
