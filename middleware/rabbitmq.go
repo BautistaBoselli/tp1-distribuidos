@@ -115,7 +115,7 @@ func (m *Middleware) consumeQueue(q *amqp.Queue) (<-chan amqp.Delivery, error) {
 func (m *Middleware) bindExchange(name string, exchange string, key string) (*amqp.Queue, error) {
 	q, err := m.channel.QueueDeclare(
 		name,  // name
-		false, // durable
+		true,  // durable
 		false, // delete when unused
 		false, // exclusive
 		false, // no-wait

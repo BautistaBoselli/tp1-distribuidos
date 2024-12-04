@@ -41,12 +41,12 @@ func (q *Query1) Run() {
 	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
 		log.Infof("Restored commit: %v", commit)
 
-		os.Rename(commit.Data[0][1], commit.Data[0][2])
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
 
 		processed := shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", commit.Data[0][0]))
 
 		if processed != nil {
-			appId, _ := strconv.Atoi(commit.Data[0][0])
+			appId, _ := strconv.Atoi(commit.Data[0][1])
 			processed.Add(int64(appId))
 		}
 	})
@@ -127,7 +127,7 @@ func NewQuery1Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	if msg.Last {
 		qc.sendResult(true)
-		qc.Close()
+		qc.End()
 		msg.Ack()
 		return
 	}
@@ -161,7 +161,7 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	realFilename := fmt.Sprintf("./database/%s/query-1.csv", qc.clientId)
 
 	qc.commit.Write([][]string{
-		{strconv.Itoa(game.AppId), tmpFile.Name(), realFilename},
+		{qc.clientId, strconv.Itoa(game.AppId), tmpFile.Name(), realFilename},
 	})
 
 	qc.processedGames.Add(int64(game.AppId))
@@ -209,7 +209,7 @@ func (qc *Query1Client) sendResult(final bool) {
 	}
 }
 
-func (qc *Query1Client) Close() {
-	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+func (qc *Query1Client) End() {
+	os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
 	qc.processedGames.Close()
 }

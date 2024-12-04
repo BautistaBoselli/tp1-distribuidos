@@ -8,12 +8,12 @@ Importantes:
 
 ## Rabbit MQ
 
-- [ ] Rabbit: Verificar que todo este en durable
+- [x] Rabbit: Verificar que todo este en durable
 - [ ] Rabbit: Usar el amqp.Persistent (medir cambio de rendimientos)
 
 ## BullyResurrecter
 
-- [ ] Bully: Traer el bully
+- [x] Bully: Traer el bully
 
 ## Server
 
@@ -36,17 +36,19 @@ Es el mas basico, no necesita commits para los datos recibidos o mandados.
 Hay que usar los totales como condicion para el EOF.
 
 - [x] Mapper: generar stat con el id de la review
+- [ ] Mapper: manejar state de cada MapperClient en disco (o ver como diseñarlo)
 - [ ] Mapper: EOF con finished + totals para condicion de corte para reviews (googlear como seria una buena condicion de corte para worker queues).
 
 ## Queries
 
 El gordo demo-falopa 😎
 
-- [ ] Queries: crear concepto de QueryClient
-- [ ] Queries: commits y temps
-- [ ] Queries: mover 1 y 2 a disco
+- [x] Queries: crear concepto de QueryClient
+- [x] Queries: commits y temps
+- [x] Queries: mover 1 y 2 a disco
 - [ ] Queries: ver como chota manejar los envios (no es grave los duplicados)
 - [ ] Queries: definir ids para los results
+- [ ] Queries: restore commit reenvia mensaje si hace falta.
 
 ## Reducers
 

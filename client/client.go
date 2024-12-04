@@ -146,7 +146,6 @@ func (c *Client) SendReviews(file *os.File) error {
 			return err
 		}
 		time.Sleep(5 * time.Millisecond)
-		break
 	}
 
 	return nil

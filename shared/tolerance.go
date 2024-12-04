@@ -135,3 +135,20 @@ func RestoreCommit(path string, onCommit func(commit *Commit)) {
 
 	onCommit(commit)
 }
+
+type Cache[T any] struct {
+	cache map[int32]T
+}
+
+func NewCache[T any]() *Cache[T] {
+	return &Cache[T]{cache: make(map[int32]T)}
+}
+
+func (c *Cache[T]) Add(key int32, value T) {
+	c.cache[key] = value
+}
+
+func (c *Cache[T]) Get(key int32) (T, bool) {
+	value, ok := c.cache[key]
+	return value, ok
+}

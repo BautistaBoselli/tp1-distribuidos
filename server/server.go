@@ -142,7 +142,7 @@ func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBa
 }
 
 func (c *Client) handleDisconnect(err error) {
-	log.Errorf("action: handle_disconnect | result: fail | error: %s", err)
+	log.Infof("action: handle_disconnect | client: %s | EOF received", c.id)
 	c.conn.Close()
 }
 
