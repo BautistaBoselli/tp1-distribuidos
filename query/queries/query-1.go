@@ -49,6 +49,13 @@ func (q *Query1) Run() {
 			appId, _ := strconv.Atoi(commit.Data[0][1])
 			processed.Add(int64(appId))
 		}
+		// TODO: fijarse que el restore puede tener que hacer el envio!!
+		// TODO: en todos, que cagada lpm
+
+		// POSIBLE SOLUCION:
+		// if qc.processedGames.Count()%qc.resultInterval == 0 {
+		// 	qc.sendResult(false)
+		// }
 	})
 
 	gamesQueue, err := q.middleware.ListenGames("1."+strconv.Itoa(q.shardId), fmt.Sprintf("%d", q.shardId))
@@ -127,7 +134,8 @@ func NewQuery1Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	if msg.Last {
 		qc.sendResult(true)
-		qc.End()
+		qc.End() // TODO CHUSMEAR COMO MANEJAR ESTO, supongo que el
+		// end puede ir despues (o saber que si ya no esta para borrar fulbo y se ACK igual)
 		msg.Ack()
 		return
 	}
@@ -158,18 +166,29 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 
 	tmpFile.WriteString(fmt.Sprintf("%d,%d,%d\n", qc.result.Windows, qc.result.Linux, qc.result.Mac))
 
+	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after tmp (game %d)", game.AppId))
+
 	realFilename := fmt.Sprintf("./database/%s/query-1.csv", qc.clientId)
 
 	qc.commit.Write([][]string{
 		{qc.clientId, strconv.Itoa(game.AppId), tmpFile.Name(), realFilename},
 	})
 
+	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after creating commit (game %d)", game.AppId))
+
 	qc.processedGames.Add(int64(game.AppId))
+
+	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after adding processed game (game %d)", game.AppId))
+
 	os.Rename(tmpFile.Name(), realFilename)
+
+	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after renaming (game %d)", game.AppId))
 
 	if qc.processedGames.Count()%qc.resultInterval == 0 {
 		qc.sendResult(false)
 	}
+
+	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after sending result (game %d)", game.AppId))
 
 	qc.commit.End()
 

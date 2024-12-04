@@ -3,12 +3,12 @@ package main
 import "time"
 
 const (
-	ElectionTimeout        = 5 * time.Second
-	OkResponseTimeout      = 2 * time.Second
-	PongTimeout            = 3 * time.Second
-	PingToLeaderTimeout    = 1 * time.Second
-	ResurrecterPingTimeout = 250 * time.Millisecond
-	ResurrecterPingInterval = 1 * time.Second
-	ResurrecterRestartDelay = 5 * time.Second
-	ResurrecterPingRetries  = 4
+	ElectionTimeout         = 2 * time.Second
+	OkResponseTimeout       = 800 * time.Millisecond
+	PongTimeout             = 1200 * time.Millisecond
+	PingToLeaderTimeout     = 400 * time.Millisecond
+	ResurrecterPingTimeout  = 100 * time.Millisecond
+	ResurrecterPingInterval = 400 * time.Millisecond
+	ResurrecterRestartDelay = 2 * time.Second
+	ResurrecterPingRetries  = 1
 )

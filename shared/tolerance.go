@@ -5,7 +5,11 @@ import (
 	"encoding/csv"
 	"io"
 	"os"
+
+	"math/rand"
 )
+
+var DEBUG_TOLERANCE = true
 
 type Processed struct {
 	file      *os.File
@@ -151,4 +155,14 @@ func (c *Cache[T]) Add(key int32, value T) {
 func (c *Cache[T]) Get(key int32) (T, bool) {
 	value, ok := c.cache[key]
 	return value, ok
+}
+
+func TestTolerance(n int, in int, msg string) {
+	if DEBUG_TOLERANCE {
+		randNum := rand.Intn(in)
+		if randNum < n {
+			log.Infof("\033[35m[TEST TOLERANCE] %s\033[0m", msg)
+			os.Exit(0)
+		}
+	}
 }

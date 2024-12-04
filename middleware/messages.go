@@ -184,6 +184,7 @@ func (s *StatsMsg) Ack() {
 type Result struct {
 	ClientId       string
 	QueryId        int
+	ShardId        int
 	IsFinalMessage bool
 	Payload        interface{}
 	msg            amqp.Delivery

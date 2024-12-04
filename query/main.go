@@ -16,6 +16,7 @@ import (
 var log = logging.MustGetLogger("log")
 
 func main() {
+	os.Mkdir("./database", 0666)
 	config, err := config.InitConfig()
 	if err != nil {
 		log.Criticalf("%s", err)
@@ -53,7 +54,6 @@ func main() {
 		log.Info("action: cancelar_query | result: in_progress")
 		middleware.Close()
 	}()
-
 
 	go shared.RunUDPListener(8080)
 	query.Run()

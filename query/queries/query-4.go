@@ -167,12 +167,6 @@ func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 	os.Rename(tmpFile.Name(), realFilename)
 	qc.commit.End()
 
-	// updatedStat := shared.UpsertStats(message.ClientId, message.Stats)
-	// if updatedStat == nil {
-	// 	log.Errorf("Failed to update stat, could not retrieve file for client %s", message.ClientId)
-	// 	return
-	// }
-
 	if isNegative && stat.Negatives == qc.middleware.Config.Query.MinNegatives {
 		qc.sendResult(stat)
 	}

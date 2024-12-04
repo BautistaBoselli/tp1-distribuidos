@@ -43,6 +43,7 @@ func createReducer(env *config.Config, clientId string, mid *middleware.Middlewa
 }
 
 func main() {
+	os.Mkdir("./database", 0666)
 	env, err := config.InitConfig()
 	if err != nil {
 		log.Errorf("action: init config | result: fail | error: %s", err)

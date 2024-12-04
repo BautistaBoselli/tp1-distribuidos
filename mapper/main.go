@@ -15,6 +15,7 @@ import (
 var log = logging.MustGetLogger("log")
 
 func main() {
+	os.Mkdir("./database", 0666)
 	config, err := config.InitConfig()
 	if err != nil {
 		log.Criticalf("%s", err)
@@ -32,9 +33,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	defer stop()
 
-
 	go shared.RunUDPListener(8080)
-	
+
 	go func() {
 		<-ctx.Done()
 		log.Info("action: cerrar_mapper | result: in_progress")

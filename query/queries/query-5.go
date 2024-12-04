@@ -104,6 +104,11 @@ func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 		return
 	}
 
+	if msg.Stats.Negatives == 0 {
+		msg.Ack()
+		return
+	}
+
 	tmpFile, err := os.CreateTemp("./database", fmt.Sprintf("%d.csv", msg.Stats.AppId))
 	if err != nil {
 		log.Errorf("failed to create temp file: %v", err)
@@ -115,21 +120,39 @@ func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 		return
 	}
 
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after tmp (game %d)", msg.Stats.AppId))
+	}
+
 	realFilename := fmt.Sprintf("./database/%s/stats/%d.csv", qc.clientId, msg.Stats.AppId)
 
 	qc.commit.Write([][]string{
 		{qc.clientId, strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
 	})
 
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after commit (game %d)", msg.Stats.AppId))
+	}
+
 	qc.processedStats.Add(int64(msg.Stats.Id))
 
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after adding processed stat (game %d)", msg.Stats.AppId))
+	}
+
 	os.Rename(tmpFile.Name(), realFilename)
+
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after renaming (game %d)", msg.Stats.AppId))
+	}
+
 	qc.commit.End()
 
 	msg.Ack()
 }
 
 func (qc *Query5Client) calculatePercentile() {
+	os.Remove(path.Join("client-"+qc.clientId, "stored.csv"))
 	qc.minNegativeReviews = -1
 
 	dentries, err := os.ReadDir(fmt.Sprintf("./database/%s/stats", qc.clientId))
@@ -290,6 +313,8 @@ func (qc *Query5Client) sendResult() {
 			result.Stats = make([]middleware.Stats, 0)
 		}
 	}
+
+	shared.TestTolerance(1, 2, "Exiting after sending result")
 
 	log.Infof("Query 5 finished")
 }

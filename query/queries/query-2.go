@@ -80,6 +80,7 @@ type Query2Client struct {
 	shardId        int
 	processedGames *shared.Processed
 	result         middleware.Query2Result
+	i              int
 }
 
 func NewQuery2Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int) *Query2Client {
@@ -117,6 +118,7 @@ func NewQuery2Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 		shardId:        shardId,
 		processedGames: shared.NewProcessed(fmt.Sprintf("./database/%s/processed.bin", clientId)),
 		result:         result,
+		i:              0,
 	}
 }
 
@@ -155,7 +157,12 @@ func (qc *Query2Client) processGame(msg *middleware.GameMsg) {
 		qc.result.TopGames = append(qc.result.TopGames, middleware.Game{})
 		copy(qc.result.TopGames[insertIndex+1:], qc.result.TopGames[insertIndex:])
 		qc.result.TopGames[insertIndex] = *game
+	} else {
+		msg.Ack()
+		return
 	}
+
+	qc.i++
 
 	if len(qc.result.TopGames) > QUERY2_TOP_SIZE {
 		qc.result.TopGames = qc.result.TopGames[:QUERY2_TOP_SIZE]
@@ -169,18 +176,27 @@ func (qc *Query2Client) processGame(msg *middleware.GameMsg) {
 
 	writer := csv.NewWriter(tmpFile)
 	for _, game := range qc.result.TopGames {
-		writer.Write([]string{qc.clientId, strconv.Itoa(game.AppId), game.Name, strconv.FormatInt(game.AvgPlaytime, 10)})
+		writer.Write([]string{strconv.Itoa(game.AppId), game.Name, strconv.FormatInt(game.AvgPlaytime, 10)})
 	}
 	writer.Flush()
+
+	shared.TestTolerance(1, 40, fmt.Sprintf("Exiting after tmp (game %d)", game.AppId))
 
 	realFilename := fmt.Sprintf("./database/%s/query-2.csv", qc.clientId)
 
 	qc.commit.Write([][]string{
-		{strconv.Itoa(game.AppId), tmpFile.Name(), realFilename},
+		{qc.clientId, strconv.Itoa(game.AppId), tmpFile.Name(), realFilename},
 	})
 
+	shared.TestTolerance(1, 40, fmt.Sprintf("Exiting after creating commit (game %d)", game.AppId))
+
 	qc.processedGames.Add(int64(game.AppId))
+
+	shared.TestTolerance(1, 40, fmt.Sprintf("Exiting after adding processed game (game %d)", game.AppId))
+
 	os.Rename(tmpFile.Name(), realFilename)
+
+	shared.TestTolerance(1, 40, fmt.Sprintf("Exiting after renaming (game %d)", game.AppId))
 
 	qc.commit.End()
 
@@ -189,6 +205,7 @@ func (qc *Query2Client) processGame(msg *middleware.GameMsg) {
 
 func (qc *Query2Client) sendResult() {
 	log.Infof("Query 2 [FINAL]")
+	log.Infof("Query 2 [FINAL] - i: %d", qc.i)
 
 	result := middleware.Result{
 		ClientId:       qc.clientId,
@@ -197,12 +214,15 @@ func (qc *Query2Client) sendResult() {
 		Payload:        qc.result,
 	}
 
+	shared.TestTolerance(1, 4, "Exiting before sending result")
+
 	if err := qc.middleware.SendResult("2", &result); err != nil {
 		log.Errorf("Failed to send result: %v", err)
 	}
 	for i, game := range qc.result.TopGames {
 		log.Debugf("Top %d game: %s (%d)", i+1, game.Name, game.AvgPlaytime)
 	}
+	shared.TestTolerance(1, 4, "Exiting after sending result")
 }
 
 func (qc *Query2Client) End() {

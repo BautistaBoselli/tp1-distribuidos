@@ -9,6 +9,8 @@ import (
 	"tp1-distribuidos/shared"
 )
 
+const GEOMETRY_DASH_APP_ID = 322170
+
 const QUERY3_TOP_SIZE = 5
 
 type Query3 struct {
@@ -104,6 +106,11 @@ func (qc *Query3Client) processStat(msg *middleware.StatsMsg) {
 		return
 	}
 
+	if msg.Stats.Positives == 0 {
+		msg.Ack()
+		return
+	}
+
 	tmpFile, err := os.CreateTemp("./database", fmt.Sprintf("%d.csv", msg.Stats.AppId))
 	if err != nil {
 		log.Errorf("failed to create temp file: %v", err)
@@ -115,15 +122,31 @@ func (qc *Query3Client) processStat(msg *middleware.StatsMsg) {
 		return
 	}
 
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 8000, fmt.Sprintf("Exiting after tmp (game %d)", msg.Stats.AppId))
+	}
+
 	realFilename := fmt.Sprintf("./database/%s/stats/%d.csv", qc.clientId, msg.Stats.AppId)
 
 	qc.commit.Write([][]string{
 		{qc.clientId, strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
 	})
 
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 8000, fmt.Sprintf("Exiting after commit (game %d)", msg.Stats.AppId))
+	}
 	qc.processedStats.Add(int64(msg.Stats.Id))
 
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 8000, fmt.Sprintf("Exiting after adding processed stat (game %d)", msg.Stats.AppId))
+	}
+
 	os.Rename(tmpFile.Name(), realFilename)
+
+	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
+		shared.TestTolerance(1, 8000, fmt.Sprintf("Exiting after renaming (game %d)", msg.Stats.AppId))
+	}
+
 	qc.commit.End()
 
 	msg.Ack()
@@ -152,9 +175,13 @@ func (qc *Query3Client) sendResult() {
 		QueryId:        3,
 	}
 
+	shared.TestTolerance(1, 2, "Exiting before sending result")
+
 	if err := qc.middleware.SendResult("3", result); err != nil {
 		log.Errorf("Failed to send result: %v", err)
 	}
+
+	shared.TestTolerance(1, 2, "Exiting after sending result")
 }
 
 func (qc *Query3Client) End() {

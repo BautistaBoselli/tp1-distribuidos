@@ -9,7 +9,7 @@ mappers:
 sharding:
   amount: 2
 query:
-  query1-result-interval: 10000
+  query1-result-interval: 500
   query4-min-negatives: 500
 reviver:
   amount: 3
