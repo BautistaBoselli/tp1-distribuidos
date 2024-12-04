@@ -197,7 +197,7 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 func (qc *Query1Client) sendResult(final bool, appId int) {
 	qc.result.Final = final
 
-	id := qc.getNextId(appId)
+	id := qc.getNextId()
 	resultMsg := &middleware.Result{
 		Id:             id,
 		ClientId:       qc.clientId,
@@ -237,15 +237,15 @@ func (qc *Query1Client) sendResult(final bool, appId int) {
 }
 
 // clientId (2 bytes) + queryId (1 byte) + shardId (1 byte) + appId (4 bytes)
-func (qc *Query1Client) getNextId(appId int) int64 {
+func (qc *Query1Client) getNextId() int64 {
 	clientId, _ := strconv.Atoi(qc.clientId)
 
 	clientIdHigh := (clientId >> 8) & 0xFF // Get high byte
 	clientIdLow := clientId & 0xFF         // Get low byte
 
-	appId = qc.processedGames.Count() + 1 // 0 means last
+	processed := qc.processedGames.Count() + 1 // 0 means last
 
-	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(1)<<40 | int64(qc.shardId)<<32 | int64(appId)
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(1)<<40 | int64(qc.shardId)<<32 | int64(processed)
 }
 
 func (qc *Query1Client) End() {
