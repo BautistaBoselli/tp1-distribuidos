@@ -1,9 +1,10 @@
 import os
 
-CONTAINERS = {'s': 'server', 'm': 'mapper', 'q': 'queries', 'r': 'reducer', 'R': 'reviver'}
+CONTAINERS = {'c': 'client', 's': 'server', 'm': 'mapper', 'q': 'queries', 'r': 'reducer', 'R': 'reviver'}
 
 MENU = """
 Containers:
+c - client
 s - server
 m - mapper
 q - queries
@@ -30,7 +31,7 @@ def main():
             container_name[0] = CONTAINERS[container_name[0]]
             kill_container('-'.join(container_name))
     except KeyboardInterrupt:
-        print("Exiting...")
+        print("\nExiting...")
 
 if __name__ == "__main__":
     main()
