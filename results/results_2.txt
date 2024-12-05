@@ -1,5 +1,0 @@
-[QUERY 3]: Top Game 1: Garry's Mod (22866)
-[QUERY 3]: Top Game 2: Hotline Miami (18201)
-[QUERY 3]: Top Game 3: BattleBlock Theater® (14903)
-[QUERY 3]: Top Game 4: Geometry Dash (12685)
-[QUERY 3]: Top Game 5: Firewatch (12406)

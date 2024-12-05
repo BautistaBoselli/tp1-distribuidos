@@ -113,11 +113,8 @@ func (m *Mapper) consumeReviewsMessages() {
 			log.Infof("Ignoring reviews message from cancelled client %s", msg.ClientId)
 			return nil
 		}
-		if client.finishedGames.Count() != m.middleware.Config.Sharding.Amount {
-			client.storeReviews(msg)
-		} else {
-			client.reviews <- *msg
-		}
+
+		client.reviews <- *msg
 		return nil
 	})
 

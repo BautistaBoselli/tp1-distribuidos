@@ -211,10 +211,12 @@ func (m *Middleware) SendReviewBatch(message *ReviewsMsg) error {
 	return m.publishQueue(m.reviewsQueue, message)
 }
 
+func (m Middleware) SendReviewsProcessed(clientId string, message *ReviewsMsg) error {
+	return m.publishQueue(m.reviewsQueue, message)
+}
+
 func (m Middleware) SendReviewsFinished(clientId string, last int) error {
-	// TODO: save on file
-	m.clientsLastsDict[clientId] += last
-	if m.clientsLastsDict[clientId] == m.Config.Mappers.Amount+1 {
+	if last == m.Config.Mappers.Amount {
 		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED FOR CLIENT %s", clientId)
 		return m.SendStatsFinished(clientId)
 	}

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	"io"
 	"os"
 	"slices"
 	"strconv"
@@ -15,51 +14,43 @@ import (
 )
 
 type MapperClient struct {
-	id                string
-	middleware        *middleware.Middleware
-	games             chan middleware.GameMsg
-	reviews           chan middleware.ReviewsMsg
-	reviewsFile       *os.File
-	reviewsFileWriter *csv.Writer
-	finishedGames     *shared.Processed
-	finishedSteps     *shared.Processed
-	cancelWg          *sync.WaitGroup
+	id              string
+	middleware      *middleware.Middleware
+	games           chan middleware.GameMsg
+	reviews         chan middleware.ReviewsMsg
+	finishedGames   *shared.Processed
+	finishedReviews *shared.Processed
+	finishedSteps   *shared.Processed
+	cancelWg        *sync.WaitGroup
 }
+
+const GEOMETRY_DASH_APP_ID = "322170"
 
 type finishedSteps int
 
 const (
 	FINISHED_FILE finishedSteps = iota
-	FINISHED_REVIEWS
 	FINISHED
 )
 
 func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 	os.MkdirAll(fmt.Sprintf("database/%s", id), 0755)
 
-	reviewsFile, err := os.OpenFile(fmt.Sprintf("database/%s/reviews.csv", id), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
-	if err != nil {
-		log.Errorf("Failed to open reviews.csv: %v", err)
-		return nil
-	}
-
 	client := &MapperClient{
-		id:                id,
-		middleware:        m,
-		games:             make(chan middleware.GameMsg),
-		reviews:           make(chan middleware.ReviewsMsg),
-		reviewsFile:       reviewsFile,
-		reviewsFileWriter: csv.NewWriter(reviewsFile),
-		finishedGames:     shared.NewProcessed(fmt.Sprintf("database/%s/processed_games.bin", id)),
-		finishedSteps:     shared.NewProcessed(fmt.Sprintf("database/%s/processed_steps.bin", id)),
-		cancelWg:          &sync.WaitGroup{},
+		id:              id,
+		middleware:      m,
+		games:           make(chan middleware.GameMsg),
+		reviews:         make(chan middleware.ReviewsMsg),
+		finishedGames:   shared.NewProcessed(fmt.Sprintf("database/%s/processed_games.bin", id)),
+		finishedReviews: shared.NewProcessed(fmt.Sprintf("database/%s/processed_reviews.bin", id)),
+		finishedSteps:   shared.NewProcessed(fmt.Sprintf("database/%s/processed_steps.bin", id)),
+		cancelWg:        &sync.WaitGroup{},
 	}
 
 	go client.consumeGames()
 	if client.finishedGames.Count() == m.Config.Sharding.Amount {
 		log.Infof("client %s After reviving, consuming reviews", client.id)
 		go client.consumeReviews()
-		go client.writeFileToChan()
 	}
 
 	client.cancelWg.Add(1)
@@ -71,7 +62,6 @@ func (c *MapperClient) Close() {
 		return
 	}
 	c.finishedSteps.Add(int64(FINISHED))
-	c.reviewsFile.Close()
 	c.cancelWg.Done()
 	if c.finishedGames.Count() != c.middleware.Config.Sharding.Amount {
 		close(c.games)
@@ -97,7 +87,6 @@ func (c *MapperClient) consumeGames() {
 			shared.TestTolerance(1, 4, "Exiting at last game after adding")
 			if c.finishedGames.Count() == c.middleware.Config.Sharding.Amount {
 				go c.consumeReviews()
-				go c.writeFileToChan()
 			}
 			game.Ack()
 			continue
@@ -151,11 +140,21 @@ func (c *MapperClient) consumeReviews() {
 			continue
 		}
 
+		if reviewBatch.Total > 0 {
+			c.handleReviewsProcessed(reviewBatch)
+			continue
+		}
+
 		for _, review := range reviewBatch.Reviews {
+			c.finishedReviews.Add(int64(review.Id))
 
 			file, err := os.Open(fmt.Sprintf("database/%s/%s.csv", c.id, review.AppId))
 			if err != nil {
 				continue // no existe el juego
+			}
+
+			if review.AppId == GEOMETRY_DASH_APP_ID {
+				shared.TestTolerance(1, 13000, "Exiting at review before reading")
 			}
 
 			reader := csv.NewReader(file)
@@ -170,7 +169,12 @@ func (c *MapperClient) consumeReviews() {
 				}
 			}
 
+			if review.AppId == GEOMETRY_DASH_APP_ID {
+				shared.TestTolerance(1, 13000, "Exiting at review after reading")
+			}
+
 			file.Close()
+
 		}
 
 		reviewBatch.Ack()
@@ -179,83 +183,32 @@ func (c *MapperClient) consumeReviews() {
 	c.cancelWg.Done()
 }
 
-func (c *MapperClient) storeReviews(reviews *middleware.ReviewsMsg) {
-	for _, review := range reviews.Reviews {
-		reviewStats := []string{
-			strconv.Itoa(review.Id),
-			review.AppId,
-			review.Text,
-			strconv.Itoa(review.Score),
-		}
-
-		if err := c.reviewsFileWriter.Write(reviewStats); err != nil {
-			log.Errorf("Failed to write to reviews.csv: %v", err)
-		}
+func (c *MapperClient) handleReviewsProcessed(reviewBatch middleware.ReviewsMsg) {
+	reviewBatch.Processed[c.middleware.Config.Mappers.Id] = c.finishedReviews.Count()
+	total := 0
+	for _, processed := range reviewBatch.Processed {
+		total += processed
 	}
-	c.reviewsFileWriter.Flush()
-	reviews.Ack()
-}
+	log.Debugf("Received Processed message for client: %s, processed: %d of %d", reviewBatch.ClientId, total, reviewBatch.Total)
 
-func (c *MapperClient) writeFileToChan() {
-	if c.finishedSteps.Contains(int64(FINISHED_FILE)) {
-		return
-	}
-	file, err := os.Open(fmt.Sprintf("database/%s/reviews.csv", c.id))
-	if err != nil {
-		log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
+	shared.TestTolerance(1, 8, "Exiting at review processed before sending updated")
+
+	if total == reviewBatch.Total {
+		c.middleware.SendReviewsFinished(reviewBatch.ClientId, reviewBatch.Last+1)
+		shared.TestTolerance(1, 8, "Exiting at review processed after sending finished")
+		c.finishedSteps.Add(int64(FINISHED))
+		reviewBatch.Ack()
+		os.RemoveAll(fmt.Sprintf("database/%s", c.id))
 		return
 	}
 
-	reader := csv.NewReader(file)
-	batch := middleware.ReviewsMsg{ClientId: c.id, Reviews: make([]middleware.Review, 0)}
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		c.middleware.SendReviewsProcessed(reviewBatch.ClientId, &reviewBatch)
+		shared.TestTolerance(1, 8, "Exiting at review processed after sending updated")
+	}()
 
-	c.cancelWg.Add(1)
-	var last middleware.Review
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
-			log.Infof("Last review: %v", last)
-			continue
-		}
-
-		id, err := strconv.Atoi(record[0])
-		if err != nil {
-			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
-			continue
-		}
-
-		score, err := strconv.Atoi(record[3])
-		if err != nil {
-			log.Errorf("action: write_file_to_chan | result: fail | error: %v", err)
-			continue
-		}
-
-		review := middleware.Review{
-			Id:    id,
-			AppId: record[1],
-			Text:  record[2],
-			Score: score,
-		}
-
-		last = review
-
-		batch.Reviews = append(batch.Reviews, review)
-
-		if len(batch.Reviews) == 100 {
-			c.reviews <- batch
-			batch.Reviews = make([]middleware.Review, 0)
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-
-	log.Infof("Finished reading reviews file for client %s", c.id)
-	c.reviews <- batch
-	c.finishedSteps.Add(int64(FINISHED_FILE))
-	c.cancelWg.Done()
+	reviewBatch.Ack()
 }
 
 func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
@@ -263,20 +216,16 @@ func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
 	if c.finishedSteps.Contains(int64(FINISHED)) {
 		log.Debugf("Received Last again, ignoring and NACKing...")
 		go func() {
-			time.Sleep(2 * time.Second)
-			reviewBatch.Nack()
+			time.Sleep(500 * time.Millisecond)
+			c.middleware.SendReviewsFinished(reviewBatch.ClientId, reviewBatch.Last)
+			shared.TestTolerance(1, 8, "Exiting at review processed after sending finished")
+			reviewBatch.Ack()
 		}()
 		return
 	}
-	if !c.finishedSteps.Contains(int64(FINISHED_FILE)) {
-		log.Debugf("Received Last but not finished reviews file, ignoring and NACKing...")
-		go func() {
-			time.Sleep(2 * time.Second)
-			reviewBatch.Nack()
-		}()
-		return
-	}
+
 	c.middleware.SendReviewsFinished(reviewBatch.ClientId, reviewBatch.Last+1)
+	shared.TestTolerance(1, 8, "Exiting at review processed after sending finished")
 	c.finishedSteps.Add(int64(FINISHED))
 	reviewBatch.Ack()
 	os.RemoveAll(fmt.Sprintf("database/%s", c.id))
