@@ -64,13 +64,6 @@ func (r *ReducerQuery2) RestoreResult() []middleware.Game {
 		if err != nil && err.Error() == "EOF" {
 			return result
 		}
-		// if err != nil && err == csv.ErrFieldCount {
-		// 	continue
-		// }
-		// if err != nil && err.Error() != "EOF" && err != csv.ErrFieldCount {
-		// 	log.Errorf("Failed to read line: %v, line: %v", err, line)
-		// 	return nil
-		// }
 
 		id, _ := strconv.Atoi(line[0])
 		year, _ := strconv.Atoi(line[2])
@@ -223,7 +216,9 @@ func (r *ReducerQuery2) SendResult() {
 		TopGames: topGames,
 	}
 
+	id := r.getNextId()
 	result := &middleware.Result{
+		Id:             id,
 		ClientId:       r.ClientId,
 		QueryId:        2,
 		IsFinalMessage: true,
@@ -240,4 +235,15 @@ func (r *ReducerQuery2) SendResult() {
 		log.Infof("Top %d Game: %v", i+1, game)
 	}
 
+}
+
+func (r *ReducerQuery2) getNextId() int64 {
+	clientId, _ := strconv.Atoi(r.ClientId)
+
+	clientIdHigh := (clientId >> 8) & 0xFF // Get high byte
+	clientIdLow := clientId & 0xFF         // Get low byte
+
+	processed := r.receivedAnswers.Count() + 1 // 0 means last
+
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(1)<<40 | int64(processed)
 }

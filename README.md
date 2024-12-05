@@ -46,15 +46,15 @@ El gordo demo-falopa 😎
 - [x] Queries: crear concepto de QueryClient
 - [x] Queries: commits y temps
 - [x] Queries: mover 1 y 2 a disco
-- [ ] Queries: ver como chota manejar los envios (no es grave los duplicados)
-- [ ] Queries: definir ids para los results
-- [ ] Queries: restore commit reenvia mensaje si hace falta.
+- [x] Queries: ver como chota manejar los envios (no es grave los duplicados)
+- [x] Queries: definir ids para los results
+- [x] Queries: restore commit reenvia mensaje si hace falta.
 
 ## Reducers
 
 A priori no deberian importarle los duplicados tampoco
 
-- [ ] Reducer: commits similares a queries supongo 🤷‍♂️
+- [x] Reducer: commits similares a queries supongo 🤷‍♂️
 - [ ] Reducer: ver como chota manejar los envios (no es grave los duplicados)
 - [ ] Reducer: ver si simplificar el envio a los ReducerClients dejando de hacer channels (medir performance)
 
@@ -68,8 +68,8 @@ IDs:
 
 A priori no se deberia caer nunca asi que fulbo.
 
-- [ ] Server (respuesta): manejar duplicados de results
-- [ ] Server (respuesta): enviar responses sin duplicado
+- [x] Server (respuesta): manejar duplicados de results
+- [x] Server (respuesta): enviar responses sin duplicado
 
 ## Otros
 

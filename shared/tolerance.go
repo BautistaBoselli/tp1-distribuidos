@@ -9,7 +9,7 @@ import (
 	"math/rand"
 )
 
-var DEBUG_TOLERANCE = true
+var DEBUG_TOLERANCE = false
 
 type Processed struct {
 	file      *os.File

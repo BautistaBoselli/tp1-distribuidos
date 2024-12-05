@@ -12,11 +12,12 @@ import (
 )
 
 type Server struct {
-	serverSocket    *net.TCPListener
-	middleware      *middleware.Middleware
-	config          *config.Config
-	clients         []*Client
-	clientsReceived int
+	serverSocket      *net.TCPListener
+	middleware        *middleware.Middleware
+	config            *config.Config
+	clients           []*Client
+	clientsReceived   int
+	processedRespones map[int64]bool
 }
 
 func NewServer(config *config.Config) (*Server, error) {
@@ -36,11 +37,12 @@ func NewServer(config *config.Config) (*Server, error) {
 	}
 
 	return &Server{
-		serverSocket:    serverSocket,
-		middleware:      middleware,
-		config:          config,
-		clients:         make([]*Client, 0),
-		clientsReceived: 1000,
+		serverSocket:      serverSocket,
+		middleware:        middleware,
+		config:            config,
+		clients:           make([]*Client, 0),
+		clientsReceived:   1000,
+		processedRespones: make(map[int64]bool),
 	}, nil
 }
 
@@ -102,7 +104,13 @@ func (s *Server) handleResponses() {
 		log.Infof("Response received from query %d and client %s", response.QueryId, response.ClientId)
 		for _, client := range s.clients {
 			if client.id == response.ClientId {
-				client.handleResponse(response)
+				// log.Info("Received response id %d for client %v", response.Id, response.ClientId)
+				log.Infof("RECV RESPONSE client %v, id: %v", response.ClientId, response.Id)
+				if !s.processedRespones[response.Id] {
+					log.Infof("HOLA RESPONSE client %v, id: %v", response.ClientId, response.Id)
+					s.processedRespones[response.Id] = true
+					client.handleResponse(response)
+				}
 			}
 		}
 		return nil

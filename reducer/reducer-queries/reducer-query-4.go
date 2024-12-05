@@ -3,6 +3,7 @@ package reducer
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
 )
@@ -46,11 +47,22 @@ func (r *ReducerQuery4) Run() {
 			r.receivedAnswers.Add(int64(result.ShardId))
 			shared.TestTolerance(1, 12, "Exiting after adding to received answers")
 		} else {
-			r.sendResult(result)
+			newResult := middleware.Result{
+				Id:             r.getNextId(result.Payload.(middleware.Query4Result).Game),
+				ClientId:       result.ClientId,
+				QueryId:        4,
+				IsFinalMessage: result.IsFinalMessage,
+				Payload:        result.Payload,
+				ShardId:        result.ShardId,
+			}
+			r.sendResult(&newResult)
 		}
 
 		if r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount {
+
+			id := r.getNextId(fmt.Sprintf("Final %s", result.ShardId))
 			r.sendResult(&middleware.Result{
+				Id:             id,
 				ClientId:       result.ClientId,
 				QueryId:        4,
 				IsFinalMessage: true,
@@ -76,4 +88,18 @@ func (r *ReducerQuery4) sendResult(result *middleware.Result) {
 	}
 
 	log.Infof("Reducer Game: %v for client %d", result.Payload.(middleware.Query4Result).Game, result.ClientId)
+}
+
+func (r *ReducerQuery4) getNextId(result string) int64 {
+	clientId, _ := strconv.Atoi(r.ClientId)
+
+	clientIdHigh := (clientId >> 8) & 0xFF // Get high byte
+	clientIdLow := clientId & 0xFF         // Get low byte
+
+	gameNameId := uint32(0)
+	for i := 0; i < len(result); i++ {
+		gameNameId += uint32([]byte(result)[i])
+	}
+
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(4)<<40 | int64(gameNameId)
 }

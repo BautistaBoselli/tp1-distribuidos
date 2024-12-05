@@ -174,7 +174,10 @@ func (r *ReducerQuery1) processResult(result *middleware.Result) {
 
 func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 
+	id := r.getNextId()
+	log.Infof("Q1 Sending id %d", id)
 	result := &middleware.Result{
+		Id:             id,
 		ClientId:       r.ClientId,
 		QueryId:        1,
 		Payload:        r.result,
@@ -192,4 +195,15 @@ func (r *ReducerQuery1) SendResult(isFinalMessage bool) {
 		log.Errorf("Failed to send response: %v", err)
 	}
 
+}
+
+func (r *ReducerQuery1) getNextId() int64 {
+	clientId, _ := strconv.Atoi(r.ClientId)
+
+	clientIdHigh := (clientId >> 8) & 0xFF // Get high byte
+	clientIdLow := clientId & 0xFF         // Get low byte
+
+	processed := r.processedAnswers.Count() + 1 // 0 means last
+
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(1)<<40 | int64(processed)
 }
