@@ -109,10 +109,12 @@ func NewReview(record []string, id int) *Review {
 }
 
 type ReviewsMsg struct {
-	ClientId string
-	Reviews  []Review
-	Last     int
-	msg      amqp.Delivery
+	ClientId  string
+	Reviews   []Review
+	Last      int
+	Total     int
+	Processed map[int]int
+	msg       amqp.Delivery
 }
 
 func (r *ReviewsMsg) Ack() {
