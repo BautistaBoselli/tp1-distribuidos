@@ -8,6 +8,7 @@ import (
 	"strings"
 	"tp1-distribuidos/config"
 	"tp1-distribuidos/middleware"
+	"tp1-distribuidos/shared"
 	"tp1-distribuidos/shared/protocol"
 )
 
@@ -16,7 +17,7 @@ type Server struct {
 	middleware      *middleware.Middleware
 	config          *config.Config
 	clients         []*Client
-	clientsReceived int
+	clientsReceived *shared.Processed
 }
 
 func NewServer(config *config.Config) (*Server, error) {
@@ -40,7 +41,7 @@ func NewServer(config *config.Config) (*Server, error) {
 		middleware:      middleware,
 		config:          config,
 		clients:         make([]*Client, 0),
-		clientsReceived: 1000,
+		clientsReceived: shared.NewProcessed("database/clients_received.bin"),
 	}, nil
 }
 
@@ -83,8 +84,9 @@ func (s *Server) acceptNewConnection() (*Client, error) {
 		return nil, err
 	}
 
-	s.clientsReceived++
-	client := NewClient(strconv.Itoa(s.clientsReceived), clientSocket, s.middleware, s.config.Server.ReviewsBatchAmount)
+	clientId := s.clientsReceived.Count() + 1001
+	s.clientsReceived.Add(int64(clientId))
+	client := NewClient(strconv.Itoa(clientId), clientSocket, s.middleware, s.config.Server.ReviewsBatchAmount)
 	s.clients = append(s.clients, client)
 
 	log.Infof("action: accept_connections | result: success | client_id: %d", client.id)

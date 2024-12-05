@@ -14,14 +14,13 @@ import (
 )
 
 type MapperClient struct {
-	id              string
-	middleware      *middleware.Middleware
-	games           chan middleware.GameMsg
-	reviews         chan middleware.ReviewsMsg
-	finishedGames   *shared.Processed
-	finishedReviews *shared.Processed
-	finishedSteps   *shared.Processed
-	cancelWg        *sync.WaitGroup
+	id            string
+	middleware    *middleware.Middleware
+	games         chan middleware.GameMsg
+	reviews       chan middleware.ReviewsMsg
+	finishedGames *shared.Processed
+	finishedSteps *shared.Processed
+	cancelWg      *sync.WaitGroup
 }
 
 const GEOMETRY_DASH_APP_ID = "322170"
@@ -171,7 +170,6 @@ func (c *MapperClient) consumeReviews() {
 		}
 
 		c.middleware.SendReviewsProcessed(&middleware.ReviewsProcessedMsg{ClientId: c.id, BatchId: reviewBatch.Id})
-		c.finishedReviews.Add(int64(reviewBatch.Id))
 		reviewBatch.Ack()
 
 	}
