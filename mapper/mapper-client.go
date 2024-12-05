@@ -37,14 +37,13 @@ func NewMapperClient(id string, m *middleware.Middleware) *MapperClient {
 	os.MkdirAll(fmt.Sprintf("database/%s", id), 0755)
 
 	client := &MapperClient{
-		id:              id,
-		middleware:      m,
-		games:           make(chan middleware.GameMsg),
-		reviews:         make(chan middleware.ReviewsMsg),
-		finishedGames:   shared.NewProcessed(fmt.Sprintf("database/%s/processed_games.bin", id)),
-		finishedReviews: shared.NewProcessed(fmt.Sprintf("database/%s/processed_reviews.bin", id)),
-		finishedSteps:   shared.NewProcessed(fmt.Sprintf("database/%s/processed_steps.bin", id)),
-		cancelWg:        &sync.WaitGroup{},
+		id:            id,
+		middleware:    m,
+		games:         make(chan middleware.GameMsg),
+		reviews:       make(chan middleware.ReviewsMsg),
+		finishedGames: shared.NewProcessed(fmt.Sprintf("database/%s/processed_games.bin", id)),
+		finishedSteps: shared.NewProcessed(fmt.Sprintf("database/%s/processed_steps.bin", id)),
+		cancelWg:      &sync.WaitGroup{},
 	}
 
 	go client.consumeGames()
@@ -140,13 +139,7 @@ func (c *MapperClient) consumeReviews() {
 			continue
 		}
 
-		if reviewBatch.Total > 0 {
-			c.handleReviewsProcessed(reviewBatch)
-			continue
-		}
-
 		for _, review := range reviewBatch.Reviews {
-			c.finishedReviews.Add(int64(review.Id))
 
 			file, err := os.Open(fmt.Sprintf("database/%s/%s.csv", c.id, review.AppId))
 			if err != nil {
@@ -177,38 +170,13 @@ func (c *MapperClient) consumeReviews() {
 
 		}
 
+		c.middleware.SendReviewsProcessed(&middleware.ReviewsProcessedMsg{ClientId: c.id, BatchId: reviewBatch.Id})
+		c.finishedReviews.Add(int64(reviewBatch.Id))
 		reviewBatch.Ack()
+
 	}
 	log.Infof("Mapper client %s finished consuming reviews", c.id)
 	c.cancelWg.Done()
-}
-
-func (c *MapperClient) handleReviewsProcessed(reviewBatch middleware.ReviewsMsg) {
-	reviewBatch.Processed[c.middleware.Config.Mappers.Id] = c.finishedReviews.Count()
-	total := 0
-	for _, processed := range reviewBatch.Processed {
-		total += processed
-	}
-	log.Debugf("Received Processed message for client: %s, processed: %d of %d", reviewBatch.ClientId, total, reviewBatch.Total)
-
-	shared.TestTolerance(1, 8, "Exiting at review processed before sending updated")
-
-	if total == reviewBatch.Total {
-		c.middleware.SendReviewsFinished(reviewBatch.ClientId, reviewBatch.Last+1)
-		shared.TestTolerance(1, 8, "Exiting at review processed after sending finished")
-		c.finishedSteps.Add(int64(FINISHED))
-		reviewBatch.Ack()
-		os.RemoveAll(fmt.Sprintf("database/%s", c.id))
-		return
-	}
-
-	go func() {
-		time.Sleep(500 * time.Millisecond)
-		c.middleware.SendReviewsProcessed(reviewBatch.ClientId, &reviewBatch)
-		shared.TestTolerance(1, 8, "Exiting at review processed after sending updated")
-	}()
-
-	reviewBatch.Ack()
 }
 
 func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {

@@ -25,6 +25,10 @@ func (m *Middleware) declare() error {
 		return err
 	}
 
+	if err := m.declareReviewsProcessedQueue(); err != nil {
+		return err
+	}
+
 	if err := m.declareStatsExchange(); err != nil {
 		return err
 	}
@@ -69,6 +73,25 @@ func (m *Middleware) declareReviewsQueue() error {
 		nil,       // arguments
 	)
 	m.reviewsQueue = &queue
+
+	if err != nil {
+		log.Errorf("Failed to declare queue: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (m *Middleware) declareReviewsProcessedQueue() error {
+	queue, err := m.channel.QueueDeclare(
+		"reviewsProcessed", // name
+		true,               // durable
+		false,              // delete when unused
+		false,              // exclusive
+		false,              // no-wait
+		nil,                // arguments
+	)
+	m.reviewsProcessedQueue = &queue
 
 	if err != nil {
 		log.Errorf("Failed to declare queue: %v", err)
@@ -203,6 +226,11 @@ func (gq *GamesQueue) Consume(wg *sync.WaitGroup, callback func(message *GameMsg
 	return nil
 }
 
+type ReviewsQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
 func (m *Middleware) ListenReviews() (*ReviewsQueue, error) {
 	return &ReviewsQueue{queue: m.reviewsQueue, middleware: m}, nil
 }
@@ -211,22 +239,16 @@ func (m *Middleware) SendReviewBatch(message *ReviewsMsg) error {
 	return m.publishQueue(m.reviewsQueue, message)
 }
 
-func (m Middleware) SendReviewsProcessed(clientId string, message *ReviewsMsg) error {
-	return m.publishQueue(m.reviewsQueue, message)
+func (m Middleware) SendReviewsProcessed(message *ReviewsProcessedMsg) error {
+	return m.publishQueue(m.reviewsProcessedQueue, message)
 }
 
 func (m Middleware) SendReviewsFinished(clientId string, last int) error {
-	if last == m.Config.Mappers.Amount {
-		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED FOR CLIENT %s", clientId)
-		return m.SendStatsFinished(clientId)
+	if last == m.Config.Mappers.Amount+1 {
+		log.Infof("ALL MAPPERS FINISHED FOR CLIENT %s", clientId)
+		return nil
 	}
-	log.Infof("Another mapper finished %d", last)
 	return m.publishQueue(m.reviewsQueue, &ReviewsMsg{ClientId: clientId, Last: last})
-}
-
-type ReviewsQueue struct {
-	queue      *amqp.Queue
-	middleware *Middleware
 }
 
 func (rq *ReviewsQueue) Consume(wg *sync.WaitGroup, callback func(message *ReviewsMsg) error) error {
@@ -251,6 +273,39 @@ func (rq *ReviewsQueue) Consume(wg *sync.WaitGroup, callback func(message *Revie
 		callback(&res)
 	}
 	wg.Done()
+
+	return nil
+}
+
+type ReviewsProcessedQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (m *Middleware) ListenReviewsProcessed() (*ReviewsProcessedQueue, error) {
+	return &ReviewsProcessedQueue{queue: m.reviewsProcessedQueue, middleware: m}, nil
+}
+
+func (rpq *ReviewsProcessedQueue) Consume(wg *sync.WaitGroup, callback func(message *ReviewsProcessedMsg) error) error {
+	msgs, err := rpq.middleware.consumeQueue(rpq.queue)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		var res ReviewsProcessedMsg
+
+		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
+		err := decoder.Decode(&res)
+		if err != nil {
+			log.Errorf("Failed to decode message: %v", err)
+			continue
+		}
+
+		res.msg = msg
+
+		callback(&res)
+	}
 
 	return nil
 }

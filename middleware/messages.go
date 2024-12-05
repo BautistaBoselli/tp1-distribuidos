@@ -109,10 +109,10 @@ func NewReview(record []string, id int) *Review {
 }
 
 type ReviewsMsg struct {
+	Id        int
 	ClientId  string
 	Reviews   []Review
 	Last      int
-	Total     int
 	Processed map[int]int
 	msg       amqp.Delivery
 }
@@ -123,6 +123,16 @@ func (r *ReviewsMsg) Ack() {
 
 func (r *ReviewsMsg) Nack() {
 	r.msg.Nack(false, true)
+}
+
+type ReviewsProcessedMsg struct {
+	ClientId string
+	BatchId  int
+	msg      amqp.Delivery
+}
+
+func (r *ReviewsProcessedMsg) Ack() {
+	r.msg.Ack(false)
 }
 
 type Stats struct {
