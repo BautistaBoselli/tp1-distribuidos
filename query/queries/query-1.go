@@ -2,6 +2,7 @@ package queries
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"strconv"
@@ -22,6 +23,7 @@ type Query1 struct {
 	resultInterval int
 	clients        map[string]*Query1Client
 	commit         *shared.Commit
+	activeClients  *shared.Processed
 }
 
 func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query1 {
@@ -31,6 +33,7 @@ func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query
 		resultInterval: resultInterval,
 		clients:        make(map[string]*Query1Client),
 		commit:         shared.NewCommit("./database/commit.csv"),
+		activeClients:  shared.NewProcessed("./database/active_clients.bin"),
 	}
 }
 
@@ -49,6 +52,19 @@ func (q *Query1) Run() {
 			appId, _ := strconv.Atoi(commit.Data[0][1])
 			processed.Add(int64(appId))
 		}
+	})
+
+	inactiveClientsQueue, err := q.middleware.ListenInactiveClients()
+	if err != nil {
+		log.Errorf("Error listening inactive clients: %s", err)
+		return
+	}
+
+	go inactiveClientsQueue.Consume(func(message []byte) error {
+		clientId := binary.BigEndian.Uint16(message)
+		clientIdStr := strconv.Itoa(int(clientId))
+		os.RemoveAll(fmt.Sprintf("./database/%s", clientIdStr))
+		return nil
 	})
 
 	gamesQueue, err := q.middleware.ListenGames("1."+strconv.Itoa(q.shardId), fmt.Sprintf("%d", q.shardId))

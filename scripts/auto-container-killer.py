@@ -3,7 +3,7 @@ import csv
 from time import sleep
 from random import choice
 
-EXCLUDED_CONTAINERS = ['server', 'reviver-1', 'mapper-1', 'mapper-2']
+EXCLUDED_CONTAINERS = ['server', 'reviver-1']
 NAME_IP_FILE = '../name_ip.csv'
 
 def read_containers_from_name_ip_file():

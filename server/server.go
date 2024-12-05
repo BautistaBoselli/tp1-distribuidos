@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/csv"
 	"errors"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"tp1-distribuidos/config"
@@ -18,6 +20,9 @@ type Server struct {
 	clients           []*Client
 	clientsReceived   int
 	processedRespones map[int64]bool
+	activeClientsFile *os.File
+	doneClientsFile   *os.File
+	doneClientsChan   chan int
 }
 
 func NewServer(config *config.Config) (*Server, error) {
@@ -36,6 +41,16 @@ func NewServer(config *config.Config) (*Server, error) {
 		return nil, err
 	}
 
+	activeClientsFile, err := os.OpenFile("active_clients.bin", os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		return nil, err
+	}
+
+	doneClientsFile, err := os.OpenFile("done_clients.bin", os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Server{
 		serverSocket:      serverSocket,
 		middleware:        middleware,
@@ -43,6 +58,9 @@ func NewServer(config *config.Config) (*Server, error) {
 		clients:           make([]*Client, 0),
 		clientsReceived:   1000,
 		processedRespones: make(map[int64]bool),
+		activeClientsFile: activeClientsFile,
+		doneClientsFile:   doneClientsFile,
+		doneClientsChan:   make(chan int),
 	}, nil
 }
 
@@ -52,9 +70,11 @@ func (s *Server) Close() {
 }
 
 func (s *Server) Run() {
+	s.broadcastInactiveClients()
 	defer s.Close()
 
 	go s.handleResponses()
+	go s.handleDoneClients()
 
 	for {
 		client, err := s.acceptNewConnection()
@@ -67,7 +87,16 @@ func (s *Server) Run() {
 		go client.handleGames()
 		go client.handleReviews()
 	}
+}
 
+func (s *Server) broadcastInactiveClients() {
+	for {
+		var clientId []byte
+		if err := binary.Read(s.activeClientsFile, binary.BigEndian, &clientId); err != nil {
+			break
+		}
+		s.middleware.SendInactiveClient(clientId)
+	}
 }
 
 func (s *Server) acceptNewConnection() (*Client, error) {
@@ -85,8 +114,11 @@ func (s *Server) acceptNewConnection() (*Client, error) {
 	}
 
 	s.clientsReceived++
-	client := NewClient(strconv.Itoa(s.clientsReceived), clientSocket, s.middleware, s.config.Server.ReviewsBatchAmount)
+	client := NewClient(strconv.Itoa(s.clientsReceived), clientSocket, s.middleware, s.config.Server.ReviewsBatchAmount, s.doneClientsChan)
 	s.clients = append(s.clients, client)
+	if _, err := s.activeClientsFile.Write(binary.BigEndian.AppendUint64([]byte{}, uint64(s.clientsReceived))); err != nil {
+		log.Errorf("Failed to write active client: %v", err)
+	}
 
 	log.Infof("action: accept_connections | result: success | client_id: %d", client.id)
 
@@ -119,6 +151,14 @@ func (s *Server) handleResponses() {
 	}
 }
 
+func (s *Server) handleDoneClients() {
+	for clientId := range s.doneClientsChan {
+		if _, err := s.doneClientsFile.Write(binary.BigEndian.AppendUint64([]byte{}, uint64(clientId))); err != nil {
+			log.Errorf("Failed to write done client: %v", err)
+		}
+	}
+}
+
 type Client struct {
 	id                 string
 	conn               *net.TCPConn
@@ -130,9 +170,10 @@ type Client struct {
 	reviewsBatchAmount int
 	totalGames         int
 	totalReviews       int
+	doneClientsChan    chan int
 }
 
-func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBatchAmount int) *Client {
+func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBatchAmount int, doneClientsChan chan int) *Client {
 	log.Infof("action: new_client | result: success | id: %s", id)
 	return &Client{
 		id:                 id,
@@ -145,11 +186,14 @@ func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBa
 		reviewsBatchAmount: reviewsBatchAmount,
 		totalGames:         0,
 		totalReviews:       0,
+		doneClientsChan:    doneClientsChan,
 	}
 }
 
 func (c *Client) handleDisconnect(err error) {
 	log.Infof("action: handle_disconnect | client: %s | EOF received", c.id)
+	clientId, _ := strconv.Atoi(c.id)
+	c.doneClientsChan <- clientId
 	c.conn.Close()
 }
 

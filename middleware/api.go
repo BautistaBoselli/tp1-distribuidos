@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"strconv"
 	"strings"
@@ -34,6 +35,10 @@ func (m *Middleware) declare() error {
 	}
 
 	if err := m.DeclareResponsesQueue(); err != nil {
+		return err
+	}
+
+	if err := m.declareInactiveClientsExchange(); err != nil {
 		return err
 	}
 
@@ -133,6 +138,38 @@ func (m *Middleware) DeclareResponsesQueue() error {
 	return nil
 }
 
+func (m *Middleware) declareInactiveClientsExchange() error {
+	err := m.channel.ExchangeDeclare(
+		"inactive", // name
+		"topic",    // type
+		true,       // durable
+		false,      // delete when unused
+		false,      // exclusive
+		false,      // no-wait
+		nil,        // arguments
+	)
+
+	if err != nil {
+		log.Errorf("Failed to declare queue: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+type InactiveClientsQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (m *Middleware) ListenInactiveClients() (*InactiveClientsQueue, error) {
+	queue, err := m.bindExchange("inactive", "inactive", "*")
+	if err != nil {
+		return nil, err
+	}
+	return &InactiveClientsQueue{queue: queue, middleware: m}, nil
+}
+
 func (m *Middleware) ListenGames(name string, shardId string) (*GamesQueue, error) {
 	queue, err := m.bindExchange(name, "games", shardId)
 	if err != nil {
@@ -153,6 +190,10 @@ func (m *Middleware) SendGameMsg(message *GameMsg) error {
 
 	message.ShardId = shardId
 	return m.publishExchange("games", stringShardId, message)
+}
+
+func (m *Middleware) SendInactiveClient(clientId []byte) error {
+	return m.publishExchange("inactive", "*", clientId)
 }
 
 func (m Middleware) SendGameFinished(clientId string) error {
@@ -199,6 +240,25 @@ func (gq *GamesQueue) Consume(wg *sync.WaitGroup, callback func(message *GameMsg
 	log.Info("HOLA 3 - Games queue finished")
 
 	wg.Done()
+
+	return nil
+}
+
+func (iq *InactiveClientsQueue) Consume(callback func(message []byte) error) error {
+	msgs, err := iq.middleware.consumeQueue(iq.queue)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		var res []byte
+		err := binary.Read(bytes.NewReader(msg.Body), binary.BigEndian, &res)
+		if err != nil {
+			log.Errorf("Failed to decode message: %v", err)
+			continue
+		}
+		callback(res)
+	}
 
 	return nil
 }
