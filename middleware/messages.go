@@ -69,6 +69,7 @@ func NewGame(record []string) *Game {
 
 type GameMsg struct {
 	ClientId string
+	ShardId  int
 	Game     *Game
 	Last     bool
 	msg      amqp.Delivery
@@ -108,10 +109,12 @@ func NewReview(record []string, id int) *Review {
 }
 
 type ReviewsMsg struct {
-	ClientId string
-	Reviews  []Review
-	Last     int
-	msg      amqp.Delivery
+	ClientId  string
+	Reviews   []Review
+	Last      int
+	Total     int
+	Processed map[int]int
+	msg       amqp.Delivery
 }
 
 func (r *ReviewsMsg) Ack() {

@@ -12,13 +12,12 @@ import (
 var log = logging.MustGetLogger("log")
 
 type Middleware struct {
-	Config           *config.Config
-	conn             *amqp.Connection
-	channel          *amqp.Channel
-	reviewsQueue     *amqp.Queue
-	responsesQueue   *amqp.Queue
-	cancelled        bool
-	clientsLastsDict map[string]int
+	Config         *config.Config
+	conn           *amqp.Connection
+	channel        *amqp.Channel
+	reviewsQueue   *amqp.Queue
+	responsesQueue *amqp.Queue
+	cancelled      bool
 }
 
 func NewMiddleware(config *config.Config) (*Middleware, error) {
@@ -37,7 +36,7 @@ func NewMiddleware(config *config.Config) (*Middleware, error) {
 		false, // global
 	)
 
-	middleware := &Middleware{conn: conn, channel: channel, Config: config, clientsLastsDict: make(map[string]int)}
+	middleware := &Middleware{conn: conn, channel: channel, Config: config}
 
 	err = middleware.declare()
 	if err != nil {

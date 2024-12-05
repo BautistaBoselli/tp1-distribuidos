@@ -151,6 +151,7 @@ func (m *Middleware) SendGameMsg(message *GameMsg) error {
 	shardId := totalInt % m.Config.Sharding.Amount
 	stringShardId := strconv.Itoa(shardId)
 
+	message.ShardId = shardId
 	return m.publishExchange("games", stringShardId, message)
 }
 
@@ -158,7 +159,7 @@ func (m Middleware) SendGameFinished(clientId string) error {
 
 	for shardId := range m.Config.Sharding.Amount {
 		stringShardId := strconv.Itoa(shardId)
-		err := m.publishExchange("games", stringShardId, &GameMsg{ClientId: clientId, Game: &Game{}, Last: true})
+		err := m.publishExchange("games", stringShardId, &GameMsg{ClientId: clientId, Game: &Game{}, Last: true, ShardId: shardId})
 		if err != nil {
 			log.Errorf("Failed to send game finished to shard %s: %v", stringShardId, err)
 			return err
@@ -210,10 +211,12 @@ func (m *Middleware) SendReviewBatch(message *ReviewsMsg) error {
 	return m.publishQueue(m.reviewsQueue, message)
 }
 
+func (m Middleware) SendReviewsProcessed(clientId string, message *ReviewsMsg) error {
+	return m.publishQueue(m.reviewsQueue, message)
+}
+
 func (m Middleware) SendReviewsFinished(clientId string, last int) error {
-	// TODO: save on file
-	m.clientsLastsDict[clientId] += last
-	if m.clientsLastsDict[clientId] == m.Config.Mappers.Amount+1 {
+	if last == m.Config.Mappers.Amount {
 		log.Infof("ALL SHARDS SENT STATS, SENDING STATS FINISHED FOR CLIENT %s", clientId)
 		return m.SendStatsFinished(clientId)
 	}

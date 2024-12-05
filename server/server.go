@@ -257,7 +257,7 @@ func (c *Client) handleReviews() {
 		}
 	}
 
-	err := c.middleware.SendReviewsFinished(c.id, 1)
+	err := c.middleware.SendReviewsProcessed(c.id, &middleware.ReviewsMsg{ClientId: c.id, Total: c.totalReviews, Processed: make(map[int]int)})
 	if err != nil {
 		log.Errorf("Failed to publish review message: %v", err)
 
