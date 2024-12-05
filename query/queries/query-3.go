@@ -176,13 +176,13 @@ func (qc *Query3Client) sendResult() {
 		IsFinalMessage: true,
 	}
 
-	shared.TestTolerance(1, 2, "Exiting before sending result")
+	shared.TestTolerance(1, 4, "Exiting before sending result")
 
 	if err := qc.middleware.SendResult("3", result); err != nil {
 		log.Errorf("Failed to send result: %v", err)
 	}
 
-	shared.TestTolerance(1, 2, "Exiting after sending result")
+	shared.TestTolerance(1, 4, "Exiting after sending result")
 }
 
 func (qc *Query3Client) End() {

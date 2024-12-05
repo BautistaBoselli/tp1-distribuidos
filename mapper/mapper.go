@@ -75,14 +75,14 @@ func (m *Mapper) consumeGameMessages() {
 	err := m.gamesQueue.Consume(m.cancelWg, func(msg *middleware.GameMsg) error {
 		metric.Update(1)
 
-		if _, exists := m.clients[msg.ClientId]; !exists {
+		client, exists := m.clients[msg.ClientId]
+		if !exists {
 			log.Infof("New client %s", msg.ClientId)
-			m.clients[msg.ClientId] = NewMapperClient(msg.ClientId, m.middleware)
+			client = NewMapperClient(msg.ClientId, m.middleware)
+			m.clients[msg.ClientId] = client
 		}
 
-		client := m.clients[msg.ClientId]
 		if m.cancelled {
-			log.Infof("Ignoring game message from cancelled client %s", msg.ClientId)
 			return nil
 		}
 		client.games <- *msg
@@ -103,17 +103,17 @@ func (m *Mapper) consumeReviewsMessages() {
 	err := m.reviewsQueue.Consume(m.cancelWg, func(msg *middleware.ReviewsMsg) error {
 		metric.Update(len(msg.Reviews))
 		client, exists := m.clients[msg.ClientId]
-
 		if !exists {
-			log.Errorf("Received reviews message from unknown client %s", msg.ClientId)
-			return nil
+			log.Infof("New client %s", msg.ClientId)
+			client = NewMapperClient(msg.ClientId, m.middleware)
+			m.clients[msg.ClientId] = client
 		}
 
 		if m.cancelled {
 			log.Infof("Ignoring reviews message from cancelled client %s", msg.ClientId)
 			return nil
 		}
-		if !client.finishedGames {
+		if client.finishedGames.Count() != m.middleware.Config.Sharding.Amount {
 			client.storeReviews(msg)
 		} else {
 			client.reviews <- *msg

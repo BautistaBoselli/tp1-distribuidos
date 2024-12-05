@@ -1,7 +1,6 @@
 server,10.5.1.1
 mapper-1,10.5.2.1
 mapper-2,10.5.2.2
-<<<<<<< HEAD
 queries-1-0,10.5.3.10
 queries-1-1,10.5.3.11
 reducer-1,10.5.4.1
@@ -14,11 +13,12 @@ reducer-3,10.5.4.3
 queries-4-0,10.5.3.40
 queries-4-1,10.5.3.41
 reducer-4,10.5.4.4
-=======
->>>>>>> 1022f4f (query 5 tolerant)
 queries-5-0,10.5.3.50
 queries-5-1,10.5.3.51
 reducer-5,10.5.4.5
+queries-3-0,10.5.3.30
+queries-3-1,10.5.3.31
+reducer-3,10.5.4.3
 reviver-1,10.5.6.1
 reviver-2,10.5.6.2
 reviver-3,10.5.6.3
