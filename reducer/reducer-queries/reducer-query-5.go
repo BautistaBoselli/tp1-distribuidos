@@ -3,6 +3,7 @@ package reducer
 import (
 	// "encoding/csv"
 	// "io"
+	"encoding/binary"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -26,9 +27,16 @@ type ReducerQuery5 struct {
 	ClientId         string
 	finished         bool
 	commit           *shared.Commit
+	totalFile        *os.File
 }
 
 func NewReducerQuery5(clientId string, m *middleware.Middleware) *ReducerQuery5 {
+	path := fmt.Sprintf("./database/%s/query-5-total.csv", clientId)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	if err != nil {
+		return nil
+	}
+
 	return &ReducerQuery5{
 		middleware:       m,
 		results:          make(chan *middleware.Result),
@@ -37,6 +45,7 @@ func NewReducerQuery5(clientId string, m *middleware.Middleware) *ReducerQuery5 
 		totalGames:       0,
 		ClientId:         clientId,
 		commit:           shared.NewCommit(fmt.Sprintf("./database/%s/commit.csv", clientId)),
+		totalFile:        file,
 	}
 }
 
@@ -57,16 +66,43 @@ func (r *ReducerQuery5) End() {
 	close(r.results)
 }
 
+func (r *ReducerQuery5) RestoreResult() {
+	path := fmt.Sprintf("./database/%s/query-5-total.csv", r.ClientId)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0777)
+	if err != nil {
+		return
+	}
+
+	var current int64
+	err = binary.Read(file, binary.BigEndian, &current)
+	if err == io.EOF {
+		return
+	}
+
+	r.totalGames = int(current)
+}
+
 func (r *ReducerQuery5) Run() {
 	log.Infof("Reducer Query 5 running")
-	// r.RestoreResult()
 
 	shared.RestoreCommit(fmt.Sprintf("./database/%s/commit.csv", r.ClientId), func(commit *shared.Commit) {
 		log.Infof("Restored commit: %v", commit)
-		//TODO
+
+		os.Rename(commit.Data[0][2], commit.Data[0][3])
+		os.Rename(commit.Data[0][4], commit.Data[0][5])
+
+		id, _ := strconv.ParseInt(commit.Data[0][1], 10, 64)
+		r.processedAnswers.Add(id)
+
+		if r.finalAnswers.Count() == r.middleware.Config.Sharding.Amount {
+			r.sendFinalResult()
+		}
+
+		r.RestoreResult()
 	})
 
 	for result := range r.results {
+		log.Infof("Processing client %v result %v id: %d, isFinal: %v", result.ClientId, result.Id, result.IsFinalMessage)
 		r.processResult(result)
 	}
 }
@@ -80,21 +116,35 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 		return
 	}
 
-	tmpFile := r.storeResults(query5Result.Stats)
+	tmpFile, tmpTotalFile := r.storeResults(query5Result.Stats)
 	realFilename := fmt.Sprintf("./database/%s/query-5.csv", r.ClientId)
+	realTotalFilename := fmt.Sprintf("./database/%s/query-5-total.csv", r.ClientId)
+
+	// shared.TestTolerance(1, 6, "Exiting after tmp")
 
 	r.commit.Write([][]string{
-		{r.ClientId, strconv.FormatInt(result.Id, 10), tmpFile.Name(), realFilename, strconv.Itoa(result.ShardId)},
+		{r.ClientId, strconv.FormatInt(result.Id, 10), tmpFile.Name(), realFilename, tmpTotalFile.Name(), realTotalFilename, strconv.Itoa(result.ShardId)},
 	})
+
+	// shared.TestTolerance(1, 10, "Exiting after creating commit")
 
 	log.Infof("processed len: %d", r.processedAnswers.Count())
 	r.processedAnswers.Add(int64(result.Id))
+
+	// shared.TestTolerance(1, 10, "Exiting after adding processed answer")
 
 	// replace file with tmp file
 	if err := os.Rename(tmpFile.Name(), realFilename); err != nil {
 		log.Errorf("action: rename file | result: error | message: %s", err)
 		return
 	}
+
+	if err := os.Rename(tmpTotalFile.Name(), realTotalFilename); err != nil {
+		log.Errorf("action: rename file | result: error | message: %s", err)
+		return
+	}
+
+	// shared.TestTolerance(1, 10, "Exiting after renaming")
 
 	if result.IsFinalMessage {
 		log.Info("Received final message")
@@ -103,37 +153,42 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 
 	log.Info("final answers: ", r.finalAnswers.Count())
 	if r.finalAnswers.Count() == r.middleware.Config.Sharding.Amount {
+		r.RestoreResult()
 		r.sendFinalResult()
 		r.End()
 	}
+
+	// shared.TestTolerance(1, 10, "Exiting after sending result")
 
 	r.commit.End()
 
 	result.Ack()
 }
 
-func (r *ReducerQuery5) storeResults(stats []middleware.Stats) *os.File {
+func (r *ReducerQuery5) storeResults(stats []middleware.Stats) (*os.File, *os.File) {
 	tmpFile, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-reducer-query-5.csv")
 	if err != nil {
 		log.Errorf("action: create file | result: error | message: %s", err)
-		return nil
+		return nil, nil
 	}
 
 	file, err := os.OpenFile(fmt.Sprintf("./database/%s/query-5.csv", r.ClientId), os.O_CREATE, 0755)
 	if err != nil {
 		log.Errorf("action: open file | result: error | message: %s", err)
-		return nil
+		return nil, nil
 	}
 	defer file.Close()
 
 	reader := csv.NewReader(file)
 	writer := csv.NewWriter(tmpFile)
 
+	totalGames := 0
+
 	for {
 		storedRecord, err := reader.Read()
 		if err != nil && err != io.EOF {
 			log.Errorf("action: read file | result: error | message: %s", err)
-			return nil
+			return nil, nil
 		}
 		if err == io.EOF {
 			break
@@ -142,7 +197,7 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) *os.File {
 		negatives, err := strconv.Atoi(storedRecord[2])
 		if err != nil {
 			log.Errorf("action: convert negative reviews to int | result: error | message: %s", err)
-			return nil
+			return nil, nil
 		}
 
 		for _, stat := range stats {
@@ -150,7 +205,7 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) *os.File {
 				break
 			}
 			writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-			r.totalGames++ // new games
+			totalGames++ // new games
 			stats = stats[1:]
 		}
 
@@ -163,12 +218,49 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) *os.File {
 		}
 		// log.Infof("writing stat %v, total games: %d", stat, r.totalGames)
 		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
-		r.totalGames++ // new games
+		totalGames++ // new games
 	}
 
 	writer.Flush()
 
-	return tmpFile
+	log.Infof("HOLA: %d", totalGames)
+
+	tmpTotalFile, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-total-reducer-query-5.csv")
+	if err != nil {
+		log.Errorf("action: create file | result: error | message: %s", err)
+		return nil, nil
+	}
+
+	totalFile, err := os.OpenFile(fmt.Sprintf("./database/%s/query-5-total.csv", r.ClientId), os.O_CREATE, 0755)
+	if err != nil {
+		log.Errorf("action: open file | result: error | message: %s", err)
+		return nil, nil
+	}
+	defer file.Close()
+
+	log.Infof("En el read bin")
+
+	log.Infof("total file: %v", totalFile.Name())
+
+	var current int64
+	err = binary.Read(totalFile, binary.BigEndian, &current)
+	if err != io.EOF && err != nil {
+		return nil, nil
+	}
+
+	log.Infof("current: %d, total: %d", current, totalGames)
+
+	newTotal := current + int64(totalGames)
+
+	err = binary.Write(tmpTotalFile, binary.BigEndian, newTotal)
+	if err != nil {
+		log.Errorf("failed to write to file: %v", err)
+		return nil, nil
+	}
+
+	log.Infof("Saliendo")
+
+	return tmpFile, tmpTotalFile
 }
 
 func (r *ReducerQuery5) sendFinalResult() {

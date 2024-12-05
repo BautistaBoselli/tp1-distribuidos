@@ -122,7 +122,7 @@ func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 	}
 
 	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
-		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after tmp (game %d)", msg.Stats.AppId))
+		// shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after tmp (game %d)", msg.Stats.AppId))
 	}
 
 	realFilename := fmt.Sprintf("./database/%s/stats/%d.csv", qc.clientId, msg.Stats.AppId)
@@ -132,19 +132,19 @@ func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 	})
 
 	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
-		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after commit (game %d)", msg.Stats.AppId))
+		// shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after commit (game %d)", msg.Stats.AppId))
 	}
 
 	qc.processedStats.Add(int64(msg.Stats.Id))
 
 	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
-		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after adding processed stat (game %d)", msg.Stats.AppId))
+		// shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after adding processed stat (game %d)", msg.Stats.AppId))
 	}
 
 	os.Rename(tmpFile.Name(), realFilename)
 
 	if msg.Stats.AppId == GEOMETRY_DASH_APP_ID {
-		shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after renaming (game %d)", msg.Stats.AppId))
+		// shared.TestTolerance(1, 400, fmt.Sprintf("Exiting after renaming (game %d)", msg.Stats.AppId))
 	}
 
 	qc.commit.End()
