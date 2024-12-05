@@ -94,15 +94,21 @@ func (r *ReducerQuery5) Run() {
 		id, _ := strconv.ParseInt(commit.Data[0][1], 10, 64)
 		r.processedAnswers.Add(id)
 
+		if commit.Data[0][6] == "true" {
+			shardId, _ := strconv.Atoi(commit.Data[0][7])
+			r.finalAnswers.Add(int64(shardId))
+		}
+
+		r.RestoreResult()
+
 		if r.finalAnswers.Count() == r.middleware.Config.Sharding.Amount {
 			r.sendFinalResult()
 		}
 
-		r.RestoreResult()
 	})
 
 	for result := range r.results {
-		log.Infof("Processing client %v result %v id: %d, isFinal: %v", result.ClientId, result.Id, result.IsFinalMessage)
+		log.Infof("Processing client %v id: %d, isFinal: %v", result.ClientId, result.Id, result.IsFinalMessage)
 		r.processResult(result)
 	}
 }
@@ -120,18 +126,19 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 	realFilename := fmt.Sprintf("./database/%s/query-5.csv", r.ClientId)
 	realTotalFilename := fmt.Sprintf("./database/%s/query-5-total.csv", r.ClientId)
 
-	// shared.TestTolerance(1, 6, "Exiting after tmp")
+	shared.TestTolerance(1, 10, "Exiting after tmp")
 
 	r.commit.Write([][]string{
-		{r.ClientId, strconv.FormatInt(result.Id, 10), tmpFile.Name(), realFilename, tmpTotalFile.Name(), realTotalFilename, strconv.Itoa(result.ShardId)},
+		{r.ClientId, strconv.FormatInt(result.Id, 10), tmpFile.Name(), realFilename, tmpTotalFile.Name(),
+			realTotalFilename, strconv.FormatBool(result.IsFinalMessage), strconv.Itoa(result.ShardId)},
 	})
 
-	// shared.TestTolerance(1, 10, "Exiting after creating commit")
+	shared.TestTolerance(1, 10, "Exiting after creating commit")
 
 	log.Infof("processed len: %d", r.processedAnswers.Count())
 	r.processedAnswers.Add(int64(result.Id))
 
-	// shared.TestTolerance(1, 10, "Exiting after adding processed answer")
+	shared.TestTolerance(1, 10, "Exiting after adding processed answer")
 
 	// replace file with tmp file
 	if err := os.Rename(tmpFile.Name(), realFilename); err != nil {
@@ -139,12 +146,14 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 		return
 	}
 
+	shared.TestTolerance(1, 10, "Exiting after renaming 1")
+
 	if err := os.Rename(tmpTotalFile.Name(), realTotalFilename); err != nil {
 		log.Errorf("action: rename file | result: error | message: %s", err)
 		return
 	}
 
-	// shared.TestTolerance(1, 10, "Exiting after renaming")
+	shared.TestTolerance(1, 10, "Exiting after renaming 2")
 
 	if result.IsFinalMessage {
 		log.Info("Received final message")
@@ -157,9 +166,6 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 		r.sendFinalResult()
 		r.End()
 	}
-
-	// shared.TestTolerance(1, 10, "Exiting after sending result")
-
 	r.commit.End()
 
 	result.Ack()
@@ -223,8 +229,6 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) (*os.File, *os.Fi
 
 	writer.Flush()
 
-	log.Infof("HOLA: %d", totalGames)
-
 	tmpTotalFile, err := os.CreateTemp(fmt.Sprintf("./database/%s/", r.ClientId), "tmp-total-reducer-query-5.csv")
 	if err != nil {
 		log.Errorf("action: create file | result: error | message: %s", err)
@@ -237,10 +241,6 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) (*os.File, *os.Fi
 		return nil, nil
 	}
 	defer file.Close()
-
-	log.Infof("En el read bin")
-
-	log.Infof("total file: %v", totalFile.Name())
 
 	var current int64
 	err = binary.Read(totalFile, binary.BigEndian, &current)
@@ -257,8 +257,6 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) (*os.File, *os.Fi
 		log.Errorf("failed to write to file: %v", err)
 		return nil, nil
 	}
-
-	log.Infof("Saliendo")
 
 	return tmpFile, tmpTotalFile
 }
@@ -331,6 +329,8 @@ func (r *ReducerQuery5) sendFinalResult() {
 		IsFinalMessage: true,
 		Payload:        batch,
 	}
+
+	shared.TestTolerance(1, 2, "Exiting before sending final")
 
 	if err := r.middleware.SendResponse(&result); err != nil {
 		log.Errorf("action: send final result | result: error | message: %s", err)

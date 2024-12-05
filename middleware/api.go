@@ -371,6 +371,9 @@ func (m *Middleware) ListenResponses() (*ResponsesQueue, error) {
 }
 
 func (m *Middleware) SendResponse(response *Result) error {
+	if response.IsFinalMessage {
+		log.Infof("Sending final response for client %d with id: %v", response.ClientId, response.Id)
+	}
 	return m.publishQueue(m.responsesQueue, response)
 }
 
