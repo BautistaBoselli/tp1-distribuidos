@@ -1,10 +1,14 @@
 package queries
 
 import (
+	"context"
+	"encoding/csv"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 	"tp1-distribuidos/middleware"
 	"tp1-distribuidos/shared"
@@ -15,8 +19,9 @@ import (
 type Query4 struct {
 	middleware *middleware.Middleware
 	shardId    int
-	clients    map[string]*Query4Client
-	commit     *shared.Commit
+
+	clients map[string]*Query4Client
+	commit  *shared.Commit
 }
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
@@ -32,6 +37,7 @@ func (q *Query4) Close() {
 }
 
 func (q *Query4) Run() {
+
 	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 4 running")
 
@@ -45,6 +51,26 @@ func (q *Query4) Run() {
 		if processed != nil {
 			id, _ := strconv.Atoi(commit.Data[0][1])
 			processed.Add(int64(id))
+		}
+
+		file, _ := os.OpenFile(commit.Data[0][3], os.O_RDWR|os.O_CREATE, 0777)
+		reader := csv.NewReader(file)
+		val, _ := reader.Read()
+		stat, _ := shared.ParseStat(val)
+		if stat.Negatives == q.middleware.Config.Query.MinNegatives {
+			result := &middleware.Result{
+				ClientId: commit.Data[0][0],
+				QueryId:  4,
+				ShardId:  q.shardId,
+				Payload: middleware.Query4Result{
+					Game: stat.Name,
+				},
+				IsFinalMessage: false,
+			}
+
+			if err := q.middleware.SendResult("4", result); err != nil {
+				log.Errorf("Failed to send result: %v", err)
+			}
 		}
 	})
 
@@ -81,9 +107,17 @@ func (q *Query4) Run() {
 }
 
 func (q *Query4) consumeFilteredStats(messages chan *middleware.StatsMsg) {
-	for message := range messages {
-		client := q.clients[message.ClientId]
-		client.processStat(message)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+	defer stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case message := <-messages:
+			client := q.clients[message.ClientId]
+			client.processStat(message)
+		}
 	}
 }
 
@@ -138,14 +172,12 @@ func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 	}
 
 	if qc.processedStats.Contains(int64(msg.Stats.Id)) {
-
 		if msg.Stats.Negatives == 1 {
 			stat := shared.GetStat(qc.clientId, msg.Stats.AppId)
 			if stat.Negatives == qc.middleware.Config.Query.MinNegatives {
 				qc.sendResult(msg.Stats)
 			}
 		}
-
 		msg.Ack()
 		return
 	}
@@ -170,12 +202,16 @@ func (qc *Query4Client) processStat(msg *middleware.StatsMsg) {
 		{qc.clientId, strconv.Itoa(msg.Stats.Id), tmpFile.Name(), realFilename},
 	})
 
+	shared.TestTolerance(1, 18000, "Exiting before a commit")
+
 	qc.processedStats.Add(int64(msg.Stats.Id))
 
 	os.Rename(tmpFile.Name(), realFilename)
 
 	if isNegative && stat.Negatives == qc.middleware.Config.Query.MinNegatives {
+		shared.TestTolerance(1, 12, "Exiting before sending result")
 		qc.sendResult(stat)
+		shared.TestTolerance(1, 12, "Exiting after sending result")
 	}
 
 	qc.commit.End()
@@ -208,6 +244,7 @@ func (qc *Query4Client) sendResultFinal() {
 		QueryId:        4,
 		ShardId:        qc.shardId,
 		IsFinalMessage: true,
+		Payload:        middleware.Query4Result{},
 	}
 
 	if err := qc.middleware.SendResult("4", result); err != nil {
@@ -217,7 +254,6 @@ func (qc *Query4Client) sendResultFinal() {
 
 func isEnglish(message *middleware.Stats) bool {
 	lang := getlang.FromString(message.Text)
-	// log.Infof("Language: %s", lang.LanguageName())
 	return lang.LanguageName() == "English"
 }
 

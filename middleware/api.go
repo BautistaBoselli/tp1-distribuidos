@@ -330,7 +330,7 @@ func (m *Middleware) ListenResults(queryId string) (*ResultsQueue, error) {
 }
 
 func (m *Middleware) SendResult(queryId string, result *Result) error {
-	log.Infof("Sending result from query %s", queryId)
+	log.Infof("Sending result from query %s for client %d", queryId, result.ClientId)
 	return m.publishExchange("results", queryId, result)
 }
 

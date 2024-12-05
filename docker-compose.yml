@@ -33,11 +33,15 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      queries-2-0:
+      mapper-1:
         condition: service_started
-      queries-2-1:
+      mapper-2:
         condition: service_started
-      reducer-2:
+      queries-4-0:
+        condition: service_started
+      queries-4-1:
+        condition: service_started
+      reducer-4:
         condition: service_started
       reviver-1:
         condition: service_started
@@ -45,50 +49,75 @@ services:
         condition: service_started
       reviver-3:
         condition: service_started
-  queries-2-0:
-    container_name: queries-2-0
+  mapper-1:
+    container_name: mapper-1
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - CLI_MAPPER_ID=1
+    networks:
+      network:
+        ipv4_address: 10.5.2.1
+    volumes:
+      - ./server.yml:/server.yml
+  mapper-2:
+    container_name: mapper-2
+    image: mapper:latest
+    entrypoint: /mapper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - CLI_MAPPER_ID=2
+    networks:
+      network:
+        ipv4_address: 10.5.2.2
+    volumes:
+      - ./server.yml:/server.yml
+  queries-4-0:
+    container_name: queries-4-0
     image: query:latest
     entrypoint: /query
     environment:
-      - CLI_QUERY_ID=2
+      - CLI_QUERY_ID=4
       - CLI_SHARD_ID=0
     networks:
       network:
-        ipv4_address: 10.5.3.20
+        ipv4_address: 10.5.3.40
     volumes:
       - ./server.yml:/server.yml
-      - ../database/queries-2-0_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
-  queries-2-1:
-    container_name: queries-2-1
+  queries-4-1:
+    container_name: queries-4-1
     image: query:latest
     entrypoint: /query
     environment:
-      - CLI_QUERY_ID=2
+      - CLI_QUERY_ID=4
       - CLI_SHARD_ID=1
     networks:
       network:
-        ipv4_address: 10.5.3.21
+        ipv4_address: 10.5.3.41
     volumes:
       - ./server.yml:/server.yml
-      - ../database/queries-2-1_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy
-  reducer-2:
-    container_name: reducer-2
+  reducer-4:
+    container_name: reducer-4
     image: reducer:latest
     entrypoint: /reducer
     environment:
-      - CLI_QUERY_ID=2
+      - CLI_QUERY_ID=4
     volumes:
       - ./server.yml:/server.yml
-      - ../database/reducer-2_database:/database
     networks:
       network:
-        ipv4_address: 10.5.4.2
+        ipv4_address: 10.5.4.4
     depends_on:
       rabbitmq:
         condition: service_healthy

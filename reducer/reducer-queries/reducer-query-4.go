@@ -28,7 +28,7 @@ func (r *ReducerQuery4) QueueResult(result *middleware.Result) {
 	r.results <- result
 }
 
-func (r *ReducerQuery4) Close() {
+func (r *ReducerQuery4) End() {
 	if r.finished {
 		return
 	}
@@ -39,10 +39,14 @@ func (r *ReducerQuery4) Close() {
 
 func (r *ReducerQuery4) Run() {
 	for result := range r.results {
-		r.processResult(result)
+		log.Infof("Result received: %v", result.Payload.(middleware.Query4Result))
+		shared.TestTolerance(1, 12, "Exiting after sending result")
 
 		if result.IsFinalMessage {
 			r.receivedAnswers.Add(int64(result.ShardId))
+			shared.TestTolerance(1, 12, "Exiting after adding to received answers")
+		} else {
+			r.sendResult(result)
 		}
 
 		if r.receivedAnswers.Count() == r.middleware.Config.Sharding.Amount {
@@ -54,20 +58,14 @@ func (r *ReducerQuery4) Run() {
 					Game: "",
 				},
 			})
-			r.Close()
+			shared.TestTolerance(1, 2, "Exiting after sending final")
 			result.Ack()
+			r.End()
 			break
 		}
 
 		result.Ack()
 
-	}
-}
-
-func (r *ReducerQuery4) processResult(result *middleware.Result) {
-	switch result.Payload.(type) {
-	case middleware.Query4Result:
-		r.sendResult(result)
 	}
 }
 
@@ -77,5 +75,5 @@ func (r *ReducerQuery4) sendResult(result *middleware.Result) {
 		log.Errorf("Failed to send result: %v", err)
 	}
 
-	log.Infof("Reducer Game: %v", result.Payload.(middleware.Query4Result).Game)
+	log.Infof("Reducer Game: %v for client %d", result.Payload.(middleware.Query4Result).Game, result.ClientId)
 }
