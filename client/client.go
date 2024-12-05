@@ -166,6 +166,8 @@ func (c *Client) ReceiveResponse() error {
 
 	queriesCompleted := 0
 
+	queriesFinished := [5]bool{false, false, false, false, false}
+
 	for {
 
 		if queriesCompleted >= 5 {
@@ -181,8 +183,9 @@ func (c *Client) ReceiveResponse() error {
 		case protocol.MessageTypeClientResponse1:
 			var response1 protocol.ClientResponse1
 			response1.Decode(response.Data)
-			if response1.Last {
+			if response1.Last && !queriesFinished[0] {
 				logResults(writer, fmt.Sprintf("[QUERY 1 - FINAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux))
+				queriesFinished[0] = true
 				queriesCompleted++
 			} else {
 				logResults(writer, fmt.Sprintf("[QUERY 1 - PARCIAL]: Windows: %d, Mac: %d, Linux: %d", response1.Windows, response1.Mac, response1.Linux))
@@ -193,19 +196,26 @@ func (c *Client) ReceiveResponse() error {
 			for i, game := range response2.TopGames {
 				logResults(writer, fmt.Sprintf("[QUERY 2]: Top Game %d: %v (%d)", i+1, game.Name, game.Count))
 			}
-			queriesCompleted++
+			if !queriesFinished[1] {
+				queriesFinished[1] = true
+				queriesCompleted++
+			}
 		case protocol.MessageTypeClientResponse3:
 			var response3 protocol.ClientResponse3
 			response3.Decode(response.Data)
 			for i, game := range response3.TopStats {
 				logResults(writer, fmt.Sprintf("[QUERY 3]: Top Game %d: %v (%d)", i+1, game.Name, game.Count))
 			}
-			queriesCompleted++
+			if !queriesFinished[2] {
+				queriesFinished[2] = true
+				queriesCompleted++
+			}
 		case protocol.MessageTypeClientResponse4:
 			var response4 protocol.ClientResponse4
 			response4.Decode(response.Data)
-			if response4.Last {
+			if response4.Last && !queriesFinished[3] {
 				logResults(writer, "[QUERY 4 - FINAL]")
+				queriesFinished[3] = true
 				queriesCompleted++
 			} else {
 				logResults(writer, fmt.Sprintf("[QUERY 4 - PARCIAL]: %v", response4.Game.Name))
@@ -216,8 +226,9 @@ func (c *Client) ReceiveResponse() error {
 			for _, game := range response5.TopStats {
 				logResults(writer, fmt.Sprintf("[QUERY 5 - PARCIAL]: %v (%d)", game.Name, game.Count))
 			}
-			if response5.Last {
+			if response5.Last && !queriesFinished[4] {
 				logResults(writer, "[QUERY 5 - FINAL]")
+				queriesFinished[4] = true
 				queriesCompleted++
 			}
 		}

@@ -1,0 +1,106 @@
+[QUERY 4 - PARCIAL]: Kinetic Void
+[QUERY 1 - PARCIAL]: Windows: 499, Mac: 121, Linux: 87
+[QUERY 4 - PARCIAL]: Fallout: New Vegas
+[QUERY 1 - PARCIAL]: Windows: 997, Mac: 234, Linux: 149
+[QUERY 4 - PARCIAL]: Awesomenauts - the 2D moba
+[QUERY 4 - PARCIAL]: The Escapists
+[QUERY 4 - PARCIAL]: BLOCKADE 3D
+[QUERY 4 - PARCIAL]: BLOCKADE 3D
+[QUERY 4 - PARCIAL]: BLOCKADE 3D
+[QUERY 4 - PARCIAL]: How to Survive
+[QUERY 1 - PARCIAL]: Windows: 1497, Mac: 357, Linux: 233
+[QUERY 1 - PARCIAL]: Windows: 1997, Mac: 458, Linux: 294
+[QUERY 1 - PARCIAL]: Windows: 2497, Mac: 567, Linux: 375
+[QUERY 4 - PARCIAL]: Digger Online
+[QUERY 4 - PARCIAL]: The Culling
+[QUERY 4 - PARCIAL]: Digger Online
+[QUERY 1 - PARCIAL]: Windows: 2497, Mac: 567, Linux: 375
+[QUERY 1 - PARCIAL]: Windows: 2996, Mac: 676, Linux: 451
+[QUERY 4 - PARCIAL]: Far Cry® 4
+[QUERY 1 - PARCIAL]: Windows: 3495, Mac: 791, Linux: 526
+[QUERY 4 - PARCIAL]: BioShock™ Remastered
+[QUERY 1 - PARCIAL]: Windows: 3995, Mac: 904, Linux: 598
+[QUERY 2]: Top Game 1: Clicker Heroes 2 (31708)
+[QUERY 2]: Top Game 2: Midas Gold Plus (19196)
+[QUERY 2]: Top Game 3: Beasts of Bermuda (17147)
+[QUERY 2]: Top Game 4: Dragon Cliff (8285)
+[QUERY 2]: Top Game 5: Workers & Resources: Soviet Republic (6536)
+[QUERY 2]: Top Game 6: 上帝之城 I：监狱帝国 [City of God I - Prison Empire] (5326)
+[QUERY 2]: Top Game 7: Notes of Soul (4938)
+[QUERY 2]: Top Game 8: SCUM (4646)
+[QUERY 2]: Top Game 9: Spellweaver (4570)
+[QUERY 2]: Top Game 10: Geometry Dash (4536)
+[QUERY 4 - PARCIAL]: RAGE
+[QUERY 1 - PARCIAL]: Windows: 3995, Mac: 904, Linux: 598
+[QUERY 1 - PARCIAL]: Windows: 4423, Mac: 1011, Linux: 671
+[QUERY 4 - FINAL]
+[QUERY 1 - FINAL]: Windows: 4873, Mac: 1105, Linux: 737
+[QUERY 4 - PARCIAL]: 
+[QUERY 5 - PARCIAL]: BLOCKADE 3D (3214)
+[QUERY 5 - PARCIAL]: The Culling (2705)
+[QUERY 5 - PARCIAL]: BioShock™ Remastered (1925)
+[QUERY 5 - PARCIAL]: Fallout: New Vegas (1438)
+[QUERY 5 - PARCIAL]: Awesomenauts - the 2D moba (1416)
+[QUERY 5 - PARCIAL]: How to Survive (1001)
+[QUERY 5 - PARCIAL]: RAGE (984)
+[QUERY 5 - PARCIAL]: Far Cry® 4 (818)
+[QUERY 5 - PARCIAL]: Kinetic Void (726)
+[QUERY 5 - PARCIAL]: Digger Online (615)
+[QUERY 5 - PARCIAL]: The Escapists (615)
+[QUERY 5 - PARCIAL]: Planetary Annihilation: TITANS (510)
+[QUERY 5 - PARCIAL]: Hotline Miami (484)
+[QUERY 5 - PARCIAL]: Kane & Lynch 2: Dog Days (475)
+[QUERY 5 - PARCIAL]: Geometry Dash (469)
+[QUERY 5 - PARCIAL]: Dead Space (449)
+[QUERY 5 - PARCIAL]: Magicka 2 (434)
+[QUERY 5 - PARCIAL]: Receiver (391)
+[QUERY 5 - PARCIAL]: Vanguard Princess (379)
+[QUERY 5 - PARCIAL]: The Darkness II (364)
+[QUERY 5 - PARCIAL]: God Mode (354)
+[QUERY 5 - PARCIAL]: King Arthur's Gold (337)
+[QUERY 5 - PARCIAL]: Spooky's Jump Scare Mansion (328)
+[QUERY 5 - PARCIAL]: Assassin’s Creed® Brotherhood (327)
+[QUERY 5 - PARCIAL]: Navy Field 2 : Conqueror of the Ocean (324)
+[QUERY 5 - PARCIAL]: BattleBlock Theater® (320)
+[QUERY 5 - PARCIAL]: Call of Duty® 4: Modern Warfare® (308)
+[QUERY 5 - PARCIAL]: Day of Defeat: Source (301)
+[QUERY 5 - PARCIAL]: Killer is Dead - Nightmare Edition (301)
+[QUERY 5 - PARCIAL]: Resident Evil: Operation Raccoon City (301)
+[QUERY 5 - PARCIAL]: ENSLAVED™: Odyssey to the West™ Premium Edition (291)
+[QUERY 5 - FINAL]
+[QUERY 5 - PARCIAL]: BLOCKADE 3D (3214)
+[QUERY 5 - PARCIAL]: The Culling (2705)
+[QUERY 5 - PARCIAL]: BioShock™ Remastered (1925)
+[QUERY 5 - PARCIAL]: Fallout: New Vegas (1438)
+[QUERY 5 - PARCIAL]: Awesomenauts - the 2D moba (1416)
+[QUERY 5 - PARCIAL]: How to Survive (1001)
+[QUERY 5 - PARCIAL]: RAGE (984)
+[QUERY 5 - PARCIAL]: Far Cry® 4 (818)
+[QUERY 5 - PARCIAL]: Kinetic Void (726)
+[QUERY 5 - PARCIAL]: Digger Online (615)
+[QUERY 5 - PARCIAL]: The Escapists (615)
+[QUERY 5 - PARCIAL]: Planetary Annihilation: TITANS (510)
+[QUERY 5 - PARCIAL]: Hotline Miami (484)
+[QUERY 5 - PARCIAL]: Kane & Lynch 2: Dog Days (475)
+[QUERY 5 - PARCIAL]: Geometry Dash (469)
+[QUERY 5 - PARCIAL]: Dead Space (449)
+[QUERY 5 - PARCIAL]: Magicka 2 (434)
+[QUERY 5 - PARCIAL]: Receiver (391)
+[QUERY 5 - PARCIAL]: Vanguard Princess (379)
+[QUERY 5 - PARCIAL]: The Darkness II (364)
+[QUERY 5 - PARCIAL]: God Mode (354)
+[QUERY 5 - PARCIAL]: King Arthur's Gold (337)
+[QUERY 5 - PARCIAL]: Spooky's Jump Scare Mansion (328)
+[QUERY 5 - PARCIAL]: Assassin’s Creed® Brotherhood (327)
+[QUERY 5 - PARCIAL]: Navy Field 2 : Conqueror of the Ocean (324)
+[QUERY 5 - PARCIAL]: BattleBlock Theater® (320)
+[QUERY 5 - PARCIAL]: Call of Duty® 4: Modern Warfare® (308)
+[QUERY 5 - PARCIAL]: Day of Defeat: Source (301)
+[QUERY 5 - PARCIAL]: Killer is Dead - Nightmare Edition (301)
+[QUERY 5 - PARCIAL]: Resident Evil: Operation Raccoon City (301)
+[QUERY 5 - PARCIAL]: ENSLAVED™: Odyssey to the West™ Premium Edition (291)
+[QUERY 3]: Top Game 1: Garry's Mod (22866)
+[QUERY 3]: Top Game 2: Hotline Miami (18201)
+[QUERY 3]: Top Game 3: BattleBlock Theater® (14903)
+[QUERY 3]: Top Game 4: Geometry Dash (12685)
+[QUERY 3]: Top Game 5: Firewatch (12406)
