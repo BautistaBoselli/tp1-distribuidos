@@ -69,6 +69,7 @@ func NewGame(record []string) *Game {
 
 type GameMsg struct {
 	ClientId string
+	ShardId  int
 	Game     *Game
 	Last     bool
 	msg      amqp.Delivery
@@ -108,10 +109,12 @@ func NewReview(record []string, id int) *Review {
 }
 
 type ReviewsMsg struct {
-	ClientId string
-	Reviews  []Review
-	Last     int
-	msg      amqp.Delivery
+	Id        int
+	ClientId  string
+	Reviews   []Review
+	Last      int
+	Processed map[int]int
+	msg       amqp.Delivery
 }
 
 func (r *ReviewsMsg) Ack() {
@@ -120,6 +123,16 @@ func (r *ReviewsMsg) Ack() {
 
 func (r *ReviewsMsg) Nack() {
 	r.msg.Nack(false, true)
+}
+
+type ReviewsProcessedMsg struct {
+	ClientId string
+	BatchId  int
+	msg      amqp.Delivery
+}
+
+func (r *ReviewsProcessedMsg) Ack() {
+	r.msg.Ack(false)
 }
 
 type Stats struct {

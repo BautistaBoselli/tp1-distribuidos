@@ -37,6 +37,7 @@ services:
         condition: service_started
       mapper-2:
         condition: service_started
+      queries-5-0:
       queries-1-0:
         condition: service_started
       queries-1-1:

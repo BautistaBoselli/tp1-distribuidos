@@ -55,6 +55,7 @@ func (s *Server) Run() {
 	defer s.Close()
 
 	go s.handleResponses()
+	go s.consumeReviewsProcessed()
 
 	for {
 		client, err := s.acceptNewConnection()
@@ -119,6 +120,24 @@ func (s *Server) handleResponses() {
 	}
 }
 
+func (s *Server) consumeReviewsProcessed() {
+	reviewsProcessedQueue, err := s.middleware.ListenReviewsProcessed()
+	if err != nil {
+		log.Errorf("Failed to listen reviews processed: %v", err)
+		return
+	}
+	reviewsProcessedQueue.Consume(nil, func(message *middleware.ReviewsProcessedMsg) error {
+		for _, client := range s.clients {
+			if client.id == message.ClientId {
+				client.handleReviewsProcessed(message.BatchId)
+			}
+		}
+
+		message.Ack()
+		return nil
+	})
+}
+
 type Client struct {
 	id                 string
 	conn               *net.TCPConn
@@ -130,6 +149,8 @@ type Client struct {
 	reviewsBatchAmount int
 	totalGames         int
 	totalReviews       int
+	totalReviewBatches int
+	processedBatches   map[int]bool
 }
 
 func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBatchAmount int) *Client {
@@ -145,6 +166,8 @@ func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBa
 		reviewsBatchAmount: reviewsBatchAmount,
 		totalGames:         0,
 		totalReviews:       0,
+		totalReviewBatches: 0,
+		processedBatches:   make(map[int]bool),
 	}
 }
 
@@ -181,7 +204,6 @@ func (c *Client) handleConnection() {
 		case protocol.MessageTypeAllSent:
 			log.Infof("action: receive_reviews | result: success")
 			log.Infof("action: receive_all_sent | result: success")
-			c.reviewsFinished = true
 			close(c.reviews)
 
 		default:
@@ -241,7 +263,8 @@ func (c *Client) handleReviews() {
 			reviewBatch = append(reviewBatch, *review)
 			c.totalReviews++
 			if len(reviewBatch) == c.reviewsBatchAmount {
-				err := c.middleware.SendReviewBatch(&middleware.ReviewsMsg{ClientId: c.id, Reviews: reviewBatch})
+				err := c.middleware.SendReviewBatch(&middleware.ReviewsMsg{Id: c.totalReviewBatches, ClientId: c.id, Reviews: reviewBatch})
+				c.totalReviewBatches++
 				if err != nil {
 					log.Errorf("Failed to publish review message: %v", err)
 				}
@@ -251,17 +274,20 @@ func (c *Client) handleReviews() {
 	}
 
 	if len(reviewBatch) > 0 {
-		err := c.middleware.SendReviewBatch(&middleware.ReviewsMsg{ClientId: c.id, Reviews: reviewBatch})
+		err := c.middleware.SendReviewBatch(&middleware.ReviewsMsg{Id: c.totalReviewBatches, ClientId: c.id, Reviews: reviewBatch})
+		c.totalReviewBatches++
 		if err != nil {
 			log.Errorf("Failed to publish review message: %v", err)
 		}
 	}
 
-	err := c.middleware.SendReviewsFinished(c.id, 1)
-	if err != nil {
-		log.Errorf("Failed to publish review message: %v", err)
+	// err := c.middleware.SendReviewsProcessed(c.id, &middleware.ReviewsMsg{ClientId: c.id, Total: c.totalReviewBatches, Processed: make(map[int]int)})
+	// if err != nil {
+	// 	log.Errorf("Failed to publish review message: %v", err)
 
-	}
+	// }
+
+	c.reviewsFinished = true
 
 	log.Infof("All %d reviews received and sent to middleware", c.totalReviews)
 }
@@ -316,4 +342,13 @@ func (c *Client) handleResponse(response *middleware.Result) {
 	}
 
 	response.Ack()
+}
+
+func (c *Client) handleReviewsProcessed(batchId int) {
+	c.processedBatches[batchId] = true
+	if c.reviewsFinished && len(c.processedBatches) == c.totalReviewBatches {
+		log.Infof("All reviews processed, closing reviews channel GOD HOLA")
+		c.middleware.SendReviewsFinished(c.id, 1)
+		c.middleware.SendStatsFinished(c.id)
+	}
 }
