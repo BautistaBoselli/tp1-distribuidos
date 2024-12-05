@@ -17,7 +17,7 @@ def decode_number(number):
     }
 
 # Your number
-number = 282039026176260138
+number = 281757551199081402
 
 result = decode_number(number)
 print(f"clientId (2 bytes): {result['clientId']}")

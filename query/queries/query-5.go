@@ -76,6 +76,7 @@ type Query5Client struct {
 	processedStats     *shared.Processed
 	minNegativeReviews int
 	cache              *shared.Cache[*middleware.Stats]
+	id                 int64
 }
 
 func NewQuery5Client(m *middleware.Middleware, commit *shared.Commit, clientId string, shardId int) *Query5Client {
@@ -99,12 +100,12 @@ func (qc *Query5Client) processStat(msg *middleware.StatsMsg) {
 		return // esto no estaba antes pero lo agrego porque tira error el processed
 	}
 
-	if qc.processedStats.Contains(int64(msg.Stats.Id)) {
+	if msg.Stats.Negatives == 0 {
 		msg.Ack()
 		return
 	}
 
-	if msg.Stats.Negatives == 0 {
+	if qc.processedStats.Contains(int64(msg.Stats.Id)) {
 		msg.Ack()
 		return
 	}
@@ -265,6 +266,7 @@ func (qc *Query5Client) handleRecord(record []string) {
 }
 
 func (qc *Query5Client) sendResult() {
+	log.Info("HOLA Q5 SR")
 	path := path.Join("client-"+qc.clientId, "stored.csv")
 	file, err := os.Open(path)
 	if err != nil {
@@ -282,7 +284,10 @@ func (qc *Query5Client) sendResult() {
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
+			qc.id++
+			id := qc.getNextId()
 			qc.middleware.SendResult("5", &middleware.Result{
+				Id:             id,
 				ClientId:       qc.clientId,
 				QueryId:        5,
 				ShardId:        qc.shardId,
@@ -305,7 +310,10 @@ func (qc *Query5Client) sendResult() {
 
 		result.Stats = append(result.Stats, *stats)
 		if len(result.Stats) == 50 {
+			qc.id++
+			id := qc.getNextId()
 			qc.middleware.SendResult("5", &middleware.Result{
+				Id:             id,
 				ClientId:       qc.clientId,
 				QueryId:        5,
 				ShardId:        qc.shardId,
@@ -316,7 +324,7 @@ func (qc *Query5Client) sendResult() {
 		}
 	}
 
-	shared.TestTolerance(1, 2, "Exiting after sending result")
+	// shared.TestTolerance(1, 2, "Exiting after sending result")
 
 	log.Infof("Query 5 finished")
 }
@@ -324,4 +332,14 @@ func (qc *Query5Client) sendResult() {
 func (qc *Query5Client) End() {
 	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
 	qc.processedStats.Close()
+}
+
+// clientId (2 bytes) + queryId (1 byte) + shardId (1 byte) + appId (4 bytes)
+func (qc *Query5Client) getNextId() int64 {
+	clientId, _ := strconv.Atoi(qc.clientId)
+
+	clientIdHigh := (clientId >> 8) & 0xFF // Get high byte
+	clientIdLow := clientId & 0xFF         // Get low byte
+
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(5)<<40 | int64(qc.shardId)<<32 | qc.id
 }

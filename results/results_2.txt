@@ -1,20 +1,32 @@
-[QUERY 4 - PARCIAL]: Kinetic Void
-[QUERY 4 - PARCIAL]: Fallout: New Vegas
-[QUERY 4 - PARCIAL]: Planetary Annihilation: TITANS
-[QUERY 4 - PARCIAL]: BLOCKADE 3D
-[QUERY 4 - PARCIAL]: Awesomenauts - the 2D moba
-[QUERY 4 - PARCIAL]: The Escapists
-[QUERY 4 - PARCIAL]: The Escapists
-[QUERY 4 - PARCIAL]: The Escapists
-[QUERY 4 - PARCIAL]: Far Cry® 4
-[QUERY 4 - PARCIAL]: BioShock™ Remastered
-[QUERY 4 - PARCIAL]: The Culling
-[QUERY 4 - PARCIAL]: The Culling
-[QUERY 4 - PARCIAL]: Digger Online
-[QUERY 4 - PARCIAL]: Digger Online
-[QUERY 4 - PARCIAL]: RAGE
-[QUERY 4 - PARCIAL]: How to Survive
-[QUERY 4 - FINAL]
-[QUERY 4 - FINAL]
-[QUERY 4 - FINAL]
-[QUERY 4 - FINAL]
+[QUERY 5 - PARCIAL]: BLOCKADE 3D (3214)
+[QUERY 5 - PARCIAL]: The Culling (2705)
+[QUERY 5 - PARCIAL]: BioShock™ Remastered (1925)
+[QUERY 5 - PARCIAL]: Fallout: New Vegas (1438)
+[QUERY 5 - PARCIAL]: Awesomenauts - the 2D moba (1416)
+[QUERY 5 - PARCIAL]: How to Survive (1001)
+[QUERY 5 - PARCIAL]: RAGE (984)
+[QUERY 5 - PARCIAL]: Far Cry® 4 (818)
+[QUERY 5 - PARCIAL]: Kinetic Void (726)
+[QUERY 5 - PARCIAL]: Digger Online (615)
+[QUERY 5 - PARCIAL]: The Escapists (615)
+[QUERY 5 - PARCIAL]: Planetary Annihilation: TITANS (510)
+[QUERY 5 - PARCIAL]: Hotline Miami (484)
+[QUERY 5 - PARCIAL]: Kane & Lynch 2: Dog Days (475)
+[QUERY 5 - PARCIAL]: Geometry Dash (469)
+[QUERY 5 - PARCIAL]: Dead Space (449)
+[QUERY 5 - PARCIAL]: Magicka 2 (434)
+[QUERY 5 - PARCIAL]: Receiver (391)
+[QUERY 5 - PARCIAL]: Vanguard Princess (379)
+[QUERY 5 - PARCIAL]: The Darkness II (364)
+[QUERY 5 - PARCIAL]: God Mode (354)
+[QUERY 5 - PARCIAL]: King Arthur's Gold (337)
+[QUERY 5 - PARCIAL]: Spooky's Jump Scare Mansion (328)
+[QUERY 5 - PARCIAL]: Assassin’s Creed® Brotherhood (327)
+[QUERY 5 - PARCIAL]: Navy Field 2 : Conqueror of the Ocean (324)
+[QUERY 5 - PARCIAL]: BattleBlock Theater® (320)
+[QUERY 5 - PARCIAL]: Call of Duty® 4: Modern Warfare® (308)
+[QUERY 5 - PARCIAL]: Day of Defeat: Source (301)
+[QUERY 5 - PARCIAL]: Killer is Dead - Nightmare Edition (301)
+[QUERY 5 - PARCIAL]: Resident Evil: Operation Raccoon City (301)
+[QUERY 5 - PARCIAL]: ENSLAVED™: Odyssey to the West™ Premium Edition (291)
+[QUERY 5 - FINAL]
