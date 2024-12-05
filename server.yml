@@ -15,6 +15,6 @@ query:
   query-2: true
   query-3: true
   query-4: true
-  query-5: false
+  query-5: true
 reviver:
   amount: 3

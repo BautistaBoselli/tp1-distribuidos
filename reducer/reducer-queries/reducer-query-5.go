@@ -307,7 +307,9 @@ func (r *ReducerQuery5) sendFinalResult() {
 		i++
 
 		if len(batch.Stats) == resultsBatchSize {
+
 			result := middleware.Result{
+				Id:             r.getNextId(&batch),
 				ClientId:       r.ClientId,
 				QueryId:        5,
 				IsFinalMessage: false,
@@ -324,6 +326,7 @@ func (r *ReducerQuery5) sendFinalResult() {
 	}
 
 	result := middleware.Result{
+		Id:             r.getNextId(&batch),
 		ClientId:       r.ClientId,
 		QueryId:        5,
 		IsFinalMessage: true,
@@ -335,4 +338,18 @@ func (r *ReducerQuery5) sendFinalResult() {
 	if err := r.middleware.SendResponse(&result); err != nil {
 		log.Errorf("action: send final result | result: error | message: %s", err)
 	}
+}
+
+func (r *ReducerQuery5) getNextId(batch *middleware.Query5Result) int64 {
+	clientId, _ := strconv.Atoi(r.ClientId)
+
+	clientIdHigh := (clientId >> 8) & 0xFF // Get high byte
+	clientIdLow := clientId & 0xFF         // Get low byte
+
+	negatives := 0
+	for _, stat := range batch.Stats {
+		negatives += stat.Negatives
+	}
+
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(5)<<40 | int64(negatives)
 }

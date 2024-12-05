@@ -104,7 +104,6 @@ func (s *Server) handleResponses() {
 		log.Infof("Response received from query %d and client %s", response.QueryId, response.ClientId)
 		for _, client := range s.clients {
 			if client.id == response.ClientId {
-				// log.Info("Received response id %d for client %v", response.Id, response.ClientId)
 				log.Infof("RECV RESPONSE client %v, id: %v", response.ClientId, response.Id)
 				if !s.processedRespones[response.Id] {
 					log.Infof("HOLA RESPONSE client %v, id: %v", response.ClientId, response.Id)

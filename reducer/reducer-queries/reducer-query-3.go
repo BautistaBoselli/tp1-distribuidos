@@ -230,5 +230,5 @@ func (r *ReducerQuery3) getNextId() int64 {
 
 	processed := r.receivedAnswers.Count() + 1 // 0 means last
 
-	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(1)<<40 | int64(processed)
+	return int64(clientIdHigh)<<56 | int64(clientIdLow)<<48 | int64(3)<<40 | int64(processed)
 }

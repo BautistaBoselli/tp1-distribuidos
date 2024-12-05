@@ -27,7 +27,7 @@ def main():
     print(f"Containers: {containers}")
     try:
         while True:
-            sleep(3)
+            sleep(4)
             container = choice(containers)
             print(f"Killing {container}\n")
             kill_container(container)
