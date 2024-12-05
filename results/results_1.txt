@@ -1,14 +1,5 @@
-[QUERY 4 - PARCIAL]: Kinetic Void
-[QUERY 4 - PARCIAL]: Fallout: New Vegas
-[QUERY 4 - PARCIAL]: BLOCKADE 3D
-[QUERY 4 - PARCIAL]: Awesomenauts - the 2D moba
-[QUERY 4 - PARCIAL]: Far Cry® 4
-[QUERY 4 - PARCIAL]: The Escapists
-[QUERY 4 - PARCIAL]: BioShock™ Remastered
-[QUERY 4 - PARCIAL]: The Culling
-[QUERY 4 - PARCIAL]: Digger Online
-[QUERY 4 - PARCIAL]: RAGE
-[QUERY 4 - PARCIAL]: How to Survive
-[QUERY 4 - FINAL]
-[QUERY 4 - FINAL]
-[QUERY 4 - FINAL]
+[QUERY 3]: Top Game 1: Garry's Mod (22866)
+[QUERY 3]: Top Game 2: Hotline Miami (18201)
+[QUERY 3]: Top Game 3: BattleBlock Theater® (14903)
+[QUERY 3]: Top Game 4: Geometry Dash (12685)
+[QUERY 3]: Top Game 5: Firewatch (12406)

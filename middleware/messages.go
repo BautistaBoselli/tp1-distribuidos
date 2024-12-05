@@ -69,6 +69,7 @@ func NewGame(record []string) *Game {
 
 type GameMsg struct {
 	ClientId string
+	ShardId  int
 	Game     *Game
 	Last     bool
 	msg      amqp.Delivery

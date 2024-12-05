@@ -13,8 +13,8 @@ query:
   query4-min-negatives: 500
   query-1: false
   query-2: false
-  query-3: false
-  query-4: true
+  query-3: true
+  query-4: false
   query-5: false
 reviver:
   amount: 3
