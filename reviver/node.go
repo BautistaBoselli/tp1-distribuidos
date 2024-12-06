@@ -351,6 +351,10 @@ func (n *Node) CreateTopology(reviverNodes int) {
 		}
 		peerName := fmt.Sprintf("reviver-%d", i)
 		peer := NewPeer(i, &peerName)
+		if peer == nil {
+			log.Printf("Could not create peer %d", i)
+			continue
+		}
 		if err := peer.call(); err != nil {
 			log.Printf("Could not connect to peer %d: %v", i, err)
 			continue
@@ -442,13 +446,9 @@ func (n *Node) handleMessage(message *Message, encoder *gob.Encoder) {
 	case MessageTypePing:
 		n.handlePing(encoder)
 	case MessageTypeElection:
-		// n.execLock.Lock()
 		n.handleElection(encoder)
-		// n.execLock.Unlock()
 	case MessageTypeCoordinator:
-		// n.execLock.Lock()
 		n.handleCoordinator(message)
-		// n.execLock.Unlock()
 	}
 }
 
