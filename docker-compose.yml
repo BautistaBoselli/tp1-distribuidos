@@ -37,7 +37,6 @@ services:
         condition: service_started
       mapper-2:
         condition: service_started
-      queries-5-0:
       queries-1-0:
         condition: service_started
       queries-1-1:
@@ -73,6 +72,10 @@ services:
       reviver-2:
         condition: service_started
       reviver-3:
+        condition: service_started
+      reviver-4:
+        condition: service_started
+      reviver-5:
         condition: service_started
   mapper-1:
     container_name: mapper-1
@@ -344,7 +347,7 @@ services:
     image: reviver:latest
     entrypoint: /reviver
     environment:
-      - CLI_TOPOLOGY_NODES=3
+      - CLI_TOPOLOGY_NODES=5
       - CLI_ID=1
     networks:
       network:
@@ -361,7 +364,7 @@ services:
     image: reviver:latest
     entrypoint: /reviver
     environment:
-      - CLI_TOPOLOGY_NODES=3
+      - CLI_TOPOLOGY_NODES=5
       - CLI_ID=2
     networks:
       network:
@@ -378,11 +381,45 @@ services:
     image: reviver:latest
     entrypoint: /reviver
     environment:
-      - CLI_TOPOLOGY_NODES=3
+      - CLI_TOPOLOGY_NODES=5
       - CLI_ID=3
     networks:
       network:
         ipv4_address: 10.5.6.3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./server.yml:/server.yml
+      - ./name_ip.csv:/name_ip.csv
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  reviver-4:
+    container_name: reviver-4
+    image: reviver:latest
+    entrypoint: /reviver
+    environment:
+      - CLI_TOPOLOGY_NODES=5
+      - CLI_ID=4
+    networks:
+      network:
+        ipv4_address: 10.5.6.4
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./server.yml:/server.yml
+      - ./name_ip.csv:/name_ip.csv
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  reviver-5:
+    container_name: reviver-5
+    image: reviver:latest
+    entrypoint: /reviver
+    environment:
+      - CLI_TOPOLOGY_NODES=5
+      - CLI_ID=5
+    networks:
+      network:
+        ipv4_address: 10.5.6.5
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./server.yml:/server.yml

@@ -330,7 +330,7 @@ func (qc *Query5Client) sendResult() {
 }
 
 func (qc *Query5Client) End() {
-	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
 	qc.processedStats.Close()
 }
 

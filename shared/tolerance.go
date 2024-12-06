@@ -37,6 +37,7 @@ func NewProcessed(path string) *Processed {
 	return &Processed{file: file, processed: processed}
 }
 
+
 func (p *Processed) Add(id int64) {
 	if p.processed[id] {
 		return

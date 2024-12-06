@@ -10,5 +10,5 @@ const (
 	ResurrecterPingTimeout  = 200 * time.Millisecond
 	ResurrecterPingInterval = 400 * time.Millisecond
 	ResurrecterRestartDelay = 2 * time.Second
-	ResurrecterPingRetries  = 1
+	ResurrecterPingRetries  = 2
 )
