@@ -200,7 +200,7 @@ func (fc *FinishedClients) Consume() error {
 		return err
 	}
 
-	clientsFinishedQueue.Consume(func(message *middleware.ClientsFinishedMsg) error {
+	go clientsFinishedQueue.Consume(func(message *middleware.ClientsFinishedMsg) error {
 		log.Infof("action: handle_clients_finished | client: %d", message.ClientId)
 		fc.lock.Lock()
 		fc.finished.Add(int64(message.ClientId))

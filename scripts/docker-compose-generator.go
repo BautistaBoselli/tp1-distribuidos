@@ -54,6 +54,7 @@ services:
         ipv4_address: 10.5.1.1
     volumes:
       - ./server.yml:/server.yml
+      - ../database/server_database:/database
     depends_on:
       rabbitmq:
         condition: service_healthy`

@@ -11,13 +11,15 @@ import (
 )
 
 type Mapper struct {
-	id           int
-	middleware   *middleware.Middleware
-	clients      map[string]*MapperClient
-	gamesQueue   *middleware.GamesQueue
-	reviewsQueue *middleware.ReviewsQueue
-	cancelWg     *sync.WaitGroup
-	cancelled    bool
+	id                     int
+	middleware             *middleware.Middleware
+	clients                map[string]*MapperClient
+	gamesQueue             *middleware.GamesQueue
+	reviewsQueue           *middleware.ReviewsQueue
+	FinishedClientsGames   *shared.FinishedClients
+	FinishedClientsReviews *shared.FinishedClients
+	cancelWg               *sync.WaitGroup
+	cancelled              bool
 }
 
 func NewMapper(config *config.Config) (*Mapper, error) {
@@ -37,12 +39,14 @@ func NewMapper(config *config.Config) (*Mapper, error) {
 	}
 
 	return &Mapper{
-		id:           0,
-		middleware:   middleware,
-		clients:      make(map[string]*MapperClient),
-		gamesQueue:   gq,
-		reviewsQueue: rq,
-		cancelWg:     &sync.WaitGroup{},
+		id:                     0,
+		middleware:             middleware,
+		clients:                make(map[string]*MapperClient),
+		gamesQueue:             gq,
+		reviewsQueue:           rq,
+		FinishedClientsGames:   shared.NewFinishedClients("finished-mapper-games."+strconv.Itoa(config.Mappers.Id), middleware),
+		FinishedClientsReviews: shared.NewFinishedClients("finished-mapper-reviews."+strconv.Itoa(config.Mappers.Id), middleware),
+		cancelWg:               &sync.WaitGroup{},
 	}, nil
 }
 
@@ -54,6 +58,10 @@ func (m *Mapper) Close() error {
 }
 
 func (m *Mapper) Run() {
+	m.FinishedClientsGames.Consume()
+	m.FinishedClientsReviews.Consume()
+	time.Sleep(500 * time.Millisecond)
+
 	m.cancelWg.Add(1)
 	go m.consumeGameMessages()
 	go m.consumeReviewsMessages()
@@ -73,9 +81,22 @@ func (m *Mapper) consumeGameMessages() {
 	})
 
 	err := m.gamesQueue.Consume(m.cancelWg, func(msg *middleware.GameMsg) error {
-		metric.Update(1)
+		m.FinishedClientsGames.Lock()
+		defer m.FinishedClientsGames.Unlock()
 
 		client, exists := m.clients[msg.ClientId]
+
+		if m.FinishedClientsGames.Contains(msg.ClientId) {
+			log.Infof("Ignoring game message from finished client %s", msg.ClientId)
+			msg.Ack()
+			if exists {
+				client.ignoreAllGames()
+				client.ignoreAllReviews()
+			}
+			return nil
+		}
+		metric.Update(1)
+
 		if !exists {
 			log.Infof("New client %s", msg.ClientId)
 			client = NewMapperClient(msg.ClientId, m.middleware)
@@ -85,6 +106,7 @@ func (m *Mapper) consumeGameMessages() {
 		if m.cancelled {
 			return nil
 		}
+
 		client.games <- *msg
 		return nil
 	})
@@ -101,8 +123,19 @@ func (m *Mapper) consumeReviewsMessages() {
 	})
 
 	err := m.reviewsQueue.Consume(m.cancelWg, func(msg *middleware.ReviewsMsg) error {
-		metric.Update(len(msg.Reviews))
+		m.FinishedClientsReviews.Lock()
+		defer m.FinishedClientsReviews.Unlock()
+
 		client, exists := m.clients[msg.ClientId]
+		if m.FinishedClientsReviews.Contains(msg.ClientId) {
+			msg.Ack()
+			if exists {
+				client.ignoreAllReviews()
+				client.ignoreAllReviews()
+			}
+			return nil
+		}
+		metric.Update(len(msg.Reviews))
 		if !exists {
 			log.Infof("New client %s", msg.ClientId)
 			client = NewMapperClient(msg.ClientId, m.middleware)

@@ -58,6 +58,10 @@ func main() {
 		log.Errorf("action: creating middleware | result: error | message: %s", err)
 	}
 
+	finishedClients := shared.NewFinishedClients("finished-reducer-"+strconv.Itoa(env.Query.Id), mid)
+
+	finishedClients.Consume()
+
 	resultsQueue, err := mid.ListenResults(strconv.Itoa(env.Query.Id))
 	if err != nil {
 		log.Errorf("action: listen results| result: error | message: %s", err)
@@ -78,6 +82,14 @@ func main() {
 	go shared.RunUDPListener(8080)
 
 	resultsQueue.Consume(func(msg *middleware.Result) error {
+		finishedClients.Lock()
+		defer finishedClients.Unlock()
+
+		if finishedClients.Contains(msg.ClientId) {
+			msg.Ack()
+			return nil
+		}
+
 		if _, ok := reducers[msg.ClientId]; !ok {
 			reducers[msg.ClientId] = createReducer(env, msg.ClientId, mid)
 		}

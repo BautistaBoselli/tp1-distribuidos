@@ -73,6 +73,7 @@ func (c *MapperClient) consumeGames() {
 
 	c.cancelWg.Add(1)
 	for game := range c.games {
+		log.Infof("Game: %d", game.Game.AppId)
 
 		if c.finishedGames.Count() == c.middleware.Config.Sharding.Amount {
 			game.Ack()
@@ -139,6 +140,7 @@ func (c *MapperClient) consumeReviews() {
 		}
 
 		for _, review := range reviewBatch.Reviews {
+			log.Infof("Review: %d", review.Id)
 
 			file, err := os.Open(fmt.Sprintf("database/%s/%s.csv", c.id, review.AppId))
 			if err != nil {
@@ -175,6 +177,42 @@ func (c *MapperClient) consumeReviews() {
 	}
 	log.Infof("Mapper client %s finished consuming reviews", c.id)
 	c.cancelWg.Done()
+}
+
+func (c *MapperClient) ignoreAllGames() {
+	log.Infof("Ignoring all games for client %s", c.id)
+
+	// Drain and close games channel
+	for {
+		select {
+		case msg, ok := <-c.games:
+			if !ok {
+				return
+			}
+			msg.Ack()
+		default:
+			close(c.games)
+			return
+		}
+	}
+}
+
+func (c *MapperClient) ignoreAllReviews() {
+	log.Infof("Ignoring all reviews for client %s", c.id)
+
+	// Drain and close reviews channel
+	for {
+		select {
+		case msg, ok := <-c.reviews:
+			if !ok {
+				return
+			}
+			msg.Ack()
+		default:
+			close(c.reviews)
+			return
+		}
+	}
 }
 
 func (c *MapperClient) handleFinsished(reviewBatch middleware.ReviewsMsg) {
