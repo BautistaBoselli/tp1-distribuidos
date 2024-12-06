@@ -135,7 +135,6 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 
 	shared.TestTolerance(1, 10, "Exiting after creating commit")
 
-	log.Infof("processed len: %d", r.processedAnswers.Count())
 	r.processedAnswers.Add(int64(result.Id))
 
 	shared.TestTolerance(1, 10, "Exiting after adding processed answer")
@@ -160,7 +159,6 @@ func (r *ReducerQuery5) processResult(result *middleware.Result) {
 		r.finalAnswers.Add(int64(result.ShardId))
 	}
 
-	log.Info("final answers: ", r.finalAnswers.Count())
 	if r.finalAnswers.Count() == r.middleware.Config.Sharding.Amount {
 		r.RestoreResult()
 		r.sendFinalResult()
@@ -222,7 +220,6 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) (*os.File, *os.Fi
 		if stat.Negatives == 0 {
 			break
 		}
-		// log.Infof("writing stat %v, total games: %d", stat, r.totalGames)
 		writer.Write([]string{strconv.Itoa(stat.AppId), stat.Name, strconv.Itoa(stat.Negatives)})
 		totalGames++ // new games
 	}
@@ -247,8 +244,6 @@ func (r *ReducerQuery5) storeResults(stats []middleware.Stats) (*os.File, *os.Fi
 	if err != io.EOF && err != nil {
 		return nil, nil
 	}
-
-	log.Infof("current: %d, total: %d", current, totalGames)
 
 	newTotal := current + int64(totalGames)
 

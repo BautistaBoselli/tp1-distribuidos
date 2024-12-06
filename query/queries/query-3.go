@@ -199,6 +199,6 @@ func (qc *Query3Client) sendResult() {
 }
 
 func (qc *Query3Client) End() {
-	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
 	qc.processedStats.Close()
 }

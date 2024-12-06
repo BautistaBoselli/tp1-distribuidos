@@ -137,12 +137,10 @@ func (n *Node) StartElection() {
 	n.inElection = true
 	defer func() { n.inElection = false }()
 
-	// Keep track of which peers we're waiting for responses from
 	waitingResponses := make(map[int]bool)
 	responseChan := make(chan int)
 	timeoutChan := time.After(ElectionTimeout)
 
-	// Send election messages only to higher-numbered peers
 	for _, peer := range n.peers {
 		if peer.id > n.id {
 			// Send election message
@@ -156,7 +154,6 @@ func (n *Node) StartElection() {
 
 			waitingResponses[peer.id] = true
 
-			// Start a goroutine to wait for OK response from this peer
 			go func(peerId int) {
 				response, err := peer.RecvTimeout(OkResponseTimeout)
 				if err != nil {
@@ -170,7 +167,6 @@ func (n *Node) StartElection() {
 		}
 	}
 
-	// If no higher-numbered peers, become leader immediately
 	if len(waitingResponses) == 0 {
 		n.leaderLock.Lock()
 		go n.BecomeLeader()
@@ -178,13 +174,11 @@ func (n *Node) StartElection() {
 		return
 	}
 
-	// Wait for responses or timeout and act accordingly
 electionLoop:
 	for len(waitingResponses) > 0 {
 		select {
 		case peerId := <-responseChan:
 			delete(waitingResponses, peerId)
-			// log.Printf("Received OK from peer %d", peerId)
 			n.stateLock.Lock()
 			if n.state == NodeStateCandidate {
 				n.state = NodeStateWaitingCoordinator
@@ -194,8 +188,6 @@ electionLoop:
 			n.stateLock.Unlock()
 
 		case <-timeoutChan:
-			// If we timeout waiting for responses, we become the leader if we are a candidate
-			// or we wait for coordinator if we are waiting for one
 			if n.GetState() == NodeStateCandidate {
 				log.Printf("Node %d becoming leader\n", n.id)
 				n.leaderLock.Lock()
@@ -291,7 +283,6 @@ func (n *Node) BecomeLeader() {
 	n.ChangeState(NodeStateCoordinator)
 	n.currentLeader = n.id
 
-	// Send coordinator message to all peers
 	for _, peer := range n.peers {
 		if err := peer.Send(Message{PeerId: n.id, Type: MessageTypeCoordinator}); err != nil {
 			log.Printf("Could not send coordinator message to peer %d: %v", peer.id, err)

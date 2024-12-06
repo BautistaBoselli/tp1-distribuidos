@@ -11,10 +11,10 @@ sharding:
 query:
   query1-result-interval: 500
   query4-min-negatives: 500
-  query-1: false
-  query-2: false
-  query-3: false
+  query-1: true
+  query-2: true
+  query-3: true
   query-4: true
-  query-5: false
+  query-5: true
 reviver:
   amount: 5

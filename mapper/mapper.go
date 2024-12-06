@@ -87,7 +87,6 @@ func (m *Mapper) consumeGameMessages() {
 		client, exists := m.clients[msg.ClientId]
 
 		if m.FinishedClientsGames.Contains(msg.ClientId) {
-			log.Infof("Ignoring game message from finished client %s", msg.ClientId)
 			msg.Ack()
 			if exists {
 				client.ignoreAllGames()
@@ -143,7 +142,6 @@ func (m *Mapper) consumeReviewsMessages() {
 		}
 
 		if m.cancelled {
-			log.Infof("Ignoring reviews message from cancelled client %s", msg.ClientId)
 			return nil
 		}
 
