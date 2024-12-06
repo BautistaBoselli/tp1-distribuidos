@@ -1,9 +1,9 @@
 server,10.5.1.1
 mapper-1,10.5.2.1
 mapper-2,10.5.2.2
-queries-3-0,10.5.3.30
-queries-3-1,10.5.3.31
-reducer-3,10.5.4.3
+queries-5-0,10.5.3.50
+queries-5-1,10.5.3.51
+reducer-5,10.5.4.5
 reviver-1,10.5.6.1
 reviver-2,10.5.6.2
 reviver-3,10.5.6.3

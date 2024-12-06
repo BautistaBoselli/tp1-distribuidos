@@ -15,23 +15,26 @@ import (
 const QUERY2_TOP_SIZE = 10
 
 type Query2 struct {
-	middleware *middleware.Middleware
-	shardId    int
-	clients    map[string]*Query2Client
-	commit     *shared.Commit
+	middleware      *middleware.Middleware
+	shardId         int
+	clients         map[string]*Query2Client
+	commit          *shared.Commit
+	FinishedClients *shared.FinishedClients
 }
 
 func NewQuery2(m *middleware.Middleware, shardId int) *Query2 {
 
 	return &Query2{
-		middleware: m,
-		shardId:    shardId,
-		clients:    make(map[string]*Query2Client),
-		commit:     shared.NewCommit("./database/commit.csv"),
+		middleware:      m,
+		shardId:         shardId,
+		clients:         make(map[string]*Query2Client),
+		commit:          shared.NewCommit("./database/commit.csv"),
+		FinishedClients: shared.NewFinishedClients("finished-2."+strconv.Itoa(shardId), m),
 	}
 }
 
 func (q *Query2) Run() {
+	go q.FinishedClients.Consume()
 	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 2 running")
 
@@ -60,6 +63,14 @@ func (q *Query2) Run() {
 
 	cancelWg := &sync.WaitGroup{}
 	gamesQueue.Consume(cancelWg, func(message *middleware.GameMsg) error {
+		q.FinishedClients.Lock()
+		defer q.FinishedClients.Unlock()
+
+		if q.FinishedClients.Contains(message.ClientId) {
+			message.Ack()
+			return nil
+		}
+
 		metric.Update(1)
 
 		client, exists := q.clients[message.ClientId]
@@ -69,6 +80,7 @@ func (q *Query2) Run() {
 		}
 
 		client.processGame(message)
+
 		return nil
 	})
 }

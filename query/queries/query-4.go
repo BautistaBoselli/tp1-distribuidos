@@ -17,19 +17,20 @@ import (
 )
 
 type Query4 struct {
-	middleware *middleware.Middleware
-	shardId    int
-
-	clients map[string]*Query4Client
-	commit  *shared.Commit
+	middleware      *middleware.Middleware
+	shardId         int
+	clients         map[string]*Query4Client
+	commit          *shared.Commit
+	FinishedClients *shared.FinishedClients
 }
 
 func NewQuery4(m *middleware.Middleware, shardId int) *Query4 {
 	return &Query4{
-		middleware: m,
-		shardId:    shardId,
-		clients:    make(map[string]*Query4Client),
-		commit:     shared.NewCommit("./database/commit.csv"),
+		middleware:      m,
+		shardId:         shardId,
+		clients:         make(map[string]*Query4Client),
+		commit:          shared.NewCommit("./database/commit.csv"),
+		FinishedClients: shared.NewFinishedClients("finished-4."+strconv.Itoa(shardId), m),
 	}
 }
 
@@ -37,6 +38,7 @@ func (q *Query4) Close() {
 }
 
 func (q *Query4) Run() {
+	go q.FinishedClients.Consume()
 
 	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 4 running")
@@ -86,6 +88,14 @@ func (q *Query4) Run() {
 	messagesChan := make(chan *middleware.StatsMsg)
 
 	go statsQueue.Consume(func(message *middleware.StatsMsg) error {
+		q.FinishedClients.Lock()
+		defer q.FinishedClients.Unlock()
+
+		if q.FinishedClients.Contains(message.ClientId) {
+			message.Ack()
+			return nil
+		}
+
 		metric.Update(1)
 
 		client, exists := q.clients[message.ClientId]
@@ -115,8 +125,16 @@ func (q *Query4) consumeFilteredStats(messages chan *middleware.StatsMsg) {
 		case <-ctx.Done():
 			return
 		case message := <-messages:
+			q.FinishedClients.Lock()
+
+			if q.FinishedClients.Contains(message.ClientId) {
+				message.Ack()
+				q.FinishedClients.Unlock()
+				continue
+			}
 			client := q.clients[message.ClientId]
 			client.processStat(message)
+			q.FinishedClients.Unlock()
 		}
 	}
 }

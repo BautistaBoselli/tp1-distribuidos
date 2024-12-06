@@ -51,7 +51,7 @@ func (q *Query3) Run() {
 		}
 	})
 
-	statsQueue, err := q.middleware.ListenStats("finished-3."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Indie")
+	statsQueue, err := q.middleware.ListenStats("3."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Indie")
 	if err != nil {
 		log.Errorf("Error listening stats: %s", err)
 		return
@@ -63,6 +63,7 @@ func (q *Query3) Run() {
 
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
 		q.FinishedClients.Lock()
+		defer q.FinishedClients.Unlock()
 
 		if q.FinishedClients.Contains(message.ClientId) {
 			message.Ack()
@@ -79,7 +80,6 @@ func (q *Query3) Run() {
 
 		client.processStat(message)
 
-		q.FinishedClients.Unlock()
 		return nil
 	})
 

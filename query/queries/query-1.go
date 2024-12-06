@@ -17,24 +17,28 @@ import (
 var log = logging.MustGetLogger("log")
 
 type Query1 struct {
-	middleware     *middleware.Middleware
-	shardId        int
-	resultInterval int
-	clients        map[string]*Query1Client
-	commit         *shared.Commit
+	middleware      *middleware.Middleware
+	shardId         int
+	resultInterval  int
+	clients         map[string]*Query1Client
+	commit          *shared.Commit
+	FinishedClients *shared.FinishedClients
 }
 
 func NewQuery1(m *middleware.Middleware, shardId int, resultInterval int) *Query1 {
 	return &Query1{
-		middleware:     m,
-		shardId:        shardId,
-		resultInterval: resultInterval,
-		clients:        make(map[string]*Query1Client),
-		commit:         shared.NewCommit("./database/commit.csv"),
+		middleware:      m,
+		shardId:         shardId,
+		resultInterval:  resultInterval,
+		clients:         make(map[string]*Query1Client),
+		commit:          shared.NewCommit("./database/commit.csv"),
+		FinishedClients: shared.NewFinishedClients("finished-1."+strconv.Itoa(shardId), m),
 	}
 }
 
 func (q *Query1) Run() {
+	go q.FinishedClients.Consume()
+
 	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 1 running")
 
@@ -63,6 +67,14 @@ func (q *Query1) Run() {
 
 	cancelWg := &sync.WaitGroup{}
 	gamesQueue.Consume(cancelWg, func(message *middleware.GameMsg) error {
+		q.FinishedClients.Lock()
+		defer q.FinishedClients.Unlock()
+
+		if q.FinishedClients.Contains(message.ClientId) {
+			message.Ack()
+			return nil
+		}
+
 		metric.Update(1)
 
 		client, exists := q.clients[message.ClientId]
@@ -72,6 +84,7 @@ func (q *Query1) Run() {
 		}
 
 		client.processGame(message)
+
 		return nil
 	})
 
@@ -128,7 +141,7 @@ func NewQuery1Client(m *middleware.Middleware, commit *shared.Commit, clientId s
 
 func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	if msg.Last {
-		qc.sendResult(true, 0)
+		qc.sendResult(true)
 		msg.Ack()
 		qc.End()
 		return
@@ -140,7 +153,7 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 		log.Infof("Game %d already processed", game.AppId)
 
 		if qc.processedGames.Count()%qc.resultInterval == 0 {
-			qc.sendResult(false, game.AppId)
+			qc.sendResult(false)
 		}
 
 		msg.Ack()
@@ -184,7 +197,7 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after renaming (game %d)", game.AppId))
 
 	if qc.processedGames.Count()%qc.resultInterval == 0 {
-		qc.sendResult(false, game.AppId)
+		qc.sendResult(false)
 	}
 
 	shared.TestTolerance(1, 3000, fmt.Sprintf("Exiting after sending result (game %d)", game.AppId))
@@ -194,7 +207,7 @@ func (qc *Query1Client) processGame(msg *middleware.GameMsg) {
 	msg.Ack()
 }
 
-func (qc *Query1Client) sendResult(final bool, appId int) {
+func (qc *Query1Client) sendResult(final bool) {
 	qc.result.Final = final
 
 	id := qc.getNextId()

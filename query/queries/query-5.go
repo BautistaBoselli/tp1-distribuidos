@@ -13,22 +13,26 @@ import (
 )
 
 type Query5 struct {
-	middleware *middleware.Middleware
-	shardId    int
-	clients    map[string]*Query5Client
-	commit     *shared.Commit
+	middleware      *middleware.Middleware
+	shardId         int
+	clients         map[string]*Query5Client
+	commit          *shared.Commit
+	FinishedClients *shared.FinishedClients
 }
 
 func NewQuery5(m *middleware.Middleware, shardId int) *Query5 {
 	return &Query5{
-		middleware: m,
-		shardId:    shardId,
-		clients:    make(map[string]*Query5Client),
-		commit:     shared.NewCommit("./database/commit.csv"),
+		middleware:      m,
+		shardId:         shardId,
+		clients:         make(map[string]*Query5Client),
+		commit:          shared.NewCommit("./database/commit.csv"),
+		FinishedClients: shared.NewFinishedClients("finished-5."+strconv.Itoa(shardId), m),
 	}
 }
 
 func (q *Query5) Run() {
+	go q.FinishedClients.Consume()
+
 	time.Sleep(500 * time.Millisecond)
 	log.Info("Query 5 running")
 
@@ -55,6 +59,13 @@ func (q *Query5) Run() {
 		return fmt.Sprintf("[Query 5-%d] Processed %d stats in %s (%.2f stats/s)", q.shardId, total, elapsed, rate)
 	})
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
+		q.FinishedClients.Lock()
+		defer q.FinishedClients.Unlock()
+
+		if q.FinishedClients.Contains(message.ClientId) {
+			message.Ack()
+			return nil
+		}
 		metric.Update(1)
 
 		client, exists := q.clients[message.ClientId]
