@@ -181,6 +181,8 @@ func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBa
 
 func (c *Client) handleDisconnect() {
 	log.Infof("action: handle_disconnect | client: %s | EOF received", c.id)
+	clientId, _ := strconv.ParseInt(c.id, 10, 64)
+	c.middleware.SendClientsFinished(int(clientId))
 	c.conn.Close()
 }
 

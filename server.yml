@@ -17,4 +17,4 @@ query:
   query-4: true
   query-5: true
 reviver:
-  amount: 5
+  amount: 3

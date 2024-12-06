@@ -61,14 +61,9 @@ func (c *MapperClient) Close() {
 	}
 	c.finishedSteps.Add(int64(FINISHED))
 	c.cancelWg.Done()
-	if c.finishedGames.Count() != c.middleware.Config.Sharding.Amount {
-		if _, ok := <-c.games; ok {
-			close(c.games)
-		}
-	}
-	if _, ok := <-c.reviews; ok {
-		close(c.reviews)
-	}
+	c.ignoreAllGames()
+	c.ignoreAllReviews()
+
 	c.cancelWg.Wait()
 	log.Infof("action: mapper_client_close | result: success | client_id: %s", c.id)
 }
