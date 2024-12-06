@@ -41,6 +41,10 @@ func (m *Middleware) declare() error {
 		return err
 	}
 
+	if err := m.declareClientsFinishedExchange(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -150,6 +154,25 @@ func (m *Middleware) DeclareResponsesQueue() error {
 
 	if err != nil {
 		log.Errorf("Failed to declare queue: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (m *Middleware) declareClientsFinishedExchange() error {
+	err := m.channel.ExchangeDeclare(
+		"clientsFinished",
+		"topic",
+		true,  // durable
+		false, // auto-deleted
+		false, // internal
+		false, // no-wait
+		nil,   // arguments
+	)
+
+	if err != nil {
+		log.Errorf("Failed to declare exchange: %v", err)
 		return err
 	}
 
@@ -457,4 +480,45 @@ func (rq *ResponsesQueue) Consume(callback func(message *Result) error) error {
 	}
 
 	return nil
+}
+
+type ClientsFinishedQueue struct {
+	queue      *amqp.Queue
+	middleware *Middleware
+}
+
+func (m *Middleware) ListenClientsFinished(name string) (*ClientsFinishedQueue, error) {
+	queue, err := m.bindExchange(name, "clientsFinished", "*")
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClientsFinishedQueue{queue: queue, middleware: m}, nil
+}
+
+func (cfq *ClientsFinishedQueue) Consume(callback func(message *ClientsFinishedMsg) error) error {
+	msgs, err := cfq.middleware.consumeQueue(cfq.queue)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		var res ClientsFinishedMsg
+
+		decoder := gob.NewDecoder(bytes.NewReader(msg.Body))
+		err := decoder.Decode(&res)
+		if err != nil {
+			log.Errorf("Failed to decode message: %v", err)
+			continue
+		}
+
+		res.msg = msg
+
+		callback(&res)
+	}
+	return nil
+}
+
+func (m *Middleware) SendClientsFinished(clientId int) error {
+	return m.publishExchange("clientsFinished", "*", &ClientsFinishedMsg{ClientId: clientId})
 }

@@ -3,8 +3,12 @@ package shared
 import (
 	"encoding/binary"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"sync"
+	"tp1-distribuidos/middleware"
 
 	"math/rand"
 )
@@ -37,7 +41,6 @@ func NewProcessed(path string) *Processed {
 	return &Processed{file: file, processed: processed}
 }
 
-
 func (p *Processed) Add(id int64) {
 	if p.processed[id] {
 		return
@@ -62,6 +65,10 @@ func (p *Processed) Count() int {
 
 func (p *Processed) Close() {
 	p.file.Close()
+}
+
+func (p *Processed) Data() map[int64]bool {
+	return p.processed
 }
 
 type Commit struct {
@@ -169,4 +176,56 @@ func TestTolerance(n int, in int, msg string) {
 			os.Exit(0)
 		}
 	}
+}
+
+type FinishedClients struct {
+	name       string
+	lock       sync.Mutex
+	finished   *Processed
+	middleware *middleware.Middleware
+}
+
+func NewFinishedClients(name string, m *middleware.Middleware) *FinishedClients {
+	return &FinishedClients{
+		name:       name,
+		lock:       sync.Mutex{},
+		finished:   NewProcessed("database/finished-clients.bin"),
+		middleware: m,
+	}
+}
+
+func (fc *FinishedClients) Consume() error {
+	clientsFinishedQueue, err := fc.middleware.ListenClientsFinished(fc.name)
+	if err != nil {
+		return err
+	}
+
+	clientsFinishedQueue.Consume(func(message *middleware.ClientsFinishedMsg) error {
+		log.Infof("action: handle_clients_finished | client: %d", message.ClientId)
+		fc.lock.Lock()
+		fc.finished.Add(int64(message.ClientId))
+		os.RemoveAll(fmt.Sprintf("./database/%d", message.ClientId))
+		message.Ack()
+		fc.lock.Unlock()
+		return nil
+	})
+
+	return nil
+}
+
+func (fc *FinishedClients) Lock() {
+	fc.lock.Lock()
+}
+
+func (fc *FinishedClients) Unlock() {
+	fc.lock.Unlock()
+}
+
+func (fc *FinishedClients) Contains(clientId string) bool {
+	clientIdInt, err := strconv.Atoi(clientId)
+	if err != nil {
+		log.Errorf("Error converting client id to int: %s", err)
+		return false
+	}
+	return fc.finished.Contains(int64(clientIdInt))
 }

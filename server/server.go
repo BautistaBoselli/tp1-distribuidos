@@ -18,7 +18,7 @@ type Server struct {
 	config            *config.Config
 	clients           []*Client
 	processedRespones map[int64]bool
-	clientsReceived *shared.Processed
+	clientsReceived   *shared.Processed
 }
 
 func NewServer(config *config.Config) (*Server, error) {
@@ -43,7 +43,7 @@ func NewServer(config *config.Config) (*Server, error) {
 		config:            config,
 		clients:           make([]*Client, 0),
 		processedRespones: make(map[int64]bool),
-		clientsReceived: shared.NewProcessed("database/clients_received.bin"),
+		clientsReceived:   shared.NewProcessed("database/clients_received.bin"),
 	}, nil
 }
 
@@ -54,6 +54,8 @@ func (s *Server) Close() {
 
 func (s *Server) Run() {
 	defer s.Close()
+
+	s.finishLostClients()
 
 	go s.handleResponses()
 	go s.consumeReviewsProcessed()
@@ -70,6 +72,13 @@ func (s *Server) Run() {
 		go client.handleReviews()
 	}
 
+}
+
+func (s *Server) finishLostClients() {
+	for client := range s.clientsReceived.Data() {
+		log.Infof("action: finish_lost_clients | client: %d", client)
+		s.middleware.SendClientsFinished(int(client))
+	}
 }
 
 func (s *Server) acceptNewConnection() (*Client, error) {
@@ -91,7 +100,7 @@ func (s *Server) acceptNewConnection() (*Client, error) {
 	client := NewClient(strconv.Itoa(clientId), clientSocket, s.middleware, s.config.Server.ReviewsBatchAmount)
 	s.clients = append(s.clients, client)
 
-	log.Infof("action: accept_connections | result: success | client_id: %d", client.id)
+	log.Infof("action: accept_connections | result: success | client_id: %s", client.id)
 
 	return client, nil
 }
@@ -170,7 +179,7 @@ func NewClient(id string, conn *net.TCPConn, m *middleware.Middleware, reviewsBa
 	}
 }
 
-func (c *Client) handleDisconnect(err error) {
+func (c *Client) handleDisconnect() {
 	log.Infof("action: handle_disconnect | client: %s | EOF received", c.id)
 	c.conn.Close()
 }
@@ -179,7 +188,7 @@ func (c *Client) handleConnection() {
 	for {
 		msg, err := protocol.Receive(c.conn)
 		if err != nil {
-			c.handleDisconnect(err)
+			c.handleDisconnect()
 			return
 		}
 

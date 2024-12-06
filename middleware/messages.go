@@ -230,3 +230,12 @@ type Query4Result struct {
 type Query5Result struct {
 	Stats []Stats
 }
+
+type ClientsFinishedMsg struct {
+	ClientId int
+	msg      amqp.Delivery
+}
+
+func (c *ClientsFinishedMsg) Ack() {
+	c.msg.Ack(false)
+}

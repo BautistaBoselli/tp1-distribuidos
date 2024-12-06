@@ -14,23 +14,28 @@ const GEOMETRY_DASH_APP_ID = 322170
 const QUERY3_TOP_SIZE = 5
 
 type Query3 struct {
-	middleware *middleware.Middleware
-	shardId    int
-	clients    map[string]*Query3Client
-	commit     *shared.Commit
+	middleware      *middleware.Middleware
+	shardId         int
+	clients         map[string]*Query3Client
+	commit          *shared.Commit
+	FinishedClients *shared.FinishedClients
 }
 
 func NewQuery3(m *middleware.Middleware, shardId int) *Query3 {
 	return &Query3{
-		middleware: m,
-		shardId:    shardId,
-		clients:    make(map[string]*Query3Client),
-		commit:     shared.NewCommit("./database/commit.csv"),
+		middleware:      m,
+		shardId:         shardId,
+		clients:         make(map[string]*Query3Client),
+		commit:          shared.NewCommit("./database/commit.csv"),
+		FinishedClients: shared.NewFinishedClients("finished-3."+strconv.Itoa(shardId), m),
 	}
 }
 
 func (q *Query3) Run() {
+	go q.FinishedClients.Consume()
+
 	time.Sleep(500 * time.Millisecond)
+
 	log.Info("Query 3 running")
 
 	shared.RestoreCommit("./database/commit.csv", func(commit *shared.Commit) {
@@ -46,7 +51,7 @@ func (q *Query3) Run() {
 		}
 	})
 
-	statsQueue, err := q.middleware.ListenStats("3."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Indie")
+	statsQueue, err := q.middleware.ListenStats("finished-3."+strconv.Itoa(q.shardId), strconv.Itoa(q.shardId), "Indie")
 	if err != nil {
 		log.Errorf("Error listening stats: %s", err)
 		return
@@ -57,6 +62,13 @@ func (q *Query3) Run() {
 	})
 
 	statsQueue.Consume(func(message *middleware.StatsMsg) error {
+		q.FinishedClients.Lock()
+
+		if q.FinishedClients.Contains(message.ClientId) {
+			message.Ack()
+			return nil
+		}
+
 		metric.Update(1)
 
 		client, exists := q.clients[message.ClientId]
@@ -67,6 +79,7 @@ func (q *Query3) Run() {
 
 		client.processStat(message)
 
+		q.FinishedClients.Unlock()
 		return nil
 	})
 
@@ -186,6 +199,6 @@ func (qc *Query3Client) sendResult() {
 }
 
 func (qc *Query3Client) End() {
-	os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
+	// os.RemoveAll(fmt.Sprintf("./database/%s", qc.clientId))
 	qc.processedStats.Close()
 }
